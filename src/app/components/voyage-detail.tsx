@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { DatePicker } from "./ui/date-picker";
 import { cn } from "./ui/utils";
 import exampleImage from 'figma:asset/6931c210e64628b26cf918b8364d99257fc1fce7.png';
-import { CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, LEGAL_USERS } from "./claims-types";
+import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS } from "./claims-types";
 
 const INCIDENT_CATEGORIES = ["Cargo", "Environmental", "Near-Miss", "Personnel Accident", "Property Damage", "Security", "Technical", "Other"];
 const FIXTURE_OPTIONS = ["FAI 2601", "FAI 2602", "FAI 2603", "FAI 2501"];
@@ -89,6 +89,7 @@ function FixtureLookupFieldV({ value, onChange }: { value: string[]; onChange: (
 interface VoyageDetailProps {
   voyage: any;
   onClose: () => void;
+  version?: 'v1' | 'v2';
 }
 
 const getVoyageDetails = (voyage: any) => {
@@ -205,10 +206,11 @@ const getVoyageDetails = (voyage: any) => {
   };
 };
 
-export function VoyageDetail({ voyage, onClose }: VoyageDetailProps) {
+export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailProps) {
   const data = getVoyageDetails(voyage);
   const isHLG2605 = voyage.number === "HLG 2605";
   const [activeTab, setActiveTab] = React.useState("Port");
+  const [addNewOpen, setAddNewOpen] = React.useState(false);
   const [incidents, setIncidents] = React.useState<any[]>([]);
   const [isIncidentSheetOpen, setIsIncidentSheetOpen] = React.useState(false);
   const [editingIncident, setEditingIncident] = React.useState<any | null>(null);
@@ -284,27 +286,20 @@ export function VoyageDetail({ voyage, onClose }: VoyageDetailProps) {
     id: "",
     claimNo: "",
     claimTitle: "",
-    claimType: "none",
-    typeOfCover: "none",
-    priority: "None",
-    status: "none",
+    claimContext: "Standalone",
     vessel: voyage.vessel || "",
     voyage: voyage.number || "",
     relatedFixtures: [],
-    broker: "none",
-    brokerReference: "",
-    leadingInsurer: "",
-    dateOfNotification: "",
+    dateOfIncident: "",
+    location: "",
+    damageAsKnown: "",
+    stepsTaken: "",
+    requiredAssistanceFromInsurance: "none",
     claimant: "",
-    claimantReference: "",
-    picLegal: "none",
-    statusDescription: "",
-    expectedSettlementDate: "",
-    liabilityPosition: "none",
-    recoveryRightExists: "none",
-    recoveryAgainst: "none",
-    recoveryRoute: "none",
-    liabilityNotes: "",
+    representativeOfClaimantPresent: "",
+    portAgent: "none",
+    status: "none",
+    priority: "None",
   }), [voyage.vessel, voyage.number]);
   const [claimFormData, setClaimFormData] = React.useState(initialClaimFormState);
 
@@ -629,7 +624,10 @@ export function VoyageDetail({ voyage, onClose }: VoyageDetailProps) {
           {/* Details Tabs */}
           <div className="flex-[0.55] bg-white border border-gray-200 rounded flex flex-col text-xs overflow-hidden">
             <div className="flex border-b border-gray-200 bg-[#f8f9fa] px-2 pt-2 gap-1">
-              {['Port', 'Fixture', 'Voyage', 'Emission', 'Voyage Remarks', 'Incidents', 'Claims'].map((tab) => (
+              {(version === 'v2'
+                ? ['Port', 'Fixture', 'Voyage', 'Emission', 'Voyage Remarks', 'Incident/ Claim']
+                : ['Port', 'Fixture', 'Voyage', 'Emission', 'Voyage Remarks', 'Incidents', 'Claims']
+              ).map((tab) => (
                 <button 
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -817,7 +815,123 @@ export function VoyageDetail({ voyage, onClose }: VoyageDetailProps) {
                 </div>
               )}
 
-              {activeTab !== 'Port' && activeTab !== 'Incidents' && activeTab !== 'Claims' && (
+              {activeTab === 'Incident/ Claim' && (
+                <div className="flex flex-col h-full">
+                  {/* Header with Add New dropdown */}
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-medium text-gray-800">
+                      Incidents ({incidents.length}) &amp; Claims ({voyageClaims.length})
+                    </h3>
+                    <div className="relative">
+                      <div className="flex items-stretch h-7 rounded overflow-hidden shadow-sm">
+                        <button
+                          onClick={() => setAddNewOpen(o => !o)}
+                          className="flex items-center gap-1.5 px-3 bg-[#1e3a8a] text-white text-xs font-medium hover:bg-[#1e3a8a]/90 transition-colors"
+                        >
+                          Add New
+                        </button>
+                        <button
+                          onClick={() => setAddNewOpen(o => !o)}
+                          className="flex items-center px-1.5 bg-[#162d6e] text-white hover:bg-[#162d6e]/90 transition-colors border-l border-[#162d6e]"
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {addNewOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded shadow-lg z-50 py-1">
+                          <button
+                            onClick={() => { setAddNewOpen(false); openNewIncident(); }}
+                            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                          >
+                            Incident
+                          </button>
+                          <button
+                            onClick={() => { setAddNewOpen(false); openNewClaim(); }}
+                            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                          >
+                            Claim
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Incidents section */}
+                  {incidents.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Incidents</p>
+                      <div className="border border-gray-200 rounded-md bg-white overflow-auto">
+                        <table className="w-full text-left border-collapse text-[11px]">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="py-2 px-3 font-medium text-gray-600">Incident No</th>
+                              <th className="py-2 px-3 font-medium text-gray-600">Date</th>
+                              <th className="py-2 px-3 font-medium text-gray-600">Category</th>
+                              <th className="py-2 px-3 font-medium text-gray-600">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {incidents.map((inc) => (
+                              <tr key={inc.id} onClick={() => openEditIncident(inc)} className="hover:bg-blue-50/50 cursor-pointer transition-colors">
+                                <td className="py-2.5 px-3 font-medium text-blue-600">{inc.incidentNumber}</td>
+                                <td className="py-2.5 px-3 text-gray-600">{inc.date}</td>
+                                <td className="py-2.5 px-3 text-gray-800">{inc.incidentCategory !== 'none' ? inc.incidentCategory : '-'}</td>
+                                <td className="py-2.5 px-3">
+                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${inc.status === "Open" ? "bg-blue-100 text-blue-800" : inc.status === "Closed" || inc.status === "Cancelled" ? "bg-gray-100 text-gray-800" : "bg-orange-100 text-orange-800"}`}>{inc.status}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Claims section */}
+                  {voyageClaims.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Claims</p>
+                      <div className="border border-gray-200 rounded-md bg-white overflow-auto">
+                        <table className="w-full text-left border-collapse text-[11px]">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="py-2 px-3 font-medium text-gray-600">Claim No</th>
+                              <th className="py-2 px-3 font-medium text-gray-600">Title</th>
+                              <th className="py-2 px-3 font-medium text-gray-600">Type</th>
+                              <th className="py-2 px-3 font-medium text-gray-600">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {voyageClaims.map((claim) => (
+                              <tr key={claim.id} onClick={() => openEditClaim(claim)} className="hover:bg-blue-50/50 cursor-pointer transition-colors">
+                                <td className="py-2.5 px-3 font-medium text-blue-600">{claim.claimNo}</td>
+                                <td className="py-2.5 px-3 text-gray-800">{claim.claimTitle || '-'}</td>
+                                <td className="py-2.5 px-3 text-gray-600">{claim.claimType !== 'none' ? claim.claimType : '-'}</td>
+                                <td className="py-2.5 px-3">
+                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${claim.status === 'Open' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{claim.status}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty state */}
+                  {incidents.length === 0 && voyageClaims.length === 0 && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center">
+                      <div className="bg-blue-50 p-4 rounded-full mb-4">
+                        <PlusCircle className="h-8 w-8 text-blue-500" />
+                      </div>
+                      <h3 className="text-sm font-medium text-gray-900 mb-1">No incidents or claims recorded</h3>
+                      <p className="text-xs text-gray-500 mb-4 max-w-sm">Use the Add New button to create an incident or claim for this voyage.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab !== 'Port' && activeTab !== 'Incidents' && activeTab !== 'Claims' && activeTab !== 'Incident/ Claim' && (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs italic">
                   Content for {activeTab} will go here.
                 </div>
@@ -1180,49 +1294,23 @@ export function VoyageDetail({ voyage, onClose }: VoyageDetailProps) {
             </SheetHeader>
 
             <div className="w-full flex-1 mt-6 space-y-6">
-              {/* Type of Claim & Type of Cover */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Type of Claim <span className="text-red-500">*</span></Label>
-                  <Select value={claimFormData.claimType} onValueChange={(val) => updateClaimField("claimType", val)}>
-                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select type</SelectItem>
-                      {CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Type of Cover</Label>
-                  <Select value={claimFormData.typeOfCover} onValueChange={(val) => updateClaimField("typeOfCover", val)}>
-                    <SelectTrigger><SelectValue placeholder="Select cover" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select cover</SelectItem>
-                      {TYPE_OF_COVER_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+              {/* Claim Context — locked to Standalone */}
+              <div className="space-y-2">
+                <Label>Claim Context</Label>
+                <div className="flex items-center h-9 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm text-gray-500">
+                  Standalone
                 </div>
               </div>
 
-              {/* Vessel & Voyage — pre-filled from this voyage */}
+              {/* Vessel & Voyage — pre-filled, read-only */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Vessel</Label>
-                  <Select value={claimFormData.vessel || "none"} onValueChange={(val) => updateClaimField("vessel", val)}>
-                    <SelectTrigger><SelectValue placeholder="Select vessel" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select vessel</SelectItem>
-                      {VESSELS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Input value={claimFormData.vessel} readOnly className="bg-gray-50 text-gray-500" />
                 </div>
                 <div className="space-y-2">
                   <Label>Voyage</Label>
-                  <Input
-                    value={claimFormData.voyage}
-                    onChange={(e) => updateClaimField("voyage", e.target.value)}
-                    placeholder="e.g. FAI 2601"
-                  />
+                  <Input value={claimFormData.voyage} readOnly className="bg-gray-50 text-gray-500" />
                 </div>
               </div>
 
@@ -1235,179 +1323,71 @@ export function VoyageDetail({ voyage, onClose }: VoyageDetailProps) {
                 />
               </div>
 
-              {/* Broker + Broker Reference */}
+              {/* Date of Incident + Location */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Broker</Label>
-                  <Select value={claimFormData.broker || "none"} onValueChange={(val) => updateClaimField("broker", val)}>
-                    <SelectTrigger><SelectValue placeholder="Select broker" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select broker</SelectItem>
-                      <SelectItem value="Maritime Insurance Brokers">Maritime Insurance Brokers</SelectItem>
-                      <SelectItem value="Global Marine Insurance">Global Marine Insurance</SelectItem>
-                      <SelectItem value="Seaborne Insurance Group">Seaborne Insurance Group</SelectItem>
-                      <SelectItem value="International Marine Brokers">International Marine Brokers</SelectItem>
-                      <SelectItem value="Maritime Risk Solutions">Maritime Risk Solutions</SelectItem>
-                      <SelectItem value="Marine Legal & Insurance">Marine Legal &amp; Insurance</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Date of Incident</Label>
+                  <Input type="date" value={claimFormData.dateOfIncident || ""} onChange={(e) => updateClaimField("dateOfIncident", e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Broker Reference Number</Label>
-                  <Input value={claimFormData.brokerReference} onChange={(e) => updateClaimField("brokerReference", e.target.value)} placeholder="e.g. MIB-2024-089" />
-                </div>
-              </div>
-
-              {/* Leading Insurer + Date of Notification */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Leading Insurer</Label>
-                  <Input value={claimFormData.leadingInsurer} onChange={(e) => updateClaimField("leadingInsurer", e.target.value)} placeholder="Enter leading insurer" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Date of Notification to Broker</Label>
-                  <Input type="date" value={claimFormData.dateOfNotification} onChange={(e) => updateClaimField("dateOfNotification", e.target.value)} />
-                </div>
-              </div>
-
-              {/* Claimant + Claimant Reference */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Claimant <span className="text-red-500">*</span></Label>
-                  <Input value={claimFormData.claimant} onChange={(e) => updateClaimField("claimant", e.target.value)} placeholder="Enter claimant name" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Claimant Reference Number</Label>
-                  <Input value={claimFormData.claimantReference} onChange={(e) => updateClaimField("claimantReference", e.target.value)} placeholder="e.g. CLM-REF-2024-001" />
-                </div>
-              </div>
-
-              {/* PIC Legal */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>PIC Legal</Label>
-                  <Select value={claimFormData.picLegal || "none"} onValueChange={(val) => updateClaimField("picLegal", val === "none" ? "" : val)}>
-                    <SelectTrigger><SelectValue placeholder="Select legal member" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select legal member</SelectItem>
-                      {LEGAL_USERS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Location</Label>
+                  <Input value={claimFormData.location || ""} onChange={(e) => updateClaimField("location", e.target.value)} placeholder="e.g. Port of Rotterdam, At Sea" />
                 </div>
               </div>
 
               {/* Short Claim Description */}
               <div className="space-y-2">
-                <Label>Short Claim Description <span className="text-red-500">*</span></Label>
-                <Textarea
-                  value={claimFormData.claimTitle}
-                  onChange={(e) => updateClaimField("claimTitle", e.target.value)}
-                  placeholder="Brief summary of the claim for list view..."
-                  className="resize-none min-h-[80px]"
-                />
+                <Label>Short Claim Description</Label>
+                <Textarea value={claimFormData.claimTitle} onChange={(e) => updateClaimField("claimTitle", e.target.value)} placeholder="Brief summary of the claim..." className="resize-none min-h-[80px]" />
               </div>
 
-              {/* Status & Priority & Expected Settlement Date */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Claim Status <span className="text-red-500">*</span></Label>
-                  <Select value={claimFormData.status} onValueChange={(val) => updateClaimField("status", val)}>
-                    <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Select status</SelectItem>
-                      <SelectItem value="Open">Open</SelectItem>
-                      <SelectItem value="Close">Close</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select value={claimFormData.priority} onValueChange={(val) => updateClaimField("priority", val)}>
-                    <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
-                    <SelectContent>
-                      {PRIORITY_OPTIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Expected Settlement Date</Label>
-                  <Input type="date" value={claimFormData.expectedSettlementDate || ""} onChange={(e) => updateClaimField("expectedSettlementDate", e.target.value)} />
-                </div>
-              </div>
-
-              {/* Status Description */}
+              {/* Damage as far as known */}
               <div className="space-y-2">
-                <Label>Status Description</Label>
-                <Textarea
-                  value={claimFormData.statusDescription}
-                  onChange={(e) => updateClaimField("statusDescription", e.target.value)}
-                  placeholder="Describe the current status of this claim..."
-                  className="resize-none min-h-[80px]"
-                />
+                <Label>Damage as far as known</Label>
+                <Textarea value={claimFormData.damageAsKnown || ""} onChange={(e) => updateClaimField("damageAsKnown", e.target.value)} placeholder="Describe the known damage..." className="resize-none min-h-[80px]" />
               </div>
 
-              {/* Liability & Recovery */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Liability &amp; Recovery</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Liability Position</Label>
-                    <Select value={claimFormData.liabilityPosition || "none"} onValueChange={(val) => updateClaimField("liabilityPosition", val)}>
-                      <SelectTrigger><SelectValue placeholder="Select position" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Select position</SelectItem>
-                        <SelectItem value="Liable">Liable</SelectItem>
-                        <SelectItem value="Not Liable">Not Liable</SelectItem>
-                        <SelectItem value="Under Review">Under Review</SelectItem>
-                        <SelectItem value="Shared Liability">Shared Liability</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Recovery Right Exists</Label>
-                    <Select value={claimFormData.recoveryRightExists || "none"} onValueChange={(val) => updateClaimField("recoveryRightExists", val)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Select</SelectItem>
-                        <SelectItem value="Yes">Yes</SelectItem>
-                        <SelectItem value="No">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {claimFormData.recoveryRightExists === "Yes" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Recovery Against</Label>
-                      <Select value={claimFormData.recoveryAgainst || "none"} onValueChange={(val) => updateClaimField("recoveryAgainst", val)}>
-                        <SelectTrigger><SelectValue placeholder="Select party" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Select party</SelectItem>
-                          {["Owner","Charterer","Shipper","Receiver","Terminal","Stevedore","Insurer","Surveyor","Other"].map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Recovery Route</Label>
-                      <Select value={claimFormData.recoveryRoute || "none"} onValueChange={(val) => updateClaimField("recoveryRoute", val)}>
-                        <SelectTrigger><SelectValue placeholder="Select route" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Select route</SelectItem>
-                          {["Insurance","Contractual","Legal","Direct Settlement","Arbitration","Litigation","Other"].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Liability Assessment Notes</Label>
-                  <Textarea
-                    value={claimFormData.liabilityNotes || ""}
-                    onChange={(e) => updateClaimField("liabilityNotes", e.target.value)}
-                    placeholder="Notes on liability position, recovery prospects, legal opinions..."
-                    className="resize-none min-h-[80px]"
-                  />
-                </div>
+              {/* Steps taken so far */}
+              <div className="space-y-2">
+                <Label>Steps taken so far</Label>
+                <Textarea value={claimFormData.stepsTaken || ""} onChange={(e) => updateClaimField("stepsTaken", e.target.value)} placeholder="Describe the steps taken..." className="resize-none min-h-[80px]" />
+              </div>
+
+              {/* Required assistance from insurance */}
+              <div className="space-y-2">
+                <Label>Required assistance from insurance</Label>
+                <Select value={claimFormData.requiredAssistanceFromInsurance || "none"} onValueChange={(val) => updateClaimField("requiredAssistanceFromInsurance", val)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select</SelectItem>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Claimant */}
+              <div className="space-y-2">
+                <Label>Claimant</Label>
+                <Input value={claimFormData.claimant || ""} onChange={(e) => updateClaimField("claimant", e.target.value)} placeholder="Enter claimant name" />
+              </div>
+
+              {/* Representative of claimant present */}
+              <div className="space-y-2">
+                <Label>Representative of claimant present</Label>
+                <Input value={claimFormData.representativeOfClaimantPresent || ""} onChange={(e) => updateClaimField("representativeOfClaimantPresent", e.target.value)} placeholder="Enter representative name" />
+              </div>
+
+              {/* Port Agent */}
+              <div className="space-y-2">
+                <Label>Port Agent (full style)</Label>
+                <Select value={claimFormData.portAgent || "none"} onValueChange={(val) => updateClaimField("portAgent", val)}>
+                  <SelectTrigger><SelectValue placeholder="Select port agent" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select port agent</SelectItem>
+                    {PORT_AGENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

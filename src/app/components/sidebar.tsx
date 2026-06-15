@@ -15,6 +15,7 @@ const managementItems = [
 
 const operationsItems = [
   { id: "voyage" as NavigationItem, label: "Voyage", icon: Ship, badge: "BETA" },
+  { id: "voyage-v2" as NavigationItem, label: "Voyage", icon: Ship, badge: "NEW" },
   { id: "inquiry" as NavigationItem, label: "Inquiry", icon: FileSearch },
   { id: "fixtures" as NavigationItem, label: "Fixtures", icon: FileText },
   { id: "legal" as NavigationItem, label: "Legal Review", icon: Scale },

@@ -20,6 +20,7 @@ export type NavigationItem =
   | "insurance"
   | "claims-insurance"
   | "voyage"
+  | "voyage-v2"
   | "inquiry"
   | "legal"
   | "hseq-kpi"
@@ -43,6 +44,8 @@ export default function App() {
         return <ClaimsInsurance />;
       case "voyage":
         return <Voyage />;
+      case "voyage-v2":
+        return <Voyage version="v2" />;
       case "inquiry":
         return <Inquiry />;
       case "legal":
