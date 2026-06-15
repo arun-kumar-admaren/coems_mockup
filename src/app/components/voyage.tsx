@@ -23,13 +23,13 @@ const VOYAGE_DATA = [
   { id: 2694, number: "AQUA 2606", vessel: "AQUAGEMINI", status: "Completed", operationInCharge: "Safna Basheer", tce: "$ 71.279,00", startDate: "06/08/2027", suez: "N/A", nsr: "N/A", createdBy: "Safna Basheer", modifiedBy: "Safna Basheer", createdOn: "10/03/2026", modifiedOn: "18/03/2026", vesselType: "Bulk Carrier", customsFiling: "Pending", agm: "Pending", armedGuards: "Pending", transitRequirements: "Pending", bunkerPlanning: "Pending" },
 ];
 
-export function Voyage() {
+export function Voyage({ version = 'v1' }: { version?: 'v1' | 'v2' }) {
   const [archived, setArchived] = useState(false);
   const [listType, setListType] = useState<"Lists" | "Trash">("Lists");
   const [selectedVoyage, setSelectedVoyage] = useState<any | null>(null);
 
   if (selectedVoyage) {
-    return <VoyageDetail voyage={selectedVoyage} onClose={() => setSelectedVoyage(null)} />;
+    return <VoyageDetail voyage={selectedVoyage} onClose={() => setSelectedVoyage(null)} version={version} />;
   }
 
   return (

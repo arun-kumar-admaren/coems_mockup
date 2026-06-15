@@ -33,7 +33,7 @@ import {
 } from "./ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "./ui/utils";
-import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES } from "./claims-types";
+import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES, PORT_AGENTS } from "./claims-types";
 import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
@@ -185,6 +185,7 @@ const INITIAL_FORM_DATA = {
   id: "",
   claimNo: "",
   claimTitle: "",
+  claimContext: "Incident Related",
   claimType: "none" as ClaimType | "none",
   typeOfCover: "none",
   priority: "None" as Priority,
@@ -226,6 +227,11 @@ const INITIAL_FORM_DATA = {
   portCall: "",
   latitude: "",
   longitude: "",
+  damageAsKnown: "",
+  stepsTaken: "",
+  requiredAssistanceFromInsurance: "none",
+  representativeOfClaimantPresent: "",
+  portAgent: "none",
 };
 
 export function ClaimsInsurance() {
@@ -266,6 +272,7 @@ export function ClaimsInsurance() {
     type: "none",
     status: "none",
     vessel: "none",
+    context: "none",
   });
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -303,8 +310,9 @@ export function ClaimsInsurance() {
       const matchesType = filters.type === "none" || claim.claimType === filters.type;
       const matchesStatus = filters.status === "none" || claim.status === filters.status;
       const matchesVessel = filters.vessel === "none" || claim.vessel === filters.vessel;
+      const matchesContext = filters.context === "none" || ((claim as any).claimContext || "Incident Related") === filters.context;
 
-      return matchesSearch && matchesType && matchesStatus && matchesVessel;
+      return matchesSearch && matchesType && matchesStatus && matchesVessel && matchesContext;
     });
   }, [claims, searchQuery, filters]);
 
@@ -519,7 +527,7 @@ export function ClaimsInsurance() {
                        className="h-auto p-0 text-[11px] text-red-500 hover:text-red-600 hover:bg-transparent"
                        onClick={() => {
                          setSearchQuery("");
-                         setFilters({ type: "none", status: "none", vessel: "none" });
+                         setFilters({ type: "none", status: "none", vessel: "none", context: "none" });
                        }}
                      >
                        Clear All
@@ -528,6 +536,18 @@ export function ClaimsInsurance() {
                 </div>
                 
                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Claim Context</Label>
+                    <Select value={filters.context} onValueChange={(val) => setFilters(prev => ({ ...prev, context: val }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="All Contexts" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">All Contexts</SelectItem>
+                        <SelectItem value="Standalone">Standalone</SelectItem>
+                        <SelectItem value="Incident Related">Incident Related</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-xs">Claim Type</Label>
                     <Select value={filters.type} onValueChange={(val) => setFilters(prev => ({ ...prev, type: val }))}>
@@ -642,8 +662,13 @@ export function ClaimsInsurance() {
                       <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap group-hover:underline">
                         {claim.claimNo}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {claim.incidentLinked ? "Incident Claim" : "Commercial Claim"}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {(() => {
+                          const ctx = (claim as any).claimContext || "Incident Related";
+                          return ctx === "Standalone"
+                            ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Standalone</span>
+                            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Incident Related</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {claim.incidentLinked && claim.incidentNo ? (
@@ -893,6 +918,114 @@ export function ClaimsInsurance() {
                   
                   <TabsContent value="overview" className="mt-0 space-y-6">
 
+                  {/* Claim Context */}
+                  <div className="space-y-2">
+                    <Label>Claim Context <span className="text-red-500">*</span></Label>
+                    <Select value={(formData as any).claimContext || "none"} onValueChange={(val) => updateField("claimContext", val)}>
+                      <SelectTrigger><SelectValue placeholder="Select claim context" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select claim context</SelectItem>
+                        <SelectItem value="Standalone">Standalone</SelectItem>
+                        <SelectItem value="Incident Related">Incident Related</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(formData as any).claimContext === "Standalone" ? (<>
+
+                  {/* Vessel & Voyage */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Vessel</Label>
+                      <Select value={formData.vessel} onValueChange={(val) => updateField("vessel", val)}>
+                        <SelectTrigger><SelectValue placeholder="Select vessel" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select vessel</SelectItem>
+                          {VESSELS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Voyage</Label>
+                      <Input value={formData.voyage} onChange={(e) => updateField("voyage", e.target.value)} placeholder="e.g. FAI 2601" />
+                    </div>
+                  </div>
+
+                  {/* Related Fixtures */}
+                  <div className="space-y-2">
+                    <Label>Related Fixtures</Label>
+                    <FixtureLookupField value={formData.relatedFixtures || []} onChange={(val) => updateField("relatedFixtures", val)} />
+                  </div>
+
+                  {/* Date of Incident + Location */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date of Incident</Label>
+                      <Input type="date" value={formData.dateOfIncident} onChange={(e) => updateField("dateOfIncident", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <Input value={(formData as any).location === "none" ? "" : ((formData as any).location || "")} onChange={(e) => updateField("location" as any, e.target.value)} placeholder="e.g. Port of Rotterdam, At Sea" />
+                    </div>
+                  </div>
+
+                  {/* Short Claim Description */}
+                  <div className="space-y-2">
+                    <Label>Short Claim Description</Label>
+                    <Textarea value={formData.claimTitle} onChange={(e) => updateField("claimTitle", e.target.value)} placeholder="Brief summary of the claim..." className="resize-none min-h-[80px]" />
+                  </div>
+
+                  {/* Damage as far as known */}
+                  <div className="space-y-2">
+                    <Label>Damage as far as known</Label>
+                    <Textarea value={(formData as any).damageAsKnown || ""} onChange={(e) => updateField("damageAsKnown" as any, e.target.value)} placeholder="Describe the known damage..." className="resize-none min-h-[80px]" />
+                  </div>
+
+                  {/* Steps taken so far */}
+                  <div className="space-y-2">
+                    <Label>Steps taken so far</Label>
+                    <Textarea value={(formData as any).stepsTaken || ""} onChange={(e) => updateField("stepsTaken" as any, e.target.value)} placeholder="Describe the steps taken..." className="resize-none min-h-[80px]" />
+                  </div>
+
+                  {/* Required assistance from insurance */}
+                  <div className="space-y-2">
+                    <Label>Required assistance from insurance</Label>
+                    <Select value={(formData as any).requiredAssistanceFromInsurance || "none"} onValueChange={(val) => updateField("requiredAssistanceFromInsurance" as any, val)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select</SelectItem>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Claimant */}
+                  <div className="space-y-2">
+                    <Label>Claimant</Label>
+                    <Input value={formData.claimant} onChange={(e) => updateField("claimant", e.target.value)} placeholder="Enter claimant name" />
+                  </div>
+
+                  {/* Representative of claimant present */}
+                  <div className="space-y-2">
+                    <Label>Representative of claimant present</Label>
+                    <Input value={(formData as any).representativeOfClaimantPresent || ""} onChange={(e) => updateField("representativeOfClaimantPresent" as any, e.target.value)} placeholder="Enter representative name" />
+                  </div>
+
+                  {/* Port Agent */}
+                  <div className="space-y-2">
+                    <Label>Port Agent (full style)</Label>
+                    <Select value={(formData as any).portAgent || "none"} onValueChange={(val) => updateField("portAgent" as any, val)}>
+                      <SelectTrigger><SelectValue placeholder="Select port agent" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select port agent</SelectItem>
+                        {PORT_AGENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  </>) : (<>
+
                   {/* Type of Claim & Type of Cover */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1040,8 +1173,8 @@ export function ClaimsInsurance() {
                     />
                   </div>
 
-                  {/* Status & Priority & Expected Settlement Date */}
-                  <div className="grid grid-cols-3 gap-4">
+                  {/* Status & Priority */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Claim Status <span className="text-red-500">*</span></Label>
                       <Select value={formData.status} onValueChange={(val) => updateField("status", val)}>
@@ -1061,14 +1194,6 @@ export function ClaimsInsurance() {
                           {PRIORITY_OPTIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Expected Settlement Date</Label>
-                      <Input
-                        type="date"
-                        value={(formData as any).expectedSettlementDate || ""}
-                        onChange={e => updateField("expectedSettlementDate", e.target.value)}
-                      />
                     </div>
                   </div>
 
@@ -1476,6 +1601,8 @@ export function ClaimsInsurance() {
                       </div>
                     )}
                   </div>}
+
+                  </>)}
 
               </TabsContent>
 

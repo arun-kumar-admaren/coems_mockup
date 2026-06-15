@@ -79,6 +79,12 @@ export interface Claim {
   approvedByInsurance: boolean;
   signedOffPending: boolean;
   documentChecklist: string[];
+  // Standalone claim fields
+  damageAsKnown: string;
+  stepsTaken: string;
+  requiredAssistanceFromInsurance: string;
+  representativeOfClaimantPresent: string;
+  portAgent: string;
   // General
   createdBy: string;
   createdDate: string;
@@ -203,6 +209,24 @@ export const VESSELS = [
   "MV TROPICAL WAVE",
   "MV GLOBAL TRADER",
   "MV LIBERTY BELLE",
+];
+
+export const PORT_AGENTS = [
+  "Inchcape Shipping Services",
+  "GAC Shipping",
+  "Wilhelmsen Ships Service",
+  "Gulf Agency Company (GAC)",
+  "Svitzer",
+  "Anglo-Eastern",
+  "Columbia Ship Management",
+  "V.Ships",
+  "Bernhard Schulte Shipmanagement",
+  "Wallem Group",
+  "Transmar Agency",
+  "Pacific Basin Shipping",
+  "North Sea Shipping Agents",
+  "Meridian Port Services",
+  "Oceanbridge Maritime",
 ];
 
 export const ALL_FIXTURES = [
