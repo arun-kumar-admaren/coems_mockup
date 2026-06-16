@@ -17,6 +17,7 @@ interface CostEntry {
   id: string;
   accountHead: string;
   particulars: string;
+  recoverableBy: string;
   invoices: string;
   amount: string;
 }
@@ -63,6 +64,12 @@ const ACCOUNT_HEAD_OPTIONS = [
   "Cargo Handling",
   "Insurance Premium",
   "Other",
+];
+
+const RECOVERABLE_BY_OPTIONS = [
+  "Insurance",
+  "Client",
+  "Non-recoverable",
 ];
 
 const INVOICE_OPTIONS = [
@@ -119,9 +126,9 @@ function buildSeed(claimId: string): FinancialsState {
       recoveryAmount: "95000",
       recoveryDate: "2024-04-15",
       costs: [
-        { id: "c1", accountHead: "Survey Fees", particulars: "Marine survey fees", invoices: "INV-2024-001", amount: "8500" },
-        { id: "c2", accountHead: "Legal Fees", particulars: "Legal & documentation fees", invoices: "INV-2024-002", amount: "22000" },
-        { id: "c3", accountHead: "Cargo Handling", particulars: "Emergency cargo handling", invoices: "No Invoice", amount: "45000" },
+        { id: "c1", accountHead: "Survey Fees", particulars: "Marine survey fees", recoverableBy: "Insurance", invoices: "INV-2024-001", amount: "8500" },
+        { id: "c2", accountHead: "Legal Fees", particulars: "Legal & documentation fees", recoverableBy: "Insurance", invoices: "INV-2024-002", amount: "22000" },
+        { id: "c3", accountHead: "Cargo Handling", particulars: "Emergency cargo handling", recoverableBy: "Client", invoices: "No Invoice", amount: "45000" },
       ],
     },
     "2": {
@@ -130,8 +137,8 @@ function buildSeed(claimId: string): FinancialsState {
       settlementCurrency: "EUR",
       recoveryAmount: "0",
       costs: [
-        { id: "c4", accountHead: "Survey Fees", particulars: "Port damage assessment", invoices: "INV-2024-003", amount: "5200" },
-        { id: "c5", accountHead: "Repair & Maintenance", particulars: "Repair supervision", invoices: "No Invoice", amount: "12000" },
+        { id: "c4", accountHead: "Survey Fees", particulars: "Port damage assessment", recoverableBy: "Insurance", invoices: "INV-2024-003", amount: "5200" },
+        { id: "c5", accountHead: "Repair & Maintenance", particulars: "Repair supervision", recoverableBy: "Insurance", invoices: "No Invoice", amount: "12000" },
       ],
     },
     "7": {
@@ -140,10 +147,10 @@ function buildSeed(claimId: string): FinancialsState {
       settlementCurrency: "USD",
       recoveryAmount: "0",
       costs: [
-        { id: "c6", accountHead: "Port Expenses", particulars: "Oil spill response & containment", invoices: "INV-2024-004", amount: "85000" },
-        { id: "c7", accountHead: "Legal Fees", particulars: "Environmental consultant fees", invoices: "INV-2024-005", amount: "28000" },
-        { id: "c8", accountHead: "Port Expenses", particulars: "Port authority fines", invoices: "No Invoice", amount: "45000" },
-        { id: "c9", accountHead: "Agency Fees", particulars: "P&I Club correspondent fees", invoices: "No Invoice", amount: "18500" },
+        { id: "c6", accountHead: "Port Expenses", particulars: "Oil spill response & containment", recoverableBy: "Insurance", invoices: "INV-2024-004", amount: "85000" },
+        { id: "c7", accountHead: "Legal Fees", particulars: "Environmental consultant fees", recoverableBy: "Insurance", invoices: "INV-2024-005", amount: "28000" },
+        { id: "c8", accountHead: "Port Expenses", particulars: "Port authority fines", recoverableBy: "Non-recoverable", invoices: "No Invoice", amount: "45000" },
+        { id: "c9", accountHead: "Agency Fees", particulars: "P&I Club correspondent fees", recoverableBy: "Insurance", invoices: "No Invoice", amount: "18500" },
       ],
     },
   };
@@ -280,6 +287,7 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
       id: genId(),
       accountHead: "",
       particulars: "",
+      recoverableBy: "",
       invoices: "",
       amount: "",
     };
@@ -317,16 +325,17 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
         ) : (
           <div className="space-y-3">
             {/* Column headers */}
-            <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_40px] gap-2 px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="grid grid-cols-[1.5fr_2fr_1.2fr_1.5fr_1fr_40px] gap-2 px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
               <span>Account Head</span>
               <span>Particulars</span>
+              <span>Recoverable By</span>
               <span>Invoices</span>
               <span>Amount</span>
               <span></span>
             </div>
 
             {state.costs.map((cost) => (
-              <div key={cost.id} className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_40px] gap-2 items-center bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5">
+              <div key={cost.id} className="grid grid-cols-[1.5fr_2fr_1.2fr_1.5fr_1fr_40px] gap-2 items-center bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5">
                 <Select value={cost.accountHead || "none"} onValueChange={v => updateCost(cost.id, "accountHead", v === "none" ? "" : v)}>
                   <SelectTrigger className="h-8 text-xs bg-white"><SelectValue placeholder="Account Head" /></SelectTrigger>
                   <SelectContent className="z-[300]">
@@ -340,6 +349,13 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
                   placeholder="Particulars"
                   className="h-8 text-xs bg-white"
                 />
+                <Select value={cost.recoverableBy || "none"} onValueChange={v => updateCost(cost.id, "recoverableBy", v === "none" ? "" : v)}>
+                  <SelectTrigger className="h-8 text-xs bg-white"><SelectValue placeholder="Recoverable By" /></SelectTrigger>
+                  <SelectContent className="z-[300]">
+                    <SelectItem value="none">Select</SelectItem>
+                    {RECOVERABLE_BY_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <Select value={cost.invoices || "none"} onValueChange={v => updateCost(cost.id, "invoices", v === "none" ? "" : v)}>
                   <SelectTrigger className="h-8 text-xs bg-white"><SelectValue placeholder="Choose Invoices" /></SelectTrigger>
                   <SelectContent className="z-[300]">
