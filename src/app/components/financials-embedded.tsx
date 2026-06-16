@@ -15,13 +15,10 @@ import {
 
 interface CostEntry {
   id: string;
-  description: string;
+  accountHead: string;
+  particulars: string;
+  invoices: string;
   amount: string;
-  date: string;
-  currency: string;
-  fxRate: string;
-  recoverableBy: string;
-  recoverabilityStatus: string;
 }
 
 interface FinancialsState {
@@ -51,9 +48,31 @@ const CLAIM_SIZE_OPTIONS = [
   "> USD 250k (special claim)",
 ];
 
-const RECOVERABLE_BY_OPTIONS = ["Insurance", "Client", "Counterparty", "Non-recoverable"];
+const ACCOUNT_HEAD_OPTIONS = [
+  "Stevedoring",
+  "Port Expenses",
+  "Bunker Expenses",
+  "Crew Expenses",
+  "Repair & Maintenance",
+  "Survey Fees",
+  "Legal Fees",
+  "Agency Fees",
+  "Freight",
+  "Demurrage",
+  "Lashing / Securing",
+  "Cargo Handling",
+  "Insurance Premium",
+  "Other",
+];
 
-const RECOVERABILITY_STATUS_OPTIONS = ["Pending", "Confirmed", "Rejected", "Recovered"];
+const INVOICE_OPTIONS = [
+  "No Invoice",
+  "INV-2024-001",
+  "INV-2024-002",
+  "INV-2024-003",
+  "INV-2024-004",
+  "INV-2024-005",
+];
 
 // Deductible seeded from insurance module (read-only in this tab)
 const SEED_DEDUCTIBLES: Record<string, number> = {
@@ -100,9 +119,9 @@ function buildSeed(claimId: string): FinancialsState {
       recoveryAmount: "95000",
       recoveryDate: "2024-04-15",
       costs: [
-        { id: "c1", description: "Marine survey fees", amount: "8500", date: "2024-02-22", currency: "USD", fxRate: "1.0000", recoverableBy: "Insurance", recoverabilityStatus: "Confirmed" },
-        { id: "c2", description: "Legal & documentation fees", amount: "22000", date: "2024-03-10", currency: "USD", fxRate: "1.0000", recoverableBy: "Insurance", recoverabilityStatus: "Pending" },
-        { id: "c3", description: "Emergency cargo handling", amount: "45000", date: "2024-02-18", currency: "USD", fxRate: "1.0000", recoverableBy: "Insurance", recoverabilityStatus: "Confirmed" },
+        { id: "c1", accountHead: "Survey Fees", particulars: "Marine survey fees", invoices: "INV-2024-001", amount: "8500" },
+        { id: "c2", accountHead: "Legal Fees", particulars: "Legal & documentation fees", invoices: "INV-2024-002", amount: "22000" },
+        { id: "c3", accountHead: "Cargo Handling", particulars: "Emergency cargo handling", invoices: "No Invoice", amount: "45000" },
       ],
     },
     "2": {
@@ -111,8 +130,8 @@ function buildSeed(claimId: string): FinancialsState {
       settlementCurrency: "EUR",
       recoveryAmount: "0",
       costs: [
-        { id: "c4", description: "Port damage assessment", amount: "5200", date: "2024-03-07", currency: "EUR", fxRate: "1.0820", recoverableBy: "Insurance", recoverabilityStatus: "Confirmed" },
-        { id: "c5", description: "Repair supervision", amount: "12000", date: "2024-03-15", currency: "EUR", fxRate: "1.0820", recoverableBy: "Insurance", recoverabilityStatus: "Pending" },
+        { id: "c4", accountHead: "Survey Fees", particulars: "Port damage assessment", invoices: "INV-2024-003", amount: "5200" },
+        { id: "c5", accountHead: "Repair & Maintenance", particulars: "Repair supervision", invoices: "No Invoice", amount: "12000" },
       ],
     },
     "7": {
@@ -121,10 +140,10 @@ function buildSeed(claimId: string): FinancialsState {
       settlementCurrency: "USD",
       recoveryAmount: "0",
       costs: [
-        { id: "c6", description: "Oil spill response & containment", amount: "85000", date: "2024-02-10", currency: "USD", fxRate: "1.0000", recoverableBy: "Insurance", recoverabilityStatus: "Confirmed" },
-        { id: "c7", description: "Environmental consultant fees", amount: "28000", date: "2024-02-15", currency: "USD", fxRate: "1.0000", recoverableBy: "Insurance", recoverabilityStatus: "Confirmed" },
-        { id: "c8", description: "Port authority fines", amount: "45000", date: "2024-02-20", currency: "USD", fxRate: "1.0000", recoverableBy: "Non-recoverable", recoverabilityStatus: "Confirmed" },
-        { id: "c9", description: "P&I Club correspondent fees", amount: "18500", date: "2024-03-01", currency: "USD", fxRate: "1.0000", recoverableBy: "Insurance", recoverabilityStatus: "Pending" },
+        { id: "c6", accountHead: "Port Expenses", particulars: "Oil spill response & containment", invoices: "INV-2024-004", amount: "85000" },
+        { id: "c7", accountHead: "Legal Fees", particulars: "Environmental consultant fees", invoices: "INV-2024-005", amount: "28000" },
+        { id: "c8", accountHead: "Port Expenses", particulars: "Port authority fines", invoices: "No Invoice", amount: "45000" },
+        { id: "c9", accountHead: "Agency Fees", particulars: "P&I Club correspondent fees", invoices: "No Invoice", amount: "18500" },
       ],
     },
   };
@@ -259,13 +278,10 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
   const addCost = () => {
     const entry: CostEntry = {
       id: genId(),
-      description: "",
+      accountHead: "",
+      particulars: "",
+      invoices: "",
       amount: "",
-      date: "",
-      currency: "USD",
-      fxRate: "1.0000",
-      recoverableBy: "Insurance",
-      recoverabilityStatus: "Pending",
     };
     set("costs", [...state.costs, entry]);
   };
@@ -281,7 +297,82 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
   return (
     <div className="p-6 space-y-8">
 
-      {/* ── 1. Claim Values ─────────────────────────────────────────────── */}
+      {/* ── 1. Cost Allocation ───────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-4">
+          <h3 className="text-sm font-semibold text-gray-900">Cost Allocation</h3>
+          <button
+            onClick={addCost}
+            className="flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors"
+          >
+            <Plus className="size-3.5" />
+            Add Cost
+          </button>
+        </div>
+
+        {state.costs.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
+            No costs recorded yet. Click "Add Cost" to begin.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Column headers */}
+            <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_40px] gap-2 px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+              <span>Account Head</span>
+              <span>Particulars</span>
+              <span>Invoices</span>
+              <span>Amount</span>
+              <span></span>
+            </div>
+
+            {state.costs.map((cost) => (
+              <div key={cost.id} className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_40px] gap-2 items-center bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5">
+                <Select value={cost.accountHead || "none"} onValueChange={v => updateCost(cost.id, "accountHead", v === "none" ? "" : v)}>
+                  <SelectTrigger className="h-8 text-xs bg-white"><SelectValue placeholder="Account Head" /></SelectTrigger>
+                  <SelectContent className="z-[300]">
+                    <SelectItem value="none">Select</SelectItem>
+                    {ACCOUNT_HEAD_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={cost.particulars}
+                  onChange={e => updateCost(cost.id, "particulars", e.target.value)}
+                  placeholder="Particulars"
+                  className="h-8 text-xs bg-white"
+                />
+                <Select value={cost.invoices || "none"} onValueChange={v => updateCost(cost.id, "invoices", v === "none" ? "" : v)}>
+                  <SelectTrigger className="h-8 text-xs bg-white"><SelectValue placeholder="Choose Invoices" /></SelectTrigger>
+                  <SelectContent className="z-[300]">
+                    <SelectItem value="none">Choose Invoices</SelectItem>
+                    {INVOICE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  value={cost.amount}
+                  onChange={e => updateCost(cost.id, "amount", e.target.value)}
+                  placeholder="0.00"
+                  className="h-8 text-xs bg-white"
+                />
+                <button
+                  onClick={() => removeCost(cost.id)}
+                  className="flex items-center justify-center h-8 w-8 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+            ))}
+
+            {/* Cost subtotal */}
+            <div className="flex justify-end pt-1 pr-10">
+              <span className="text-xs text-gray-500 mr-3">Total Costs:</span>
+              <span className="text-sm font-semibold text-gray-900">USD {fmt(totalCosts)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── 2. Claim Values ─────────────────────────────────────────────── */}
       <div>
         <SectionHead title="Claim Values" />
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -331,7 +422,7 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
         </div>
       </div>
 
-      {/* ── 2. Insurance Thresholds ──────────────────────────────────────── */}
+      {/* ── 3. Insurance Thresholds ──────────────────────────────────────── */}
       <div>
         <SectionHead title="Insurance Thresholds" />
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
@@ -362,104 +453,6 @@ export function FinancialsEmbedded({ claimId }: FinancialsEmbeddedProps) {
           </div>
 
         </div>
-      </div>
-
-      {/* ── 3. Cost Allocation ───────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">Cost Allocation</h3>
-          <button
-            onClick={addCost}
-            className="flex items-center gap-1.5 text-xs font-medium text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors"
-          >
-            <Plus className="size-3.5" />
-            Add Cost
-          </button>
-        </div>
-
-        {state.costs.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
-            No costs recorded yet. Click "Add Cost" to begin.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Column headers */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_80px_1fr_1fr_1fr_40px] gap-2 px-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-              <span>Description *</span>
-              <span>Amount *</span>
-              <span>Date</span>
-              <span>CCY</span>
-              <span>FX Rate</span>
-              <span>Recoverable By</span>
-              <span>Rec. Status</span>
-              <span></span>
-            </div>
-
-            {state.costs.map((cost) => (
-              <div key={cost.id} className="grid grid-cols-[2fr_1fr_1fr_80px_1fr_1fr_1fr_40px] gap-2 items-center bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5">
-                <Input
-                  value={cost.description}
-                  onChange={e => updateCost(cost.id, "description", e.target.value)}
-                  placeholder="Cost description"
-                  className="h-8 text-xs bg-white"
-                />
-                <Input
-                  type="number"
-                  min="0"
-                  value={cost.amount}
-                  onChange={e => updateCost(cost.id, "amount", e.target.value)}
-                  placeholder="0.00"
-                  className="h-8 text-xs bg-white"
-                />
-                <Input
-                  type="date"
-                  value={cost.date}
-                  onChange={e => updateCost(cost.id, "date", e.target.value)}
-                  className="h-8 text-xs bg-white"
-                />
-                <Select value={cost.currency} onValueChange={v => updateCost(cost.id, "currency", v)}>
-                  <SelectTrigger className="h-8 text-xs bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[300]">
-                    {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.0001"
-                  value={cost.fxRate}
-                  onChange={e => updateCost(cost.id, "fxRate", e.target.value)}
-                  placeholder="1.0000"
-                  className="h-8 text-xs bg-white"
-                />
-                <Select value={cost.recoverableBy} onValueChange={v => updateCost(cost.id, "recoverableBy", v)}>
-                  <SelectTrigger className="h-8 text-xs bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[300]">
-                    {RECOVERABLE_BY_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={cost.recoverabilityStatus} onValueChange={v => updateCost(cost.id, "recoverabilityStatus", v)}>
-                  <SelectTrigger className="h-8 text-xs bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent className="z-[300]">
-                    {RECOVERABILITY_STATUS_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <button
-                  onClick={() => removeCost(cost.id)}
-                  className="flex items-center justify-center h-8 w-8 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
-            ))}
-
-            {/* Cost subtotal */}
-            <div className="flex justify-end pt-1 pr-10">
-              <span className="text-xs text-gray-500 mr-3">Total Costs:</span>
-              <span className="text-sm font-semibold text-gray-900">USD {fmt(totalCosts)}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── 4. Recovery ─────────────────────────────────────────────────── */}
