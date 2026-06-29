@@ -59,6 +59,8 @@ import {
 import { cn } from "./ui/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "cmdk";
 import { Incident, CauseEntry, ControlAction, ClaimEntry, DocumentEntry, IncidentSeverity, IncidentStatus } from "./hseq-types";
+import { INITIAL_CLAIMS_DATA } from "./claims-types";
+import { ClaimsIncidentEmbedded } from "./claims-incident-embedded";
 
 const INCIDENT_CATEGORIES = [
   "Accident", 
@@ -2080,69 +2082,15 @@ export function HSEQ({ incidents, setIncidents }: HSEQProps) {
 
                 {/* Old Control Actions Tab Content Removed */}
 
-                <TabsContent value="claims" className="mt-0 space-y-8">
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
-                          Related Claims
-                        </h3>
-                        <Button 
-                          type="button" 
-                          onClick={addLinkedClaim}
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-xs"
-                        >
-                          <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-                          Link Claim
-                        </Button>
-                      </div>
-
-                      {formData.linkedClaims.length === 0 ? (
-                        <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                          <p className="text-sm text-gray-500">No claims linked.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {formData.linkedClaims.map((claim) => (
-                            <div key={claim.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center gap-3 group">
-                              <div className="grid grid-cols-2 gap-3 flex-1">
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Claim Reference</Label>
-                                  <Input 
-                                    value={claim.reference}
-                                    onChange={(e) => updateLinkedClaim(claim.id, "reference", e.target.value)}
-                                    className="h-8 text-xs bg-white"
-                                    placeholder="CLM-2024-XXX"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Estimated Amount (USD)</Label>
-                                  <Input 
-                                    type="number"
-                                    value={claim.amount}
-                                    onChange={(e) => updateLinkedClaim(claim.id, "amount", parseFloat(e.target.value))}
-                                    className="h-8 text-xs bg-white"
-                                    placeholder="0.00"
-                                  />
-                                </div>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-gray-400 hover:text-red-500 mt-5"
-                                onClick={() => removeLinkedClaim(claim.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                <TabsContent value="claims" className="mt-0 p-0 flex flex-col" style={{ height: "calc(100vh - 220px)" }}>
+                  <ClaimsIncidentEmbedded
+                    incidentNumber={formData.incidentNumber}
+                    initialLinkedIds={
+                      formData.linkedClaims
+                        .map(lc => INITIAL_CLAIMS_DATA.find(c => c.claimNo === lc.reference)?.id)
+                        .filter((id): id is string => !!id)
+                    }
+                  />
                 </TabsContent>
               </Tabs>
 
