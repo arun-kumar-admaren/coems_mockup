@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { useVersion } from "../version-context";
+import { TYPE_OF_COVER_V2 } from "./insurance-constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -190,6 +192,7 @@ interface InsuranceEmbeddedProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedProps) {
+  const isV2 = useVersion() === "2.0";
   const storageKey = `insurance-links-${moduleType}-${moduleId}`;
   const recordsKey = "insurance-embedded-records";
 
@@ -257,7 +260,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
         r.insuranceStatus.toLowerCase().includes(linkSearch.toLowerCase()))
   );
 
-  const coverTypes = TYPE_OF_COVER_BY_CATEGORY[moduleType] ?? [];
+  const coverTypes = isV2 ? TYPE_OF_COVER_V2 : (TYPE_OF_COVER_BY_CATEGORY[moduleType] ?? []);
   const canSave = form.typeOfCover !== "" && form.insuranceStatus !== "";
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -426,7 +429,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
               {/* Card header */}
               <div className="flex items-center gap-2 mb-3 pr-8">
                 <span className="text-sm font-semibold text-gray-900">{record.policyNo}</span>
-                {record.insuranceCategory && (
+                {!isV2 && record.insuranceCategory && (
                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${CATEGORY_STYLES[record.insuranceCategory] ?? "bg-gray-100 text-gray-600"}`}>
                     {record.insuranceCategory}
                   </span>
@@ -504,12 +507,14 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
                 <Input value={generatePolicyNo(nextCount)} disabled className="bg-gray-50 text-gray-500 font-medium" />
               </div>
 
-              {/* Category + Entity (pre-filled, read-only) */}
+              {/* Category + Entity (pre-filled, read-only) — Category dropped in v2 */}
               <div className="grid grid-cols-2 gap-4">
+                {!isV2 && (
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">Insurance Category</Label>
                   <Input value={moduleType} disabled className="bg-gray-50 text-gray-500" />
                 </div>
+                )}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">{moduleType}</Label>
                   <Input value={moduleId} disabled className="bg-gray-50 text-gray-500" />

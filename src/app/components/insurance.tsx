@@ -28,6 +28,8 @@ import {
 } from "./ui/popover";
 import { cn } from "./ui/utils";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
+import { useVersion } from "../version-context";
+import { TYPE_OF_COVER_V2 } from "./insurance-constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -370,6 +372,7 @@ function PercentInput({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Insurance() {
+  const isV2 = useVersion() === "2.0";
   const [policies, setPolicies] = useState<InsuranceRecord[]>(INITIAL_DATA);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({ category: "none", status: "none", vessel: "none" });
@@ -385,7 +388,7 @@ export function Insurance() {
       const q = searchQuery.toLowerCase();
       const matchesSearch = !q ||
         p.policyNo.toLowerCase().includes(q) ||
-        p.insuranceCategory.toLowerCase().includes(q) ||
+        (!isV2 && p.insuranceCategory.toLowerCase().includes(q)) ||
         p.typeOfCover.toLowerCase().includes(q) ||
         p.insurerClub.toLowerCase().includes(q) ||
         p.broker.toLowerCase().includes(q) ||
@@ -453,11 +456,13 @@ export function Insurance() {
     setIsSheetOpen(false);
   };
 
-  const coverTypes = formData.insuranceCategory !== "none"
-    ? TYPE_OF_COVER_BY_CATEGORY[formData.insuranceCategory] ?? []
-    : [];
+  const coverTypes = isV2
+    ? TYPE_OF_COVER_V2
+    : formData.insuranceCategory !== "none"
+      ? TYPE_OF_COVER_BY_CATEGORY[formData.insuranceCategory] ?? []
+      : [];
 
-  const isLoH = formData.typeOfCover === "Loss of Hire";
+  const isLoH = formData.typeOfCover === "Loss of Hire" || formData.typeOfCover === "Loss of hire (LOH)";
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -526,6 +531,7 @@ export function Insurance() {
                   )}
                 </div>
                 <div className="space-y-4">
+                  {!isV2 && (
                   <div className="space-y-2">
                     <Label className="text-xs">Insurance Category</Label>
                     <Select value={filters.category} onValueChange={(v) => setFilters((f) => ({ ...f, category: v }))}>
@@ -536,6 +542,7 @@ export function Insurance() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
                   <div className="space-y-2">
                     <Label className="text-xs">Status</Label>
                     <Select value={filters.status} onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}>
@@ -582,7 +589,7 @@ export function Insurance() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <th className="px-4 py-3 whitespace-nowrap">Insurance No</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Category</th>
+                  {!isV2 && <th className="px-4 py-3 whitespace-nowrap">Category</th>}
                   <th className="px-4 py-3 whitespace-nowrap">Type of Cover</th>
                   <th className="px-4 py-3 whitespace-nowrap">Linked Entity</th>
                   <th className="px-4 py-3 whitespace-nowrap">Broker</th>
@@ -620,6 +627,7 @@ export function Insurance() {
                       onClick={() => handleOpenEdit(p)}
                     >
                       <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap group-hover:underline">{p.policyNo}</td>
+                      {!isV2 && (
                       <td className="px-4 py-3 whitespace-nowrap">
                         {p.insuranceCategory ? (
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${CATEGORY_STYLES[p.insuranceCategory] ?? "bg-gray-100 text-gray-600"}`}>
@@ -627,6 +635,7 @@ export function Insurance() {
                           </span>
                         ) : "—"}
                       </td>
+                      )}
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{p.typeOfCover || "—"}</td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{linkedEntity(p)}</td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{p.broker || "—"}</td>
@@ -700,10 +709,12 @@ export function Insurance() {
                   <span className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Insurance No</span>
                   <span className="font-semibold text-gray-900">{formData.policyNo || "—"}</span>
                 </div>
+                {!isV2 && (
                 <div>
                   <span className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Category</span>
                   <span className="font-medium text-gray-900">{formData.insuranceCategory !== "none" ? formData.insuranceCategory : "—"}</span>
                 </div>
+                )}
                 <div>
                   <span className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Type of Cover</span>
                   <span className="font-medium text-gray-900">{formData.typeOfCover !== "none" ? formData.typeOfCover : "—"}</span>
@@ -762,6 +773,7 @@ export function Insurance() {
               <div>
                 <SectionHeader>Cover Details</SectionHeader>
 
+                {!isV2 && (<>
                 <SubHeader>Category &amp; Entity</SubHeader>
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="space-y-2">
@@ -818,6 +830,7 @@ export function Insurance() {
                     </div>
                   )}
                 </div>
+                </>)}
 
                 <SubHeader>Cover &amp; Policy</SubHeader>
                 <div className="grid grid-cols-2 gap-4">
@@ -826,17 +839,17 @@ export function Insurance() {
                     <Select
                       value={formData.typeOfCover}
                       onValueChange={(v) => updateField("typeOfCover", v)}
-                      disabled={formData.insuranceCategory === "none"}
+                      disabled={!isV2 && formData.insuranceCategory === "none"}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={formData.insuranceCategory === "none" ? "Select category first" : "Select type of cover"} />
+                        <SelectValue placeholder={!isV2 && formData.insuranceCategory === "none" ? "Select category first" : "Select type of cover"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Select type of cover</SelectItem>
                         {coverTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    {formData.insuranceCategory === "none" && (
+                    {!isV2 && formData.insuranceCategory === "none" && (
                       <p className="text-xs text-amber-600">Select Insurance Category first to load options.</p>
                     )}
                   </div>

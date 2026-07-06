@@ -10,6 +10,7 @@ import { Legal } from "./components/legal";
 import { Fixtures } from "./components/fixtures";
 import { Settings } from "./components/settings";
 import { INITIAL_DATA, Incident } from "./components/hseq-types";
+import { AppVersion, VersionProvider } from "./version-context";
 import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign } from "lucide-react";
 
 export type NavigationItem =
@@ -33,6 +34,14 @@ export type NavigationItem =
 export default function App() {
   const [activeSection, setActiveSection] = useState<NavigationItem>("hseq");
   const [incidents, setIncidents] = useState<Incident[]>(INITIAL_DATA);
+  const [version, setVersion] = useState<AppVersion>(
+    () => (localStorage.getItem("coems-version") === "2.0" ? "2.0" : "1.0")
+  );
+
+  const handleVersionChange = (v: AppVersion) => {
+    setVersion(v);
+    localStorage.setItem("coems-version", v);
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -73,11 +82,13 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#f8f9fa]">
-      <Sidebar activeSection={activeSection} onNavigate={setActiveSection} />
-      <main className="flex-1 overflow-auto">
-        {renderContent()}
-      </main>
-    </div>
+    <VersionProvider value={version}>
+      <div className="flex h-screen bg-[#f8f9fa]">
+        <Sidebar activeSection={activeSection} onNavigate={setActiveSection} version={version} onVersionChange={handleVersionChange} />
+        <main className="flex-1 overflow-auto">
+          {renderContent()}
+        </main>
+      </div>
+    </VersionProvider>
   );
 }

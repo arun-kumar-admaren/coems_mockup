@@ -1,11 +1,20 @@
-import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote } from "lucide-react";
+import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote, Check, ChevronDown } from "lucide-react";
 import { NavigationItem } from "../App";
+import { AppVersion } from "../version-context";
 import { cn } from "./ui/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface SidebarProps {
   activeSection: NavigationItem;
   onNavigate: (section: NavigationItem) => void;
+  version: AppVersion;
+  onVersionChange: (v: AppVersion) => void;
 }
+
+const VERSIONS: { value: AppVersion; label: string; note: string }[] = [
+  { value: "1.0", label: "Version 1.0", note: "Current functionality" },
+  { value: "2.0", label: "Version 2.0", note: "BRD comment updates" },
+];
 
 const managementItems = [
   { id: "company" as NavigationItem, label: "Company", icon: Building2 },
@@ -28,13 +37,42 @@ const operationsItems = [
   { id: "income-expense-list" as NavigationItem, label: "Income Expense List", icon: DollarSign },
 ];
 
-export function Sidebar({ activeSection, onNavigate }: SidebarProps) {
+export function Sidebar({ activeSection, onNavigate, version, onVersionChange }: SidebarProps) {
   return (
     <aside className="w-64 bg-[#1a1d29] flex flex-col h-screen text-white">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-700/50">
-        <div className="flex items-baseline gap-1.5">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xl font-normal text-white">COEMS</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center gap-1 rounded-md border border-gray-600/60 bg-gray-800/40 px-2 py-1 text-[11px] font-medium text-gray-200 hover:bg-gray-700/50 transition-colors"
+                title="Select version"
+              >
+                v{version}
+                <ChevronDown className="size-3 text-gray-400" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56 p-1">
+              {VERSIONS.map((v) => (
+                <button
+                  key={v.value}
+                  onClick={() => onVersionChange(v.value)}
+                  className={cn(
+                    "w-full flex items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors",
+                    version === v.value ? "bg-blue-50" : "hover:bg-gray-100"
+                  )}
+                >
+                  <Check className={cn("size-4 mt-0.5 flex-shrink-0", version === v.value ? "text-blue-600" : "text-transparent")} />
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium text-gray-900">{v.label}</div>
+                    <div className="text-[11px] text-gray-500">{v.note}</div>
+                  </div>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
