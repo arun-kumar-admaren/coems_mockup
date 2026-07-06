@@ -1,8 +1,8 @@
+import { useState } from "react";
 import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote, Check, ChevronDown } from "lucide-react";
 import { NavigationItem } from "../App";
 import { AppVersion } from "../version-context";
 import { cn } from "./ui/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface SidebarProps {
   activeSection: NavigationItem;
@@ -38,41 +38,46 @@ const operationsItems = [
 ];
 
 export function Sidebar({ activeSection, onNavigate, version, onVersionChange }: SidebarProps) {
+  const [versionOpen, setVersionOpen] = useState(false);
   return (
     <aside className="w-64 bg-[#1a1d29] flex flex-col h-screen text-white">
       {/* Header */}
       <div className="px-5 py-4 border-b border-gray-700/50">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xl font-normal text-white">COEMS</span>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                className="flex items-center gap-1 rounded-md border border-gray-600/60 bg-gray-800/40 px-2 py-1 text-[11px] font-medium text-gray-200 hover:bg-gray-700/50 transition-colors"
-                title="Select version"
-              >
-                v{version}
-                <ChevronDown className="size-3 text-gray-400" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-1">
-              {VERSIONS.map((v) => (
-                <button
-                  key={v.value}
-                  onClick={() => onVersionChange(v.value)}
-                  className={cn(
-                    "w-full flex items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors",
-                    version === v.value ? "bg-blue-50" : "hover:bg-gray-100"
-                  )}
-                >
-                  <Check className={cn("size-4 mt-0.5 flex-shrink-0", version === v.value ? "text-blue-600" : "text-transparent")} />
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-gray-900">{v.label}</div>
-                    <div className="text-[11px] text-gray-500">{v.note}</div>
-                  </div>
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
+          <div className="relative">
+            <button
+              onClick={() => setVersionOpen((o) => !o)}
+              className="flex items-center gap-1 rounded-md border border-gray-600/60 bg-gray-800/40 px-2 py-1 text-[11px] font-medium text-gray-200 hover:bg-gray-700/50 transition-colors"
+              title="Select version"
+            >
+              v{version}
+              <ChevronDown className="size-3 text-gray-400" />
+            </button>
+            {versionOpen && (
+              <>
+                <div className="fixed inset-0 z-[90]" onClick={() => setVersionOpen(false)} />
+                <div className="absolute right-0 mt-1 w-56 rounded-md border border-gray-200 bg-white p-1 shadow-lg z-[100]">
+                  {VERSIONS.map((v) => (
+                    <button
+                      key={v.value}
+                      onClick={() => { onVersionChange(v.value); setVersionOpen(false); }}
+                      className={cn(
+                        "w-full flex items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors",
+                        version === v.value ? "bg-blue-50" : "hover:bg-gray-100"
+                      )}
+                    >
+                      <Check className={cn("size-4 mt-0.5 flex-shrink-0", version === v.value ? "text-blue-600" : "text-transparent")} />
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium text-gray-900">{v.label}</div>
+                        <div className="text-[11px] text-gray-500">{v.note}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
