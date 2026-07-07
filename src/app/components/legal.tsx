@@ -579,7 +579,7 @@ export function Legal() {
                 <th className="py-4 pl-4 pr-0 w-8"></th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase w-24">ID</th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">REVIEW NUMBER</th>
-                <th className="py-4 px-6 font-medium tracking-wider uppercase">{isV2 ? "LABEL" : "REVIEW TYPE"}</th>
+                <th className="py-4 px-6 font-medium tracking-wider uppercase">REVIEW TYPE</th>
                 {isV2 && <th className="py-4 px-6 font-medium tracking-wider uppercase">PIC LEGAL</th>}
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">DESCRIPTION</th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">LEGAL REVIEW STATUS</th>
@@ -858,14 +858,14 @@ export function Legal() {
               <p className="text-xs text-gray-400">Select Inquiry / Fixture / Scope / Insurance</p>
             </div>
 
-            {/* Label (v2) / Review Type (v1) */}
+            {/* Review Type — same field in v1 & v2; only the dropdown values differ in v2 */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">
-                {isV2 ? "Label" : "Review Type"} <span className="text-red-500">*</span>
+                Review Type <span className="text-red-500">*</span>
               </Label>
               <Select value={form.reviewType} onValueChange={(v) => setForm((f) => ({ ...f, reviewType: v }))}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={isV2 ? "Select label" : "Select review type"} />
+                  <SelectValue placeholder="Select review type" />
                 </SelectTrigger>
                 <SelectContent>
                   {REVIEW_LABELS.map((l) => (
