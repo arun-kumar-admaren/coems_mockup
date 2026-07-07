@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { useVersion } from "../version-context";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -22,16 +23,40 @@ const REVIEW_STATUSES = [
   "Not Required",
 ];
 
+// Version 2.0 (BRD v2)
+const REVIEW_STATUSES_V2 = [
+  "To be reviewed", "Under review", "Review completed", "Under negotiation",
+  "Draft issued", "Final issued", "Signed", "Not required",
+];
+const LABELS_V2 = [
+  "Contract Review Chartering", "Contract Review Projects", "NDA Review",
+  "Insurance Request", "KYC Assistance", "Others",
+];
+
 const STATUS_STYLES: Record<string, string> = {
   "Reviewed": "bg-green-100 text-green-700",
   "Under Review": "bg-yellow-100 text-yellow-700",
   "Not Required": "bg-gray-100 text-gray-700",
   "To be reviewed by Legal": "bg-red-100 text-red-700",
+  "To be reviewed": "bg-red-100 text-red-700",
+  "Under review": "bg-yellow-100 text-yellow-700",
+  "Review completed": "bg-green-100 text-green-700",
+  "Under negotiation": "bg-amber-100 text-amber-700",
+  "Draft issued": "bg-blue-100 text-blue-700",
+  "Final issued": "bg-indigo-100 text-indigo-700",
+  "Signed": "bg-emerald-100 text-emerald-700",
+  "Not required": "bg-gray-100 text-gray-700",
 };
 
 const TYPE_STYLES: Record<string, string> = {
   "Documents": "bg-blue-100 text-blue-700",
   "NDA": "bg-purple-100 text-purple-700",
+  "Contract Review Chartering": "bg-blue-100 text-blue-700",
+  "Contract Review Projects": "bg-indigo-100 text-indigo-700",
+  "NDA Review": "bg-purple-100 text-purple-700",
+  "Insurance Request": "bg-sky-100 text-sky-700",
+  "KYC Assistance": "bg-teal-100 text-teal-700",
+  "Others": "bg-gray-100 text-gray-700",
 };
 
 const ITEMS_BY_CATEGORY: Record<string, string[]> = {
@@ -134,6 +159,9 @@ interface LegalReviewEmbeddedProps {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbeddedProps) {
+  const isV2 = useVersion() === "2.0";
+  const REVIEW_LABELS = isV2 ? LABELS_V2 : ["Documents", "NDA"];
+  const STATUS_OPTIONS = isV2 ? REVIEW_STATUSES_V2 : REVIEW_STATUSES;
   const storageKey = `legal-review-links-${moduleType}-${moduleId}`;
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -432,10 +460,12 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                   <span className="text-gray-400">Related To</span>
                   <div className="text-gray-700 font-medium mt-0.5">{review.relatedTo?.join(", ") || "—"}</div>
                 </div>
+                {!isV2 && (
                 <div>
                   <span className="text-gray-400">E Filing No</span>
                   <div className="text-gray-700 font-medium mt-0.5">{review.eFilingNumber || "—"}</div>
                 </div>
+                )}
                 <div>
                   <span className="text-gray-400">Due Date</span>
                   <div className="text-gray-700 font-medium mt-0.5">{review.dueDate || "—"}</div>
@@ -592,18 +622,19 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                 <p className="text-xs text-gray-400">Select Inquiry / Fixture / Scope / Insurance</p>
               </div>
 
-              {/* Review Type */}
+              {/* Label (v2) / Review Type (v1) */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">
-                  Review Type <span className="text-red-500">*</span>
+                  {isV2 ? "Label" : "Review Type"} <span className="text-red-500">*</span>
                 </Label>
                 <Select value={form.reviewType} onValueChange={(v) => setForm((f) => ({ ...f, reviewType: v }))}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select review type" />
+                    <SelectValue placeholder={isV2 ? "Select label" : "Select review type"} />
                   </SelectTrigger>
                   <SelectContent className="z-[600]">
-                    <SelectItem value="Documents">Documents</SelectItem>
-                    <SelectItem value="NDA">NDA</SelectItem>
+                    {REVIEW_LABELS.map((l) => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -636,14 +667,15 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent className="z-[600]">
-                    {REVIEW_STATUSES.map((s) => (
+                    {STATUS_OPTIONS.map((s) => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* E Filing Number */}
+              {/* E Filing Number (v1 only — removed in v2 per M-Files) */}
+              {!isV2 && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium text-gray-700">E Filing Number</Label>
@@ -658,6 +690,7 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                   placeholder="Alphanumeric only"
                 />
               </div>
+              )}
 
               {/* Due Date */}
               <div className="space-y-1.5">

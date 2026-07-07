@@ -23,6 +23,7 @@ import {
 } from "./ui/sheet";
 import { type Task } from "./legal-review-tab";
 import { Switch } from "./ui/switch";
+import { useVersion } from "../version-context";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -33,16 +34,57 @@ const REVIEW_STATUSES = [
   "Not Required",
 ];
 
+// Version 2.0 — client-provided status dropdown (BRD v2, comment 5)
+const REVIEW_STATUSES_V2 = [
+  "To be reviewed",
+  "Under review",
+  "Review completed",
+  "Under negotiation",
+  "Draft issued",
+  "Final issued",
+  "Signed",
+  "Not required",
+];
+
+// Version 2.0 — Label dropdown (replaces Review Type; comments 1 & 4)
+const LABELS_V2 = [
+  "Contract Review Chartering",
+  "Contract Review Projects",
+  "NDA Review",
+  "Insurance Request",
+  "KYC Assistance",
+  "Others",
+];
+
+// Version 2.0 — PIC Legal options (comment 7)
+const PIC_LEGAL_OPTIONS = ["AVD", "AL", "MM", "MW", "LP", "MR"];
+
 const STATUS_STYLES: Record<string, string> = {
   "Reviewed": "bg-green-100 text-green-700",
   "Under Review": "bg-yellow-100 text-yellow-700",
   "Not Required": "bg-gray-100 text-gray-700",
   "To be reviewed by Legal": "bg-red-100 text-red-700",
+  // v2 statuses
+  "To be reviewed": "bg-red-100 text-red-700",
+  "Under review": "bg-yellow-100 text-yellow-700",
+  "Review completed": "bg-green-100 text-green-700",
+  "Under negotiation": "bg-amber-100 text-amber-700",
+  "Draft issued": "bg-blue-100 text-blue-700",
+  "Final issued": "bg-indigo-100 text-indigo-700",
+  "Signed": "bg-emerald-100 text-emerald-700",
+  "Not required": "bg-gray-100 text-gray-700",
 };
 
 const TYPE_STYLES: Record<string, string> = {
   "Documents": "bg-blue-100 text-blue-700",
   "NDA": "bg-purple-100 text-purple-700",
+  // v2 labels
+  "Contract Review Chartering": "bg-blue-100 text-blue-700",
+  "Contract Review Projects": "bg-indigo-100 text-indigo-700",
+  "NDA Review": "bg-purple-100 text-purple-700",
+  "Insurance Request": "bg-sky-100 text-sky-700",
+  "KYC Assistance": "bg-teal-100 text-teal-700",
+  "Others": "bg-gray-100 text-gray-700",
 };
 
 const INITIAL_TASK: Partial<Task> = {
@@ -87,6 +129,8 @@ interface Review {
   description: string;
   legalReviewStatus: string;
   eFilingNumber: string;
+  picLegal: string;
+  account: string;
   dueDate: string;
   reviewRaisedBy: string;
   toBeReviewedBy: string;
@@ -100,6 +144,8 @@ interface ReviewForm {
   description: string;
   legalReviewStatus: string;
   eFilingNumber: string;
+  picLegal: string;
+  account: string;
   dueDate: string;
   reviewRaisedBy: string;
   toBeReviewedBy: string;
@@ -112,18 +158,23 @@ const EMPTY_FORM: ReviewForm = {
   description: "",
   legalReviewStatus: "",
   eFilingNumber: "",
+  picLegal: "",
+  account: "",
   dueDate: "",
   reviewRaisedBy: "",
   toBeReviewedBy: "",
   tasks: [],
 };
 
-const generateReviewNumber = (count: number) =>
-  `REV-2026-${String(count).padStart(4, "0")}`;
+const generateReviewNumber = (count: number, isV2: boolean) =>
+  `${isV2 ? "UHL-L" : "REV"}-2026-${String(count).padStart(4, "0")}`;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Legal() {
+  const isV2 = useVersion() === "2.0";
+  const REVIEW_LABELS = isV2 ? LABELS_V2 : ["Documents", "NDA"];
+  const STATUS_OPTIONS = isV2 ? REVIEW_STATUSES_V2 : REVIEW_STATUSES;
   // Listing state
   const [reviews, setReviews] = useState<Review[]>(() => {
     try {
@@ -239,7 +290,7 @@ export function Legal() {
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
-  const statuses = ["All", ...REVIEW_STATUSES];
+  const statuses = ["All", ...STATUS_OPTIONS];
 
   const filtered = reviews.filter((r) => {
     const matchesStatus =
@@ -273,6 +324,8 @@ export function Legal() {
       description: review.description,
       legalReviewStatus: review.legalReviewStatus,
       eFilingNumber: review.eFilingNumber,
+      picLegal: review.picLegal ?? "",
+      account: review.account ?? "",
       dueDate: review.dueDate ?? "",
       reviewRaisedBy: review.reviewRaisedBy ?? "",
       toBeReviewedBy: review.toBeReviewedBy ?? "",
@@ -285,12 +338,14 @@ export function Legal() {
     const newReview: Review = {
       id: `rev-${nextCount}`,
       seqId: String(nextCount).padStart(4, "0"),
-      reviewNumber: generateReviewNumber(nextCount),
+      reviewNumber: generateReviewNumber(nextCount, isV2),
       relatedTo: form.relatedTo,
       reviewType: form.reviewType,
       description: form.description,
       legalReviewStatus: form.legalReviewStatus,
       eFilingNumber: form.eFilingNumber,
+      picLegal: form.picLegal,
+      account: form.account,
       dueDate: form.dueDate,
       reviewRaisedBy: form.reviewRaisedBy,
       toBeReviewedBy: form.toBeReviewedBy,
@@ -314,6 +369,8 @@ export function Legal() {
               description: form.description,
               legalReviewStatus: form.legalReviewStatus,
               eFilingNumber: form.eFilingNumber,
+              picLegal: form.picLegal,
+              account: form.account,
               dueDate: form.dueDate,
               reviewRaisedBy: form.reviewRaisedBy,
               toBeReviewedBy: form.toBeReviewedBy,
@@ -522,11 +579,13 @@ export function Legal() {
                 <th className="py-4 pl-4 pr-0 w-8"></th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase w-24">ID</th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">REVIEW NUMBER</th>
-                <th className="py-4 px-6 font-medium tracking-wider uppercase">REVIEW TYPE</th>
+                <th className="py-4 px-6 font-medium tracking-wider uppercase">{isV2 ? "LABEL" : "REVIEW TYPE"}</th>
+                {isV2 && <th className="py-4 px-6 font-medium tracking-wider uppercase">PIC LEGAL</th>}
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">DESCRIPTION</th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">LEGAL REVIEW STATUS</th>
-                <th className="py-4 px-6 font-medium tracking-wider uppercase">E FILING NUMBER</th>
+                {!isV2 && <th className="py-4 px-6 font-medium tracking-wider uppercase">E FILING NUMBER</th>}
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">DUE DATE</th>
+                {isV2 && <th className="py-4 px-6 font-medium tracking-wider uppercase">ACCOUNT</th>}
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">REVIEW RAISED BY</th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">TO BE REVIEWED BY</th>
                 <th className="py-4 px-6 font-medium tracking-wider uppercase">CREATED DATE</th>
@@ -579,6 +638,7 @@ export function Legal() {
                             {row.reviewType}
                           </span>
                         </td>
+                        {isV2 && <td className="py-3 px-6 text-gray-600">{row.picLegal || <span className="text-gray-300">—</span>}</td>}
                         <td className="py-3 px-6 text-gray-600 max-w-xs truncate">
                           {row.description || <span className="text-gray-300 italic">—</span>}
                         </td>
@@ -587,8 +647,9 @@ export function Legal() {
                             {row.legalReviewStatus}
                           </span>
                         </td>
-                        <td className="py-3 px-6 text-gray-600">{row.eFilingNumber || <span className="text-gray-300">—</span>}</td>
+                        {!isV2 && <td className="py-3 px-6 text-gray-600">{row.eFilingNumber || <span className="text-gray-300">—</span>}</td>}
                         <td className="py-3 px-6 text-gray-600">{row.dueDate || <span className="text-gray-300">—</span>}</td>
+                        {isV2 && <td className="py-3 px-6 text-gray-600">{row.account || <span className="text-gray-300">—</span>}</td>}
                         <td className="py-3 px-6 text-gray-600">{row.reviewRaisedBy || <span className="text-gray-300">—</span>}</td>
                         <td className="py-3 px-6 text-gray-600">{row.toBeReviewedBy || <span className="text-gray-300">—</span>}</td>
                         <td className="py-3 px-6 text-gray-500">{row.createdAt}</td>
@@ -797,21 +858,39 @@ export function Legal() {
               <p className="text-xs text-gray-400">Select Inquiry / Fixture / Scope / Insurance</p>
             </div>
 
-            {/* Review Type */}
+            {/* Label (v2) / Review Type (v1) */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">
-                Review Type <span className="text-red-500">*</span>
+                {isV2 ? "Label" : "Review Type"} <span className="text-red-500">*</span>
               </Label>
               <Select value={form.reviewType} onValueChange={(v) => setForm((f) => ({ ...f, reviewType: v }))}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select review type" />
+                  <SelectValue placeholder={isV2 ? "Select label" : "Select review type"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Documents">Documents</SelectItem>
-                  <SelectItem value="NDA">NDA</SelectItem>
+                  {REVIEW_LABELS.map((l) => (
+                    <SelectItem key={l} value={l}>{l}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* PIC Legal (v2 only) */}
+            {isV2 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">PIC Legal</Label>
+                <Select value={form.picLegal} onValueChange={(v) => setForm((f) => ({ ...f, picLegal: v }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select PIC Legal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PIC_LEGAL_OPTIONS.map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Description */}
             <div className="space-y-2">
@@ -836,14 +915,15 @@ export function Legal() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {REVIEW_STATUSES.map((s) => (
+                  {STATUS_OPTIONS.map((s) => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* E Filing Number */}
+            {/* E Filing Number (v1 only — removed in v2 per M-Files) */}
+            {!isV2 && (
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">E Filing Number</Label>
               <Input
@@ -853,6 +933,19 @@ export function Legal() {
                 maxLength={50}
               />
             </div>
+            )}
+
+            {/* Account (v2 only) */}
+            {isV2 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Account</Label>
+              <Input
+                placeholder="Enter account"
+                value={form.account}
+                onChange={(e) => setForm((f) => ({ ...f, account: e.target.value }))}
+              />
+            </div>
+            )}
 
             {/* Due Date */}
             <div className="space-y-2">
@@ -961,7 +1054,7 @@ export function Legal() {
                               >
                                 {/* Expand */}
                                 <td style={{padding:"10px 4px",textAlign:"center"}}>
-                                  {hasSubtasks ? (
+                                  {!isV2 && hasSubtasks ? (
                                     <button onClick={(e) => toggleExpand(task.id, e)}
                                       style={{background:"none",border:"none",cursor:"pointer",padding:"2px",borderRadius:"3px",color:"#9ca3af",display:"flex",alignItems:"center"}}>
                                       {isExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
@@ -1008,6 +1101,7 @@ export function Legal() {
                                 <td style={{padding:"10px 8px",whiteSpace:"nowrap"}}>
                                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"4px"}}>
                                     <span style={{color:"#6b7280"}}>{fmtDate(task.dueDate)}</span>
+                                    {!isV2 && (
                                     <button title="Add Sub Task"
                                       onClick={(e) => { e.stopPropagation(); openAddTask(task.id); }}
                                       style={{flexShrink:0,width:"18px",height:"18px",borderRadius:"3px",border:"none",background:"none",cursor:"pointer",color:"#9ca3af",display:"flex",alignItems:"center",justifyContent:"center"}}
@@ -1015,6 +1109,7 @@ export function Legal() {
                                       onMouseLeave={e=>{e.currentTarget.style.background="none";e.currentTarget.style.color="#9ca3af"}}>
                                       <Plus className="size-3" />
                                     </button>
+                                    )}
                                   </div>
                                 </td>
                                 {/* Estimation */}
@@ -1022,7 +1117,7 @@ export function Legal() {
                               </tr>
 
                               {/* Subtask rows */}
-                              {hasSubtasks && isExpanded && (
+                              {!isV2 && hasSubtasks && isExpanded && (
                                 <>
                                   <tr style={{background:"#f9fafb",borderBottom:"1px solid #e5e7eb"}}>
                                     <td colSpan={13} style={{padding:"4px 12px 4px 32px",fontSize:"10px",fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:"0.08em"}}>
@@ -1387,7 +1482,8 @@ export function Legal() {
                   </div>
                 </div>
 
-                {/* Sub Tasks */}
+                {/* Sub Tasks (v1 only — removed in v2: a review is a single task) */}
+                {!isV2 && (
                 <div style={{marginBottom:"28px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
                     <span style={{fontSize:"14px",fontWeight:600,color:"#374151"}}>Sub Tasks</span>
@@ -1425,6 +1521,7 @@ export function Legal() {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Activity */}
                 <div>
