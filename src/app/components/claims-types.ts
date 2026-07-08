@@ -196,6 +196,17 @@ export const INSURERS = [
   "Shipowners' Club",
 ];
 
+// Version 2.0 — display-format a Claim No as UHL-CL-[YYYY]-[XXXX].
+// Applies to pre-seeded records (e.g. "CLM-2024-001") so existing claims also
+// reflect the v2.0 numbering convention; numbers already in the new format
+// (newly created in v2.0) pass through unchanged.
+export const formatClaimNo = (claimNo: string, isV2: boolean): string => {
+  if (!isV2 || !claimNo) return claimNo;
+  const m = claimNo.match(/^CLM-(\d{4})-(\d+)$/);
+  if (!m) return claimNo;
+  return `UHL-CL-${m[1]}-${m[2].padStart(4, "0")}`;
+};
+
 export const VESSELS = [
   "MV OCEAN STAR",
   "MV PACIFIC VOYAGER",

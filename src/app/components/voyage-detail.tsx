@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { DatePicker } from "./ui/date-picker";
 import { cn } from "./ui/utils";
 import exampleImage from 'figma:asset/6931c210e64628b26cf918b8364d99257fc1fce7.png';
-import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, BROKERS, LEGAL_USERS } from "./claims-types";
+import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, BROKERS, LEGAL_USERS, INSURERS, formatClaimNo } from "./claims-types";
 import { useVersion } from "../version-context";
 
 const INCIDENT_CATEGORIES = ["Cargo", "Environmental", "Near-Miss", "Personnel Accident", "Property Damage", "Security", "Technical", "Other"];
@@ -331,7 +331,9 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
       // Generate claimNo from fresh prev.length so it's never stale
       const claimNo = editingClaim
         ? claimFormData.claimNo
-        : `CLM-${new Date().getFullYear()}-V${String(prev.length + 1).padStart(2, "0")}`;
+        : isV2
+          ? `UHL-CL-${new Date().getFullYear()}-${String(prev.length + 1).padStart(4, "0")}`
+          : `CLM-${new Date().getFullYear()}-V${String(prev.length + 1).padStart(2, "0")}`;
       const claim = { ...claimFormData, id: claimId, claimNo };
       const updated = editingClaim
         ? prev.map(c => c.id === editingClaim.id ? claim : c)
@@ -799,7 +801,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                                 onClick={() => openEditClaim(claim)}
                                 className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                               >
-                                <td className="py-2.5 px-3 font-medium text-blue-600">{claim.claimNo}</td>
+                                <td className="py-2.5 px-3 font-medium text-blue-600">{formatClaimNo(claim.claimNo, isV2)}</td>
                                 <td className="py-2.5 px-3 text-gray-800">{claim.claimTitle || '-'}</td>
                                 <td className="py-2.5 px-3 text-gray-600">{claim.claimType !== 'none' ? claim.claimType : '-'}</td>
                                 <td className="py-2.5 px-3">
@@ -914,7 +916,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                           <tbody className="divide-y divide-gray-100">
                             {voyageClaims.map((claim) => (
                               <tr key={claim.id} onClick={() => openEditClaim(claim)} className="hover:bg-blue-50/50 cursor-pointer transition-colors">
-                                <td className="py-2.5 px-3 font-medium text-blue-600">{claim.claimNo}</td>
+                                <td className="py-2.5 px-3 font-medium text-blue-600">{formatClaimNo(claim.claimNo, isV2)}</td>
                                 <td className="py-2.5 px-3 text-gray-800">{claim.claimTitle || '-'}</td>
                                 <td className="py-2.5 px-3 text-gray-600">{claim.claimType !== 'none' ? claim.claimType : '-'}</td>
                                 <td className="py-2.5 px-3">
@@ -1382,7 +1384,13 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Leading Insurer</Label>
-                  <Input value={claimFormData.leadingInsurer || ""} onChange={(e) => updateClaimField("leadingInsurer", e.target.value)} placeholder="Enter leading insurer" />
+                  <Select value={claimFormData.leadingInsurer || "none"} onValueChange={(val) => updateClaimField("leadingInsurer", val === "none" ? "" : val)}>
+                    <SelectTrigger><SelectValue placeholder="Select leading insurer" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select leading insurer</SelectItem>
+                      {INSURERS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Date of Notification to Broker</Label>

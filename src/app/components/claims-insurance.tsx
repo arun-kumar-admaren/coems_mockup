@@ -33,7 +33,7 @@ import {
 } from "./ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "./ui/utils";
-import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES, PORT_AGENTS } from "./claims-types";
+import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES, PORT_AGENTS, INSURERS, formatClaimNo } from "./claims-types";
 import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
@@ -306,6 +306,7 @@ export function ClaimsInsurance() {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         (claim.claimNo ?? "").toLowerCase().includes(q) ||
+        formatClaimNo(claim.claimNo ?? "", isV2).toLowerCase().includes(q) ||
         (claim.claimTitle ?? "").toLowerCase().includes(q) ||
         (claim.vessel ?? "").toLowerCase().includes(q);
       
@@ -316,14 +317,16 @@ export function ClaimsInsurance() {
 
       return matchesSearch && matchesType && matchesStatus && matchesVessel && matchesContext;
     });
-  }, [claims, searchQuery, filters]);
+  }, [claims, searchQuery, filters, isV2]);
 
   const uniqueVessels = useMemo(() => {
     return Array.from(new Set(claims.map(c => c.vessel))).sort();
   }, [claims]);
 
   const handleOpenAdd = () => {
-    const newNo = `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`;
+    const newNo = isV2
+      ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(4, "0")}`
+      : `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`;
     setFormData({ ...INITIAL_FORM_DATA, claimNo: newNo });
     setEditingId(null);
     setEditParties([]);
@@ -407,7 +410,9 @@ export function ClaimsInsurance() {
 
     const claimToSave: Claim = {
       id: editingId || Math.random().toString(36).substr(2, 9),
-      claimNo: formData.claimNo || `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`,
+      claimNo: formData.claimNo || (isV2
+        ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(4, "0")}`
+        : `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`),
       claimType: formData.claimType as ClaimType,
       typeOfCover: formData.typeOfCover === "none" ? "" : formData.typeOfCover,
       priority: formData.priority as any,
@@ -662,7 +667,7 @@ export function ClaimsInsurance() {
                       onClick={() => handleEditClaim(claim)}
                     >
                       <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap group-hover:underline">
-                        {claim.claimNo}
+                        {formatClaimNo(claim.claimNo, isV2)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {(() => {
@@ -816,7 +821,7 @@ export function ClaimsInsurance() {
                   <div className="grid grid-cols-3 gap-4 text-sm mb-4">
                     <div>
                       <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Claim Number</span>
-                      <span className="font-semibold text-gray-900">{formData.claimNo || "-"}</span>
+                      <span className="font-semibold text-gray-900">{formatClaimNo(formData.claimNo, isV2) || "-"}</span>
                     </div>
                     <div>
                       <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Type of Claim</span>
@@ -1130,11 +1135,21 @@ export function ClaimsInsurance() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Leading Insurer</Label>
-                      <Input
-                        value={formData.leadingInsurer}
-                        onChange={(e) => updateField("leadingInsurer", e.target.value)}
-                        placeholder="Enter leading insurer"
-                      />
+                      {isV2 ? (
+                        <Select value={formData.leadingInsurer || "none"} onValueChange={(val) => updateField("leadingInsurer", val === "none" ? "" : val)}>
+                          <SelectTrigger><SelectValue placeholder="Select leading insurer" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select leading insurer</SelectItem>
+                            {INSURERS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={formData.leadingInsurer}
+                          onChange={(e) => updateField("leadingInsurer", e.target.value)}
+                          placeholder="Enter leading insurer"
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Date of Notification to Broker</Label>
