@@ -227,6 +227,7 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ReviewForm>(EMPTY_FORM);
+  const [picLegalOpen, setPicLegalOpen] = useState(false);
 
   // Related To split field (category selector + number search)
   const [relatedToSearch, setRelatedToSearch] = useState("");
@@ -710,26 +711,41 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                 </Select>
               </div>
 
-              {/* PIC Legal — multi-select (v2 only) */}
+              {/* PIC Legal — dropdown with multi-selection (v2 only) */}
               {isV2 && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative">
                   <Label className="text-sm font-medium text-gray-700">PIC Legal</Label>
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 border border-gray-200 rounded-md px-3 py-2.5">
-                    {PIC_LEGAL_OPTIONS.map((p) => (
-                      <label key={p} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer select-none">
-                        <Checkbox
-                          checked={form.picLegal.includes(p)}
-                          onCheckedChange={(checked) =>
-                            setForm((f) => ({
-                              ...f,
-                              picLegal: checked ? [...f.picLegal, p] : f.picLegal.filter((x) => x !== p),
-                            }))
-                          }
-                        />
-                        {p}
-                      </label>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPicLegalOpen((o) => !o)}
+                    className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <span className={form.picLegal.length ? "text-gray-900" : "text-muted-foreground"}>
+                      {form.picLegal.length ? form.picLegal.join(", ") : "Select PIC Legal"}
+                    </span>
+                    <ChevronDown className="size-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {picLegalOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[590]" onClick={() => setPicLegalOpen(false)} />
+                      <div className="absolute left-0 right-0 z-[600] mt-1 rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+                        {PIC_LEGAL_OPTIONS.map((p) => (
+                          <label key={p} className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 rounded hover:bg-gray-50 cursor-pointer select-none">
+                            <Checkbox
+                              checked={form.picLegal.includes(p)}
+                              onCheckedChange={(checked) =>
+                                setForm((f) => ({
+                                  ...f,
+                                  picLegal: checked ? [...f.picLegal, p] : f.picLegal.filter((x) => x !== p),
+                                }))
+                              }
+                            />
+                            {p}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
