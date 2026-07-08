@@ -38,6 +38,7 @@ import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
 import { FinancialsEmbedded } from "./financials-embedded";
+import { useVersion } from "../version-context";
 import { ClosureEmbedded, DocumentsChecklist } from "./closure-embedded";
 
 
@@ -235,6 +236,7 @@ const INITIAL_FORM_DATA = {
 };
 
 export function ClaimsInsurance() {
+  const isV2 = useVersion() === "2.0";
   const [claims, setClaims] = useState<Claim[]>(() => {
     try {
       const raw = JSON.parse(localStorage.getItem('voyage-claims') || '[]') as Claim[];
@@ -918,7 +920,8 @@ export function ClaimsInsurance() {
                   
                   <TabsContent value="overview" className="mt-0 space-y-6">
 
-                  {/* Claim Context */}
+                  {/* Claim Context — removed from the form in v2.0 (client comments 1/3/4/5/7); field remains internally for the listing badge/filter */}
+                  {!isV2 && (
                   <div className="space-y-2">
                     <Label>Claim Context <span className="text-red-500">*</span></Label>
                     <Select value={(formData as any).claimContext || "none"} onValueChange={(val) => updateField("claimContext", val)}>
@@ -930,8 +933,9 @@ export function ClaimsInsurance() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
 
-                  {(formData as any).claimContext === "Standalone" ? (<>
+                  {(!isV2 && (formData as any).claimContext === "Standalone") ? (<>
 
                   {/* Vessel & Voyage */}
                   <div className="grid grid-cols-2 gap-4">
@@ -1081,6 +1085,20 @@ export function ClaimsInsurance() {
                     />
                   </div>
 
+                  {/* Date of Incident + Location — merged into the unified v2.0 form (was Standalone-only) */}
+                  {isV2 && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date of Incident</Label>
+                      <Input type="date" value={formData.dateOfIncident} onChange={(e) => updateField("dateOfIncident", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <Input value={(formData as any).location === "none" ? "" : ((formData as any).location || "")} onChange={(e) => updateField("location" as any, e.target.value)} placeholder="e.g. Port of Rotterdam, At Sea" />
+                    </div>
+                  </div>
+                  )}
+
                   {/* Broker + Broker Reference */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1148,6 +1166,25 @@ export function ClaimsInsurance() {
                     </div>
                   </div>
 
+                  {/* Representative of claimant present + Port Agent — merged into the unified v2.0 form (was Standalone-only) */}
+                  {isV2 && (<>
+                  <div className="space-y-2">
+                    <Label>Representative of claimant present</Label>
+                    <Input value={(formData as any).representativeOfClaimantPresent || ""} onChange={(e) => updateField("representativeOfClaimantPresent" as any, e.target.value)} placeholder="Enter representative name" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Port Agent (full style)</Label>
+                    <Select value={(formData as any).portAgent || "none"} onValueChange={(val) => updateField("portAgent" as any, val)}>
+                      <SelectTrigger><SelectValue placeholder="Select port agent" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select port agent</SelectItem>
+                        {PORT_AGENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  </>)}
+
                   {/* PIC Legal */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1172,6 +1209,31 @@ export function ClaimsInsurance() {
                       className="resize-none min-h-[80px]"
                     />
                   </div>
+
+                  {/* Damage as far as known, Steps taken, Required assistance — merged into the unified v2.0 form (was Standalone-only) */}
+                  {isV2 && (<>
+                  <div className="space-y-2">
+                    <Label>Damage as far as known</Label>
+                    <Textarea value={(formData as any).damageAsKnown || ""} onChange={(e) => updateField("damageAsKnown" as any, e.target.value)} placeholder="Describe the known damage..." className="resize-none min-h-[80px]" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Steps taken so far</Label>
+                    <Textarea value={(formData as any).stepsTaken || ""} onChange={(e) => updateField("stepsTaken" as any, e.target.value)} placeholder="Describe the steps taken..." className="resize-none min-h-[80px]" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Required assistance from insurance</Label>
+                    <Select value={(formData as any).requiredAssistanceFromInsurance || "none"} onValueChange={(val) => updateField("requiredAssistanceFromInsurance" as any, val)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select</SelectItem>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  </>)}
 
                   {/* Status & Priority */}
                   <div className="grid grid-cols-2 gap-4">

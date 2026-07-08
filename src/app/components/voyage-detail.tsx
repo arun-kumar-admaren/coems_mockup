@@ -11,7 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { DatePicker } from "./ui/date-picker";
 import { cn } from "./ui/utils";
 import exampleImage from 'figma:asset/6931c210e64628b26cf918b8364d99257fc1fce7.png';
-import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS } from "./claims-types";
+import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, BROKERS, LEGAL_USERS } from "./claims-types";
+import { useVersion } from "../version-context";
 
 const INCIDENT_CATEGORIES = ["Cargo", "Environmental", "Near-Miss", "Personnel Accident", "Property Damage", "Security", "Technical", "Other"];
 const FIXTURE_OPTIONS = ["FAI 2601", "FAI 2602", "FAI 2603", "FAI 2501"];
@@ -207,6 +208,7 @@ const getVoyageDetails = (voyage: any) => {
 };
 
 export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailProps) {
+  const isV2 = useVersion() === "2.0"; // COEMS mockup Version 2.0 toggle — distinct from the `version` (Voyage v1/v2) prop above
   const data = getVoyageDetails(voyage);
   const isHLG2605 = voyage.number === "HLG 2605";
   const [activeTab, setActiveTab] = React.useState("Port");
@@ -290,14 +292,22 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
     vessel: voyage.vessel || "",
     voyage: voyage.number || "",
     relatedFixtures: [],
+    claimType: "none",
+    typeOfCover: "none",
+    broker: "none",
+    brokerReference: "",
+    leadingInsurer: "",
+    dateOfNotification: "",
     dateOfIncident: "",
     location: "",
     damageAsKnown: "",
     stepsTaken: "",
     requiredAssistanceFromInsurance: "none",
     claimant: "",
+    claimantReference: "",
     representativeOfClaimantPresent: "",
     portAgent: "none",
+    picLegal: "",
     status: "none",
     priority: "None",
   }), [voyage.vessel, voyage.number]);
@@ -1294,13 +1304,41 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
             </SheetHeader>
 
             <div className="w-full flex-1 mt-6 space-y-6">
-              {/* Claim Context — locked to Standalone */}
+              {/* Claim Context — removed in v2.0 (client comments 1/3/4/5/7); the claim form is now the same regardless of origin */}
+              {!isV2 && (
               <div className="space-y-2">
                 <Label>Claim Context</Label>
                 <div className="flex items-center h-9 px-3 rounded-md border border-gray-200 bg-gray-50 text-sm text-gray-500">
                   Standalone
                 </div>
               </div>
+              )}
+
+              {/* Type of Claim + Type of Cover — v2.0 field-parity with the unified claim form */}
+              {isV2 && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type of Claim</Label>
+                  <Select value={claimFormData.claimType || "none"} onValueChange={(val) => updateClaimField("claimType", val)}>
+                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select type</SelectItem>
+                      {CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Type of Cover</Label>
+                  <Select value={claimFormData.typeOfCover || "none"} onValueChange={(val) => updateClaimField("typeOfCover", val)}>
+                    <SelectTrigger><SelectValue placeholder="Select cover" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select cover</SelectItem>
+                      {TYPE_OF_COVER_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              )}
 
               {/* Vessel & Voyage — pre-filled, read-only */}
               <div className="grid grid-cols-2 gap-4">
@@ -1322,6 +1360,36 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                   onChange={(val) => updateClaimField("relatedFixtures", val)}
                 />
               </div>
+
+              {/* Broker + Broker Reference, Leading Insurer + Date of Notification — v2.0 field-parity */}
+              {isV2 && (<>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Broker</Label>
+                  <Select value={claimFormData.broker || "none"} onValueChange={(val) => updateClaimField("broker", val)}>
+                    <SelectTrigger><SelectValue placeholder="Select broker" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select broker</SelectItem>
+                      {BROKERS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Broker Reference Number</Label>
+                  <Input value={claimFormData.brokerReference || ""} onChange={(e) => updateClaimField("brokerReference", e.target.value)} placeholder="e.g. MIB-2024-089" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Leading Insurer</Label>
+                  <Input value={claimFormData.leadingInsurer || ""} onChange={(e) => updateClaimField("leadingInsurer", e.target.value)} placeholder="Enter leading insurer" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Date of Notification to Broker</Label>
+                  <Input type="date" value={claimFormData.dateOfNotification || ""} onChange={(e) => updateClaimField("dateOfNotification", e.target.value)} />
+                </div>
+              </div>
+              </>)}
 
               {/* Date of Incident + Location */}
               <div className="grid grid-cols-2 gap-4">
@@ -1366,11 +1434,24 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                 </Select>
               </div>
 
-              {/* Claimant */}
+              {/* Claimant (+ Claimant Reference Number in v2.0) */}
+              {isV2 ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Claimant</Label>
+                  <Input value={claimFormData.claimant || ""} onChange={(e) => updateClaimField("claimant", e.target.value)} placeholder="Enter claimant name" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Claimant Reference Number</Label>
+                  <Input value={claimFormData.claimantReference || ""} onChange={(e) => updateClaimField("claimantReference", e.target.value)} placeholder="e.g. CLM-REF-2024-001" />
+                </div>
+              </div>
+              ) : (
               <div className="space-y-2">
                 <Label>Claimant</Label>
                 <Input value={claimFormData.claimant || ""} onChange={(e) => updateClaimField("claimant", e.target.value)} placeholder="Enter claimant name" />
               </div>
+              )}
 
               {/* Representative of claimant present */}
               <div className="space-y-2">
@@ -1389,6 +1470,20 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* PIC Legal — v2.0 field-parity */}
+              {isV2 && (
+              <div className="space-y-2">
+                <Label>PIC Legal</Label>
+                <Select value={claimFormData.picLegal || "none"} onValueChange={(val) => updateClaimField("picLegal", val === "none" ? "" : val)}>
+                  <SelectTrigger><SelectValue placeholder="Select legal member" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select legal member</SelectItem>
+                    {LEGAL_USERS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
             </div>
           </div>
 
