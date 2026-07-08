@@ -4,6 +4,7 @@ import { Plus, Search, MoreVertical, ChevronDown, X, FileText } from "lucide-rea
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import { Checkbox } from "./ui/checkbox";
 import { DatePicker } from "./ui/date-picker";
 import {
   Select,
@@ -32,6 +33,16 @@ const LABELS_V2 = [
   "Contract Review Chartering", "Contract Review Projects", "NDA Review",
   "Insurance Request", "KYC Assistance", "Others",
 ];
+const PIC_LEGAL_OPTIONS = ["AVD", "AL", "MM", "MW", "LP", "MR"];
+const ACCOUNTS = [
+  "Atlantic Resources", "East Asia Traders", "Global Shipping Co",
+  "Mediterranean Lines", "Nordic Transport", "Pacific Bulk",
+];
+const CHARTER_PARTY_TYPES = [
+  "Gencon 94", "Heavycon 2007", "NYPE 2015", "BIMCO",
+  "Frame Agreement", "COA", "BIMCO Supplytime", "BIMCO UHL Supplytime",
+];
+const REVIEW_CATEGORIES = ["Standard", "Project", "Special"];
 
 const STATUS_STYLES: Record<string, string> = {
   "Reviewed": "bg-green-100 text-green-700",
@@ -117,6 +128,18 @@ interface Review {
   description: string;
   legalReviewStatus: string;
   eFilingNumber: string;
+  picLegal: string[];
+  account: string;
+  charterPartyType: string;
+  contractRecapDate: string;
+  cpIssuanceDate: string;
+  draftCpIssuanceDate: string;
+  finalCpIssuanceDate: string;
+  reviewCategory: string;
+  redFlag: string;
+  additionalInsuranceRequired: boolean;
+  insuranceDetails: string;
+  dueDiligenceCompleted: boolean;
   dueDate: string;
   reviewRaisedBy: string;
   toBeReviewedBy: string;
@@ -130,6 +153,18 @@ interface ReviewForm {
   description: string;
   legalReviewStatus: string;
   eFilingNumber: string;
+  picLegal: string[];
+  account: string;
+  charterPartyType: string;
+  contractRecapDate: string;
+  cpIssuanceDate: string;
+  draftCpIssuanceDate: string;
+  finalCpIssuanceDate: string;
+  reviewCategory: string;
+  redFlag: string;
+  additionalInsuranceRequired: boolean;
+  insuranceDetails: string;
+  dueDiligenceCompleted: boolean;
   dueDate: string;
   reviewRaisedBy: string;
   toBeReviewedBy: string;
@@ -141,13 +176,25 @@ const EMPTY_FORM: ReviewForm = {
   description: "",
   legalReviewStatus: "",
   eFilingNumber: "",
+  picLegal: [],
+  account: "",
+  charterPartyType: "",
+  contractRecapDate: "",
+  cpIssuanceDate: "",
+  draftCpIssuanceDate: "",
+  finalCpIssuanceDate: "",
+  reviewCategory: "",
+  redFlag: "",
+  additionalInsuranceRequired: false,
+  insuranceDetails: "",
+  dueDiligenceCompleted: false,
   dueDate: "",
   reviewRaisedBy: "",
   toBeReviewedBy: "",
 };
 
-const generateReviewNumber = (count: number) =>
-  `REV-2026-${String(count).padStart(4, "0")}`;
+const generateReviewNumber = (count: number, isV2: boolean) =>
+  `${isV2 ? "UHL-L" : "REV"}-2026-${String(count).padStart(4, "0")}`;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -270,6 +317,18 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
       description: review.description,
       legalReviewStatus: review.legalReviewStatus,
       eFilingNumber: review.eFilingNumber,
+      picLegal: review.picLegal ?? [],
+      account: review.account ?? "",
+      charterPartyType: review.charterPartyType ?? "",
+      contractRecapDate: review.contractRecapDate ?? "",
+      cpIssuanceDate: review.cpIssuanceDate ?? "",
+      draftCpIssuanceDate: review.draftCpIssuanceDate ?? "",
+      finalCpIssuanceDate: review.finalCpIssuanceDate ?? "",
+      reviewCategory: review.reviewCategory ?? "",
+      redFlag: review.redFlag ?? "",
+      additionalInsuranceRequired: review.additionalInsuranceRequired ?? false,
+      insuranceDetails: review.insuranceDetails ?? "",
+      dueDiligenceCompleted: review.dueDiligenceCompleted ?? false,
       dueDate: review.dueDate ?? "",
       reviewRaisedBy: review.reviewRaisedBy ?? "",
       toBeReviewedBy: review.toBeReviewedBy ?? "",
@@ -281,12 +340,24 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
     const newReview: Review = {
       id: `rev-${nextCount}`,
       seqId: String(nextCount).padStart(4, "0"),
-      reviewNumber: generateReviewNumber(nextCount),
+      reviewNumber: generateReviewNumber(nextCount, isV2),
       relatedTo: form.relatedTo,
       reviewType: form.reviewType,
       description: form.description,
       legalReviewStatus: form.legalReviewStatus,
       eFilingNumber: form.eFilingNumber,
+      picLegal: form.picLegal,
+      account: form.account,
+      charterPartyType: form.charterPartyType,
+      contractRecapDate: form.contractRecapDate,
+      cpIssuanceDate: form.cpIssuanceDate,
+      draftCpIssuanceDate: form.draftCpIssuanceDate,
+      finalCpIssuanceDate: form.finalCpIssuanceDate,
+      reviewCategory: form.reviewCategory,
+      redFlag: form.redFlag,
+      additionalInsuranceRequired: form.additionalInsuranceRequired,
+      insuranceDetails: form.insuranceDetails,
+      dueDiligenceCompleted: form.dueDiligenceCompleted,
       dueDate: form.dueDate,
       reviewRaisedBy: form.reviewRaisedBy,
       toBeReviewedBy: form.toBeReviewedBy,
@@ -559,7 +630,7 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Review Number</Label>
                 <Input
-                  value={editingId ? (editingReview?.reviewNumber ?? "") : generateReviewNumber(nextCount)}
+                  value={editingId ? (editingReview?.reviewNumber ?? "") : generateReviewNumber(nextCount, isV2)}
                   disabled
                   className="bg-gray-50 text-gray-500 font-medium"
                 />
@@ -639,6 +710,29 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                 </Select>
               </div>
 
+              {/* PIC Legal — multi-select (v2 only) */}
+              {isV2 && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">PIC Legal</Label>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 border border-gray-200 rounded-md px-3 py-2.5">
+                    {PIC_LEGAL_OPTIONS.map((p) => (
+                      <label key={p} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer select-none">
+                        <Checkbox
+                          checked={form.picLegal.includes(p)}
+                          onCheckedChange={(checked) =>
+                            setForm((f) => ({
+                              ...f,
+                              picLegal: checked ? [...f.picLegal, p] : f.picLegal.filter((x) => x !== p),
+                            }))
+                          }
+                        />
+                        {p}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Description */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -690,6 +784,99 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                   placeholder="Alphanumeric only"
                 />
               </div>
+              )}
+
+              {/* Account (v2 only) */}
+              {isV2 && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Account</Label>
+                  <Select value={form.account} onValueChange={(v) => setForm((f) => ({ ...f, account: v }))}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select account" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[600]">
+                      {ACCOUNTS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* ── Charter Party / Insurance / Compliance (v2 only) ── */}
+              {isV2 && (
+              <>
+                <div className="pt-3 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800">Charter Party</h3>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Charter Party Type</Label>
+                  <Select value={form.charterPartyType} onValueChange={(v) => setForm((f) => ({ ...f, charterPartyType: v }))}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select charter party type" /></SelectTrigger>
+                    <SelectContent className="z-[600]">
+                      {CHARTER_PARTY_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Contract / Recap Date</Label>
+                  <DatePicker value={form.contractRecapDate ? new Date(form.contractRecapDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, contractRecapDate: d ? d.toISOString().slice(0, 10) : "" }))} placeholder="Select date" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Charter Party Issuance Date</Label>
+                  <DatePicker value={form.cpIssuanceDate ? new Date(form.cpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, cpIssuanceDate: d ? d.toISOString().slice(0, 10) : "" }))} placeholder="Select date" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Draft Charter Party Issuance Date</Label>
+                  <DatePicker value={form.draftCpIssuanceDate ? new Date(form.draftCpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, draftCpIssuanceDate: d ? d.toISOString().slice(0, 10) : "", ...(d ? { legalReviewStatus: "Draft issued" } : {}) }))} placeholder="Select date" />
+                  <p className="text-xs text-gray-400">Setting this date changes the status to "Draft issued".</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Final Charter Party Issuance Date</Label>
+                  <DatePicker value={form.finalCpIssuanceDate ? new Date(form.finalCpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, finalCpIssuanceDate: d ? d.toISOString().slice(0, 10) : "", ...(d ? { legalReviewStatus: "Final issued" } : {}) }))} placeholder="Select date" />
+                  <p className="text-xs text-gray-400">Setting this date changes the status to "Final issued".</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Category</Label>
+                  <Select value={form.reviewCategory} onValueChange={(v) => setForm((f) => ({ ...f, reviewCategory: v }))}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent className="z-[600]">
+                      {REVIEW_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Red Flag</Label>
+                  <Input placeholder="e.g. BOD" value={form.redFlag} onChange={(e) => setForm((f) => ({ ...f, redFlag: e.target.value }))} />
+                </div>
+
+                <div className="pt-3 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800">Insurance</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="lre-addl-ins" checked={form.additionalInsuranceRequired} onCheckedChange={(v) => setForm((f) => ({ ...f, additionalInsuranceRequired: v === true }))} />
+                  <Label htmlFor="lre-addl-ins" className="text-sm font-medium text-gray-700">Additional Insurance Required</Label>
+                </div>
+                {form.additionalInsuranceRequired && (
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Insurance Details</Label>
+                    <Textarea value={form.insuranceDetails} onChange={(e) => setForm((f) => ({ ...f, insuranceDetails: e.target.value }))} placeholder="Enter insurance details..." rows={3} className="resize-none" />
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800">Compliance (KYC)</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="lre-kyc" checked={form.dueDiligenceCompleted} onCheckedChange={(v) => setForm((f) => ({ ...f, dueDiligenceCompleted: v === true }))} />
+                  <Label htmlFor="lre-kyc" className="text-sm font-medium text-gray-700">Due Diligence Completed</Label>
+                </div>
+              </>
               )}
 
               {/* Due Date */}
