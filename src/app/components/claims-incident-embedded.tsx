@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, ChevronDown, FileSearch, MoreVertical } from "lucide-react";
-import { Claim, INITIAL_CLAIMS_DATA } from "./claims-types";
+import { Claim, INITIAL_CLAIMS_DATA, formatClaimNo } from "./claims-types";
+import { useVersion } from "../version-context";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,9 +38,9 @@ export function ClaimsIncidentEmbedded({
   incidentNumber,
   initialLinkedIds = [],
 }: ClaimsIncidentEmbeddedProps) {
+  const isV2 = useVersion() === "2.0";
 
   const [linkedIds, setLinkedIds] = useState<string[]>(() => {
-    // Auto-include claims whose incidentNo matches this incident
     const autoLinked = INITIAL_CLAIMS_DATA
       .filter(c => c.incidentLinked && c.incidentNo === incidentNumber)
       .map(c => c.id);
@@ -48,8 +49,11 @@ export function ClaimsIncidentEmbedded({
 
   const [linkSearch, setLinkSearch]   = useState("");
   const [isLinkOpen, setIsLinkOpen]   = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const [openKebabId, setOpenKebabId] = useState<string | null>(null);
   const [unlinkId, setUnlinkId]       = useState<string | null>(null);
+
+  const linkBtnRef = useRef<HTMLButtonElement>(null);
 
   // ── Derived ───────────────────────────────────────────────────────────────
 
@@ -64,6 +68,7 @@ export function ClaimsIncidentEmbedded({
       !c.deleted &&
       (linkSearch === "" ||
         c.claimNo.toLowerCase().includes(linkSearch.toLowerCase()) ||
+        formatClaimNo(c.claimNo, isV2).toLowerCase().includes(linkSearch.toLowerCase()) ||
         c.description.toLowerCase().includes(linkSearch.toLowerCase()) ||
         c.claimType.toLowerCase().includes(linkSearch.toLowerCase()) ||
         c.claimant.toLowerCase().includes(linkSearch.toLowerCase()) ||
@@ -71,6 +76,13 @@ export function ClaimsIncidentEmbedded({
   );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleOpenLink = () => {
+    if (!isLinkOpen && linkBtnRef.current) {
+      setDropdownRect(linkBtnRef.current.getBoundingClientRect());
+    }
+    setIsLinkOpen(v => !v);
+  };
 
   const handleLink = (claim: Claim) => {
     setLinkedIds(prev => [claim.id, ...prev]);
@@ -84,6 +96,7 @@ export function ClaimsIncidentEmbedded({
       setUnlinkId(null);
     }
   };
+
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -101,65 +114,17 @@ export function ClaimsIncidentEmbedded({
           )}
         </span>
 
-        {/* Link Claim dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setIsLinkOpen(v => !v)}
-            className="flex items-center gap-2 border border-gray-300 hover:border-gray-400 bg-white text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-          >
-            <Search className="size-3.5" />
-            Link Claim
-            <ChevronDown className="size-3.5 text-gray-400" />
-          </button>
-
-          {isLinkOpen && (
-            <div className="absolute right-0 top-full mt-1 w-[480px] bg-white border border-gray-200 rounded-lg shadow-xl z-[200]">
-              <div className="p-2 border-b border-gray-100">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="Search by Claim No, type, claimant, vessel..."
-                    value={linkSearch}
-                    onChange={e => setLinkSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-blue-400"
-                  />
-                </div>
-              </div>
-              <div className="max-h-72 overflow-y-auto">
-                {linkable.length === 0 ? (
-                  <div className="py-6 text-center text-sm text-gray-400">
-                    No claims available to link
-                  </div>
-                ) : (
-                  linkable.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => handleLink(c)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-gray-900">{c.claimNo}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${STATUS_STYLES[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                          {c.status}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-700 font-medium mt-0.5 truncate">
-                        {c.claimType} · {c.vessel}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5 truncate">{c.description}</div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {isLinkOpen && (
-          <div className="fixed inset-0 z-[199]" onClick={() => { setIsLinkOpen(false); setLinkSearch(""); }} />
-        )}
+        {/* Link Claim button — dropdown is portalled to document.body to escape overflow clipping */}
+        <button
+          ref={linkBtnRef}
+          type="button"
+          onClick={handleOpenLink}
+          className="flex items-center gap-2 border border-gray-300 hover:border-gray-400 bg-white text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+        >
+          <Search className="size-3.5" />
+          Link Claim
+          <ChevronDown className="size-3.5 text-gray-400" />
+        </button>
       </div>
 
       {/* ── Claims cards list ────────────────────────────────────────────── */}
@@ -180,7 +145,7 @@ export function ClaimsIncidentEmbedded({
                   {/* Card header */}
                   <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                     <span className="text-sm font-semibold text-blue-600 shrink-0">
-                      {claim.claimNo}
+                      {formatClaimNo(claim.claimNo, isV2)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded font-medium shrink-0 ${
                       context === "Incident Related"
@@ -199,8 +164,9 @@ export function ClaimsIncidentEmbedded({
                     )}
 
                     {/* Kebab */}
-                    <div className="ml-auto relative shrink-0" onClick={e => e.stopPropagation()}>
+                    <div className="ml-auto relative shrink-0">
                       <button
+                        type="button"
                         onClick={() => setOpenKebabId(openKebabId === claim.id ? null : claim.id)}
                         className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
                       >
@@ -208,9 +174,15 @@ export function ClaimsIncidentEmbedded({
                       </button>
                       {openKebabId === claim.id && (
                         <>
-                          <div className="fixed inset-0 z-[199]" onClick={() => setOpenKebabId(null)} />
-                          <div className="absolute right-0 top-7 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-[200] py-1">
+                          <div
+                            className="fixed inset-0 z-[299]"
+                            onClick={() => setOpenKebabId(null)}
+                          />
+                          <div
+                            className="absolute right-0 top-7 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-[300] py-1"
+                          >
                             <button
+                              type="button"
                               onClick={() => { setOpenKebabId(null); setUnlinkId(claim.id); }}
                               className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                             >
@@ -224,12 +196,9 @@ export function ClaimsIncidentEmbedded({
 
                   {/* Card body */}
                   <div className="px-4 py-3 space-y-3">
-                    {/* Description */}
                     {claim.description && (
                       <p className="text-sm text-gray-700 line-clamp-2">{claim.description}</p>
                     )}
-
-                    {/* Details grid */}
                     <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                       <div>
                         <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Type of Claim</p>
@@ -266,11 +235,75 @@ export function ClaimsIncidentEmbedded({
         )}
       </div>
 
-      {/* ── Unlink confirmation ──────────────────────────────────────────── */}
+      {/* ── Link Claim dropdown portal ───────────────────────────────────── */}
+      {isLinkOpen && dropdownRect && createPortal(
+        <div data-claims-portal="" style={{ pointerEvents: "auto" }}>
+          <div
+            className="fixed inset-0 z-[499]"
+            onClick={() => { setIsLinkOpen(false); setLinkSearch(""); }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: dropdownRect.bottom + 4,
+              right: window.innerWidth - dropdownRect.right,
+              width: 480,
+              zIndex: 500,
+            }}
+            className="bg-white border border-gray-200 rounded-lg shadow-xl"
+          >
+            <div className="p-2 border-b border-gray-100">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Search by Claim No, type, claimant, vessel..."
+                  value={linkSearch}
+                  onChange={e => setLinkSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:border-blue-400"
+                />
+              </div>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {linkable.length === 0 ? (
+                <div className="py-6 text-center text-sm text-gray-400">
+                  No claims available to link
+                </div>
+              ) : (
+                linkable.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleLink(c)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{formatClaimNo(c.claimNo, isV2)}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${STATUS_STYLES[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                        {c.status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-700 font-medium mt-0.5 truncate">
+                      {c.claimType} · {c.vessel}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5 truncate">{c.description}</div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Unlink confirmation portal ───────────────────────────────────── */}
       {unlinkId && createPortal(
-        <>
+        <div data-claims-portal="" style={{ pointerEvents: "auto" }}>
           <div className="fixed inset-0 bg-black/30 z-[400]" />
-          <div className="fixed inset-0 flex items-center justify-center z-[410]">
+          <div
+            className="fixed inset-0 flex items-center justify-center z-[410]"
+          >
             <div className="bg-white rounded-xl shadow-2xl p-6 w-[380px]">
               <h3 className="text-base font-semibold text-gray-900 mb-2">Unlink Claim</h3>
               <p className="text-sm text-gray-600 mb-6">
@@ -278,12 +311,14 @@ export function ClaimsIncidentEmbedded({
               </p>
               <div className="flex items-center justify-end gap-3">
                 <button
+                  type="button"
                   onClick={() => setUnlinkId(null)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   No
                 </button>
                 <button
+                  type="button"
                   onClick={handleUnlink}
                   className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
                 >
@@ -292,7 +327,7 @@ export function ClaimsIncidentEmbedded({
               </div>
             </div>
           </div>
-        </>,
+        </div>,
         document.body
       )}
     </div>

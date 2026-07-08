@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { useVersion } from "../version-context";
+import { formatInsuranceNo } from "./insurance-constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -302,6 +304,7 @@ interface InsuranceClaimsEmbeddedProps {
 }
 
 export function InsuranceClaimsEmbedded({ claimId }: InsuranceClaimsEmbeddedProps) {
+  const isV2 = useVersion() === "2.0";
   // ── Shared state ──────────────────────────────────────────────────────────
 
   const [allInsurance, setAllInsurance] = useState<InsuranceRecord[]>(SEED_INSURANCE);
@@ -348,6 +351,7 @@ export function InsuranceClaimsEmbedded({ claimId }: InsuranceClaimsEmbeddedProp
     (r) =>
       !linkedIds.includes(r.id) &&
       (r.id.toLowerCase().includes(linkSearch.toLowerCase()) ||
+        formatInsuranceNo(r.id, isV2).toLowerCase().includes(linkSearch.toLowerCase()) ||
         r.typeOfCover.toLowerCase().includes(linkSearch.toLowerCase()) ||
         r.leadingInsurer.toLowerCase().includes(linkSearch.toLowerCase()) ||
         r.broker.toLowerCase().includes(linkSearch.toLowerCase()) ||
@@ -460,7 +464,7 @@ export function InsuranceClaimsEmbedded({ claimId }: InsuranceClaimsEmbeddedProp
                       className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-900">{r.id}</span>
+                        <span className="text-sm font-semibold text-gray-900">{formatInsuranceNo(r.id, isV2)}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_STYLES[r.status] ?? "bg-gray-100 text-gray-600"}`}>
                           {r.status}
                         </span>
@@ -513,7 +517,7 @@ export function InsuranceClaimsEmbedded({ claimId }: InsuranceClaimsEmbeddedProp
                       onClick={() => openEdit(record)}
                       className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline w-32 shrink-0 text-left"
                     >
-                      {record.id}
+                      {formatInsuranceNo(record.id, isV2)}
                     </button>
 
                     <span
@@ -852,7 +856,7 @@ export function InsuranceClaimsEmbedded({ claimId }: InsuranceClaimsEmbeddedProp
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">Edit Insurance</h2>
-                <p className="text-xs text-gray-500 mt-0.5">{editingRecord.id}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{formatInsuranceNo(editingRecord.id, isV2)}</p>
               </div>
               <button onClick={() => { setEditingRecord(null); setEditForm(null); }} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded transition-colors">
                 <X className="size-5" />
@@ -865,7 +869,7 @@ export function InsuranceClaimsEmbedded({ claimId }: InsuranceClaimsEmbeddedProp
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Insurance Number</Label>
-                <Input value={editForm.id} disabled className="bg-gray-50 text-gray-500 font-medium" />
+                <Input value={formatInsuranceNo(editForm.id, isV2)} disabled className="bg-gray-50 text-gray-500 font-medium" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Type of Cover</Label>
