@@ -417,7 +417,9 @@ export function Insurance() {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
   const handleOpenAdd = () => {
-    const newNo = `INS-${new Date().getFullYear()}-${String(policies.length + 1).padStart(3, "0")}`;
+    const newNo = isV2
+      ? `UHL-IN-${new Date().getFullYear()}-${String(policies.length + 1).padStart(4, "0")}`
+      : `INS-${new Date().getFullYear()}-${String(policies.length + 1).padStart(3, "0")}`;
     setFormData({ ...EMPTY_FORM, policyNo: newNo });
     setEditingId(null);
     setActiveOverlayTab("Overview");

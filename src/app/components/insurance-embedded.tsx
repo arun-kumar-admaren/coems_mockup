@@ -179,8 +179,10 @@ const SEED_RECORDS: InsuranceRecord[] = [
   },
 ];
 
-const generatePolicyNo = (count: number) =>
-  `INS-${new Date().getFullYear()}-${String(count).padStart(3, "0")}`;
+const generatePolicyNo = (count: number, isV2: boolean = false) =>
+  isV2
+    ? `UHL-IN-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`
+    : `INS-${new Date().getFullYear()}-${String(count).padStart(3, "0")}`;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -273,7 +275,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
   const handleCreate = () => {
     const newRecord: InsuranceRecord = {
       id: `ins-emb-${nextCount}`,
-      policyNo: generatePolicyNo(nextCount),
+      policyNo: generatePolicyNo(nextCount, isV2),
       insuranceCategory: moduleType,
       fixture: moduleType === "Fixture" ? moduleId : "",
       vessel: moduleType === "Vessel" ? moduleId : "",
@@ -504,7 +506,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
               {/* Insurance No (auto-gen) */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Insurance No</Label>
-                <Input value={generatePolicyNo(nextCount)} disabled className="bg-gray-50 text-gray-500 font-medium" />
+                <Input value={generatePolicyNo(nextCount, isV2)} disabled className="bg-gray-50 text-gray-500 font-medium" />
               </div>
 
               {/* Category + Entity (pre-filled, read-only) — Category dropped in v2 */}
