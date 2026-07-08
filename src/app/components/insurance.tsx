@@ -29,7 +29,7 @@ import {
 import { cn } from "./ui/utils";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
 import { useVersion } from "../version-context";
-import { TYPE_OF_COVER_V2 } from "./insurance-constants";
+import { TYPE_OF_COVER_V2, formatInsuranceNo } from "./insurance-constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -388,6 +388,7 @@ export function Insurance() {
       const q = searchQuery.toLowerCase();
       const matchesSearch = !q ||
         p.policyNo.toLowerCase().includes(q) ||
+        formatInsuranceNo(p.policyNo, isV2).toLowerCase().includes(q) ||
         (!isV2 && p.insuranceCategory.toLowerCase().includes(q)) ||
         p.typeOfCover.toLowerCase().includes(q) ||
         p.insurerClub.toLowerCase().includes(q) ||
@@ -628,7 +629,7 @@ export function Insurance() {
                       className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
                       onClick={() => handleOpenEdit(p)}
                     >
-                      <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap group-hover:underline">{p.policyNo}</td>
+                      <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap group-hover:underline">{formatInsuranceNo(p.policyNo, isV2)}</td>
                       {!isV2 && (
                       <td className="px-4 py-3 whitespace-nowrap">
                         {p.insuranceCategory ? (
@@ -709,7 +710,7 @@ export function Insurance() {
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mb-8">
                 <div>
                   <span className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Insurance No</span>
-                  <span className="font-semibold text-gray-900">{formData.policyNo || "—"}</span>
+                  <span className="font-semibold text-gray-900">{formatInsuranceNo(formData.policyNo, isV2) || "—"}</span>
                 </div>
                 {!isV2 && (
                 <div>

@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useVersion } from "../version-context";
-import { TYPE_OF_COVER_V2 } from "./insurance-constants";
+import { TYPE_OF_COVER_V2, formatInsuranceNo } from "./insurance-constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -258,6 +258,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
     (r) =>
       !linkedIds.includes(r.id) &&
       (r.policyNo.toLowerCase().includes(linkSearch.toLowerCase()) ||
+        formatInsuranceNo(r.policyNo, isV2).toLowerCase().includes(linkSearch.toLowerCase()) ||
         r.typeOfCover.toLowerCase().includes(linkSearch.toLowerCase()) ||
         r.insuranceStatus.toLowerCase().includes(linkSearch.toLowerCase()))
   );
@@ -371,7 +372,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
                       className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">{r.policyNo}</span>
+                        <span className="text-sm font-medium text-gray-900">{formatInsuranceNo(r.policyNo, isV2)}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_STYLES[r.insuranceStatus] ?? "bg-gray-100 text-gray-600"}`}>
                           {r.insuranceStatus}
                         </span>
@@ -430,7 +431,7 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
 
               {/* Card header */}
               <div className="flex items-center gap-2 mb-3 pr-8">
-                <span className="text-sm font-semibold text-gray-900">{record.policyNo}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatInsuranceNo(record.policyNo, isV2)}</span>
                 {!isV2 && record.insuranceCategory && (
                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${CATEGORY_STYLES[record.insuranceCategory] ?? "bg-gray-100 text-gray-600"}`}>
                     {record.insuranceCategory}
