@@ -33,7 +33,7 @@ import {
 } from "./ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "./ui/utils";
-import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, PIC_LEGAL_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
+import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, PIC_LEGAL_OPTIONS, VESSELS, ALL_FIXTURES, VOYAGE_LIST, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
 import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
@@ -45,14 +45,16 @@ import { ClosureEmbedded, DocumentsChecklist } from "./closure-embedded";
 function FixtureLookupField({
   value,
   onChange,
+  options = ALL_FIXTURES,
 }: {
   value: string[];
   onChange: (val: string[]) => void;
+  options?: typeof ALL_FIXTURES;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch]  = useState("");
 
-  const available = ALL_FIXTURES.filter(
+  const available = options.filter(
     (f) =>
       !value.includes(f.id) &&
       (f.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -300,6 +302,7 @@ export function ClaimsInsurance() {
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [editParties, setEditParties] = useState<ExternalParty[]>([]);
   const [openPartyKebabId, setOpenPartyKebabId] = useState<string | null>(null);
+  const [additionalInfoOpen, setAdditionalInfoOpen] = useState(true);
 
   // Filtered Claims
   const filteredClaims = useMemo(() => {
@@ -328,9 +331,10 @@ export function ClaimsInsurance() {
     const newNo = isV2
       ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(4, "0")}`
       : `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`;
-    setFormData({ ...INITIAL_FORM_DATA, claimNo: newNo });
+    setFormData({ ...INITIAL_FORM_DATA, claimNo: newNo, status: isV2 ? "Open" : INITIAL_FORM_DATA.status });
     setEditingId(null);
     setEditParties([]);
+    setAdditionalInfoOpen(true);
     setIsSheetOpen(true);
   };
 
@@ -383,6 +387,7 @@ export function ClaimsInsurance() {
     } as any);
     setEditingId(claim.id);
     setEditParties((claim as any).externalParties || SEED_PARTIES[claim.id] || []);
+    setAdditionalInfoOpen(true);
     setIsSheetOpen(true);
   };
 
@@ -404,7 +409,12 @@ export function ClaimsInsurance() {
   };
 
   const handleSave = () => {
-    if (!formData.claimant || formData.claimType === "none" || formData.status === "none") {
+    if (isV2) {
+      if (!formData.voyage || formData.voyage === "none" || !(formData.relatedFixtures || []).length || !formData.claimant || formData.status === "none") {
+        alert("Please fill in required fields: Voyage, Related Fixture, Claimant, and Claim Status.");
+        return;
+      }
+    } else if (!formData.claimant || formData.claimType === "none" || formData.status === "none") {
       alert("Please fill in required fields: Type of Claim, Claimant, and Claim Status.");
       return;
     }
@@ -941,7 +951,7 @@ export function ClaimsInsurance() {
                   </div>
                   )}
 
-                  {(!isV2 && (formData as any).claimContext === "Standalone") ? (<>
+                  {!isV2 && ((formData as any).claimContext === "Standalone" ? (<>
 
                   {/* Vessel & Voyage */}
                   <div className="grid grid-cols-2 gap-4">
@@ -1601,6 +1611,624 @@ export function ClaimsInsurance() {
                   </div>}
 
                   {/* ── External Parties (edit only) ────────────────────── */}
+                  {editingId && <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-700">External Parties</h3>
+                      <button
+                        type="button"
+                        onClick={addExternalParty}
+                        className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-400 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors"
+                      >
+                        <Plus className="size-3.5" />
+                        External Party
+                      </button>
+                    </div>
+
+                    {editParties.length === 0 ? (
+                      <div className="border border-dashed border-gray-200 rounded-lg py-6 text-center text-xs text-gray-400">
+                        No external parties added. Click "+ External Party" to add one.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {editParties.map((party) => (
+                          <div key={party.id} className="relative border border-gray-200 rounded-lg bg-white p-4 hover:border-gray-300 transition-colors">
+
+                            {/* Kebab menu */}
+                            <div className="absolute top-3 right-3">
+                              <button
+                                type="button"
+                                onClick={() => setOpenPartyKebabId(openPartyKebabId === party.id ? null : party.id)}
+                                className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              >
+                                <MoreVertical className="size-4" />
+                              </button>
+                              {openPartyKebabId === party.id && (
+                                <>
+                                  <div className="fixed inset-0 z-[199]" onClick={() => setOpenPartyKebabId(null)} />
+                                  <div className="absolute right-0 top-7 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-[200] py-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => removeParty(party.id)}
+                                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Row 1: Type + Name */}
+                            <div className="grid grid-cols-2 gap-3 pr-8 mb-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-gray-600">Type</Label>
+                                <Select value={party.type || ""} onValueChange={(v) => updatePartyField(party.id, "type", v)}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {PARTY_TYPE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-gray-600">Name</Label>
+                                <Input
+                                  value={party.name}
+                                  onChange={(e) => updatePartyField(party.id, "name", e.target.value)}
+                                  placeholder="Full name"
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Row 2: Parent Company + Date Appointed + Status */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-gray-600">Parent Company</Label>
+                                <Input
+                                  value={party.parentCompany}
+                                  onChange={(e) => updatePartyField(party.id, "parentCompany", e.target.value)}
+                                  placeholder="Company name"
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-gray-600">Date Appointed</Label>
+                                <Input
+                                  type="date"
+                                  value={party.dateAppointed}
+                                  onChange={(e) => updatePartyField(party.id, "dateAppointed", e.target.value)}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-gray-600">Status</Label>
+                                <Select value={party.status || ""} onValueChange={(v) => updatePartyField(party.id, "status", v)}>
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {PARTY_STATUS_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>}
+
+                  </>))}
+
+                  {isV2 && (<>
+                  {/* ═══ Version 2.0 restructured Overview form (client BRD follow-up) ═══ */}
+
+                  {/* Voyage (mandatory) + Vessel (auto-populated, non-editable) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Voyage <span className="text-red-500">*</span></Label>
+                      <Select
+                        value={formData.voyage || "none"}
+                        onValueChange={(val) => {
+                          const match = VOYAGE_LIST.find((v) => v.voyage === val);
+                          setFormData((f: any) => ({
+                            ...f,
+                            voyage: val === "none" ? "" : val,
+                            vessel: match ? match.vessel : "",
+                            relatedFixtures: [],
+                          }));
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select voyage" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select voyage</SelectItem>
+                          {VOYAGE_LIST.map((v) => <SelectItem key={v.voyage} value={v.voyage}>{v.voyage}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Vessel <span className="text-red-500">*</span></Label>
+                      <Input value={formData.vessel} readOnly placeholder="Auto-populated from Voyage" className="bg-gray-50 text-gray-500" />
+                    </div>
+                  </div>
+
+                  {/* Related Fixture (mandatory) — scoped to the selected voyage */}
+                  <div className="space-y-2">
+                    <Label>Related Fixture <span className="text-red-500">*</span></Label>
+                    <FixtureLookupField
+                      value={formData.relatedFixtures || []}
+                      onChange={(val) => updateField("relatedFixtures", val)}
+                      options={ALL_FIXTURES.filter((f) => f.voyage === formData.voyage)}
+                    />
+                  </div>
+
+                  {/* Date of Incident + Location */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date of Incident</Label>
+                      <Input type="date" value={formData.dateOfIncident} onChange={(e) => updateField("dateOfIncident", e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <Input value={(formData as any).location === "none" ? "" : ((formData as any).location || "")} onChange={(e) => updateField("location" as any, e.target.value)} placeholder="e.g. Port of Rotterdam, At Sea" />
+                    </div>
+                  </div>
+
+                  {/* Short Claim Description */}
+                  <div className="space-y-2">
+                    <Label>Short Claim Description</Label>
+                    <Textarea value={formData.claimTitle} onChange={(e) => updateField("claimTitle", e.target.value)} placeholder="Brief summary of the claim for list view..." className="resize-none min-h-[80px]" />
+                  </div>
+
+                  {/* Required assistance from insurance */}
+                  <div className="space-y-2">
+                    <Label>Required assistance from insurance</Label>
+                    <Select value={(formData as any).requiredAssistanceFromInsurance || "none"} onValueChange={(val) => updateField("requiredAssistanceFromInsurance" as any, val)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select</SelectItem>
+                        <SelectItem value="Yes">Yes</SelectItem>
+                        <SelectItem value="No">No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Claimant (mandatory) + Claimant Reference Number */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Claimant <span className="text-red-500">*</span></Label>
+                      <Input value={formData.claimant} onChange={(e) => updateField("claimant", e.target.value)} placeholder="Enter claimant name" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Claimant Reference Number</Label>
+                      <Input value={formData.claimantReference} onChange={(e) => updateField("claimantReference", e.target.value)} placeholder="e.g. CLM-REF-2024-001" />
+                    </div>
+                  </div>
+
+                  {/* Port Agent (renamed from "Port Agent (full style)") */}
+                  <div className="space-y-2">
+                    <Label>Port Agent</Label>
+                    <Select value={(formData as any).portAgent || "none"} onValueChange={(val) => updateField("portAgent" as any, val)}>
+                      <SelectTrigger><SelectValue placeholder="Select port agent" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select port agent</SelectItem>
+                        {PORT_AGENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Claim Status (mandatory, defaults to Open) */}
+                  <div className="space-y-2">
+                    <Label>Claim Status <span className="text-red-500">*</span></Label>
+                    <Select value={formData.status} onValueChange={(val) => updateField("status", val)}>
+                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select status</SelectItem>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Close">Close</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Date Settled & Claim Duration — Edit only */}
+                  {editingId && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1">
+                          Date Settled
+                          {formData.status === "Close" && <span className="text-red-500">*</span>}
+                        </Label>
+                        <Input
+                          type="date"
+                          value={(formData as any).dateSettled || ""}
+                          onChange={e => updateField("dateSettled" as any, e.target.value)}
+                          min={(formData as any).createdDate || undefined}
+                          className={`text-sm ${
+                            formData.status === "Close" && !(formData as any).dateSettled
+                              ? "border-amber-300 focus:ring-amber-300"
+                              : ""
+                          }`}
+                        />
+                        {formData.status === "Close" && !(formData as any).dateSettled && (
+                          <p className="text-[10px] text-amber-500">Recommended when claim is closed</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1 text-gray-500">
+                          Claim Duration
+                          <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </Label>
+                        <div className={`flex items-center h-10 px-3 rounded-md border text-sm ${
+                          (formData as any).dateSettled && (formData as any).createdDate
+                            ? "bg-blue-50 border-blue-200 text-blue-800 font-medium"
+                            : "bg-gray-50 border-gray-200 text-gray-400"
+                        }`}>
+                          {(() => {
+                            const settled = (formData as any).dateSettled;
+                            const created = (formData as any).createdDate;
+                            if (!settled || !created) return "—";
+                            const days = Math.round((new Date(settled).getTime() - new Date(created).getTime()) / 86400000);
+                            return days >= 0 ? `${days} day${days !== 1 ? "s" : ""}` : "—";
+                          })()}
+                        </div>
+                        <p className="text-[10px] text-gray-400">Date Settled − Created Date</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PIC Legal (optional) */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>PIC Legal</Label>
+                      <div className="space-y-2 relative">
+                        <button
+                          type="button"
+                          onClick={() => setPicLegalOpen((o) => !o)}
+                          className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <span className={formData.picLegal.length ? "text-gray-900" : "text-muted-foreground"}>
+                            {formData.picLegal.length ? formData.picLegal.join(", ") : "Select PIC Legal"}
+                          </span>
+                          <ChevronDown className="size-4 text-gray-400 flex-shrink-0" />
+                        </button>
+                        {picLegalOpen && (
+                          <>
+                            <div className="fixed inset-0 z-[500]" onClick={() => setPicLegalOpen(false)} />
+                            <div className="absolute left-0 right-0 z-[510] mt-1 rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+                              {PIC_LEGAL_OPTIONS.map((p) => (
+                                <label key={p} className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 rounded hover:bg-gray-50 cursor-pointer select-none">
+                                  <Checkbox
+                                    checked={formData.picLegal.includes(p)}
+                                    onCheckedChange={(checked) =>
+                                      setFormData((f: any) => ({
+                                        ...f,
+                                        picLegal: checked ? [...f.picLegal, p] : f.picLegal.filter((x: string) => x !== p),
+                                      }))
+                                    }
+                                  />
+                                  {p}
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information — collapsible, expanded by default in the main Claims module */}
+                  <div className="border border-gray-200 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setAdditionalInfoOpen((o) => !o)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left"
+                    >
+                      <h3 className="text-sm font-semibold text-gray-900">Additional Information</h3>
+                      <ChevronDown className={cn("size-4 text-gray-400 transition-transform", additionalInfoOpen && "rotate-180")} />
+                    </button>
+                    {additionalInfoOpen && (
+                      <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+
+                        {/* Type of Claim + Type of Cover */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Type of Claim</Label>
+                            <Select value={formData.claimType} onValueChange={(val) => updateField("claimType", val)}>
+                              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select type</SelectItem>
+                                {CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Type of Cover</Label>
+                            <Select value={formData.typeOfCover} onValueChange={(val) => updateField("typeOfCover", val)}>
+                              <SelectTrigger><SelectValue placeholder="Select cover" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select cover</SelectItem>
+                                {TYPE_OF_COVER_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Broker + Broker Reference */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Broker</Label>
+                            <Select value={formData.broker} onValueChange={(val) => updateField("broker", val)}>
+                              <SelectTrigger><SelectValue placeholder="Select broker" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select broker</SelectItem>
+                                {BROKERS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Broker Reference Number</Label>
+                            <Input value={formData.brokerReference} onChange={(e) => updateField("brokerReference", e.target.value)} placeholder="e.g. MIB-2024-089" />
+                          </div>
+                        </div>
+
+                        {/* Leading Insurer + Date of Notification */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Leading Insurer</Label>
+                            <Select value={formData.leadingInsurer || "none"} onValueChange={(val) => updateField("leadingInsurer", val === "none" ? "" : val)}>
+                              <SelectTrigger><SelectValue placeholder="Select leading insurer" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select leading insurer</SelectItem>
+                                {INSURERS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Date of Notification to Broker</Label>
+                            <Input type="date" value={formData.dateOfNotification} onChange={(e) => updateField("dateOfNotification", e.target.value)} />
+                          </div>
+                        </div>
+
+                        {/* Priority + Status Description */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Priority</Label>
+                            <Select value={formData.priority} onValueChange={(val) => updateField("priority", val)}>
+                              <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                              <SelectContent>
+                                {PRIORITY_OPTIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Status Description</Label>
+                            <Textarea
+                              value={formData.statusDescription}
+                              onChange={(e) => updateField("statusDescription", e.target.value)}
+                              placeholder="Describe the current status of this claim..."
+                              className="resize-none min-h-[80px]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Recovery (renamed from "Liability & Recovery"; Liability Position and Liability Assessment Notes removed) */}
+                        <div className="space-y-4">
+                          <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Recovery</h3>
+
+                          <div className="space-y-2">
+                            <Label>Recovery Right Exists</Label>
+                            <Select value={(formData as any).recoveryRightExists || "none"} onValueChange={(val) => updateField("recoveryRightExists", val)}>
+                              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select</SelectItem>
+                                <SelectItem value="Yes">Yes</SelectItem>
+                                <SelectItem value="No">No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {(formData as any).recoveryRightExists === "Yes" && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Recovery Against</Label>
+                                <Select value={(formData as any).recoveryAgainst || "none"} onValueChange={(val) => updateField("recoveryAgainst", val)}>
+                                  <SelectTrigger><SelectValue placeholder="Select party" /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Select party</SelectItem>
+                                    <SelectItem value="Owner">Owner</SelectItem>
+                                    <SelectItem value="Charterer">Charterer</SelectItem>
+                                    <SelectItem value="Shipper">Shipper</SelectItem>
+                                    <SelectItem value="Receiver">Receiver</SelectItem>
+                                    <SelectItem value="Terminal">Terminal</SelectItem>
+                                    <SelectItem value="Stevedore">Stevedore</SelectItem>
+                                    <SelectItem value="Insurer">Insurer</SelectItem>
+                                    <SelectItem value="Surveyor">Surveyor</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Recovery Route</Label>
+                                <Select value={(formData as any).recoveryRoute || "none"} onValueChange={(val) => updateField("recoveryRoute", val)}>
+                                  <SelectTrigger><SelectValue placeholder="Select route" /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Select route</SelectItem>
+                                    <SelectItem value="Insurance">Insurance</SelectItem>
+                                    <SelectItem value="Contractual">Contractual</SelectItem>
+                                    <SelectItem value="Legal">Legal</SelectItem>
+                                    <SelectItem value="Direct Settlement">Direct Settlement</SelectItem>
+                                    <SelectItem value="Arbitration">Arbitration</SelectItem>
+                                    <SelectItem value="Litigation">Litigation</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resolution & Security — Edit only, unchanged from today's layout */}
+                  {editingId && <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Resolution &amp; Security</h3>
+
+                    {/* Resolution Path */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Resolution Path <span className="text-red-500">*</span></Label>
+                        <Select value={(formData as any).resolutionPath || "none"} onValueChange={(val) => updateField("resolutionPath", val)}>
+                          <SelectTrigger><SelectValue placeholder="Select resolution path" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select path</SelectItem>
+                            <SelectItem value="Under Negotiation">Under Negotiation</SelectItem>
+                            <SelectItem value="Settlement">Settlement</SelectItem>
+                            <SelectItem value="Defense">Defense</SelectItem>
+                            <SelectItem value="Recovery">Recovery</SelectItem>
+                            <SelectItem value="Litigation">Litigation</SelectItem>
+                            <SelectItem value="Arbitration">Arbitration</SelectItem>
+                            <SelectItem value="Closed without Action">Closed without Action</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Security Provided */}
+                      <div className="space-y-2">
+                        <Label>Security Provided</Label>
+                        <Select
+                          value={(formData as any).securityProvided || "No"}
+                          onValueChange={(val) => {
+                            updateField("securityProvided", val);
+                            if (val === "No") {
+                              updateField("securityType", "");
+                              updateField("securityAmount", "");
+                              updateField("securityCurrency", "USD");
+                              updateField("securityIssuedDate", "");
+                              updateField("securityReleasedDate", "");
+                            }
+                          }}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="No">No</SelectItem>
+                            <SelectItem value="Yes">Yes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Security fields — shown only when Security Provided = Yes */}
+                    {(formData as any).securityProvided === "Yes" && (
+                      <div className="space-y-4 pl-4 border-l-2 border-blue-100">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Security Type */}
+                          <div className="space-y-2">
+                            <Label>Security Type <span className="text-red-500">*</span></Label>
+                            <Select value={(formData as any).securityType || "none"} onValueChange={(val) => updateField("securityType", val)}>
+                              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select type</SelectItem>
+                                <SelectItem value="Letter of Undertaking (LOU)">Letter of Undertaking (LOU)</SelectItem>
+                                <SelectItem value="Bank Guarantee">Bank Guarantee</SelectItem>
+                                <SelectItem value="Club Letter">Club Letter</SelectItem>
+                                <SelectItem value="Cash Deposit">Cash Deposit</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {(formData as any).securityType === "Other" && (
+                              <Input
+                                value={(formData as any).securityTypeOther || ""}
+                                onChange={(e) => updateField("securityTypeOther", e.target.value)}
+                                placeholder="Describe security type..."
+                                className="mt-2"
+                              />
+                            )}
+                          </div>
+
+                          {/* Security Currency */}
+                          <div className="space-y-2">
+                            <Label>Security Currency</Label>
+                            <Select value={(formData as any).securityCurrency || "USD"} onValueChange={(val) => updateField("securityCurrency", val)}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {["USD","EUR","GBP","SGD","AED","Other"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Security Amount */}
+                          <div className="space-y-2">
+                            <Label>Security Amount</Label>
+                            <Input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={(formData as any).securityAmount || ""}
+                              onChange={(e) => updateField("securityAmount", e.target.value)}
+                              placeholder="0.00"
+                            />
+                            {(formData as any).securityAmount && parseFloat((formData as any).securityAmount) <= 0 && (
+                              <p className="text-xs text-red-500">Amount must be greater than 0</p>
+                            )}
+                          </div>
+
+                          {/* Security Issued Date */}
+                          <div className="space-y-2">
+                            <Label>Security Issued Date</Label>
+                            <Input
+                              type="date"
+                              value={(formData as any).securityIssuedDate || ""}
+                              onChange={(e) => updateField("securityIssuedDate", e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Security Released Date */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Security Released Date</Label>
+                            <Input
+                              type="date"
+                              value={(formData as any).securityReleasedDate || ""}
+                              onChange={(e) => {
+                                const issued = (formData as any).securityIssuedDate;
+                                if (issued && e.target.value && e.target.value < issued) return;
+                                updateField("securityReleasedDate", e.target.value);
+                              }}
+                            />
+                            {(formData as any).securityIssuedDate && (
+                              <p className="text-xs text-gray-400">Must be on or after the issued date. Leave blank if still active.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Resolution Notes */}
+                    <div className="space-y-2">
+                      <Label>
+                        Resolution Notes
+                        {["Defense","Litigation","Arbitration","Closed without Action"].includes((formData as any).resolutionPath) && (
+                          <span className="ml-2 text-xs font-normal text-amber-600">(Recommended for this resolution path)</span>
+                        )}
+                      </Label>
+                      <Textarea
+                        value={(formData as any).resolutionNotes || ""}
+                        onChange={(e) => updateField("resolutionNotes", e.target.value)}
+                        placeholder="Negotiation summary, defense strategy, arbitration rationale, or reason for closing without action..."
+                        className="resize-none min-h-[80px]"
+                      />
+                    </div>
+                  </div>}
+
+                  {/* External Parties — Edit only, unchanged from today's layout */}
                   {editingId && <div className="space-y-3 pt-2">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-700">External Parties</h3>

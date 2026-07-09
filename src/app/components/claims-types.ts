@@ -244,16 +244,29 @@ export const PORT_AGENTS = [
   "Oceanbridge Maritime",
 ];
 
+// Voyage codes here (VOY-2024-xxx) match each fixture's owning claim in
+// INITIAL_CLAIMS_DATA 1:1, so the Voyage → Vessel → Fixture cascade in the
+// Claims add/edit overlay (v2.0) has no ambiguous voyage-to-vessel mapping.
 export const ALL_FIXTURES = [
-  { id: "FIX-2024-067", vessel: "MV OCEAN STAR",      voyage: "FAI 2601" },
-  { id: "FIX-2024-089", vessel: "MV PACIFIC VOYAGER", voyage: "FAI 2502" },
-  { id: "FIX-2024-045", vessel: "MV ATLANTIC PRIDE",  voyage: "FAI 2498" },
-  { id: "FIX-2024-112", vessel: "MV SOUTHERN CROSS",  voyage: "FAI 2312" },
-  { id: "FIX-2024-056", vessel: "MV WESTERN SPIRIT",  voyage: "FAI 2499" },
-  { id: "FIX-2024-134", vessel: "MV NORTHERN LIGHT",  voyage: "FAI 2601" },
-  { id: "FIX-2024-118", vessel: "MV TROPICAL WAVE",   voyage: "FAI 2715" },
-  { id: "FIX-2023-289", vessel: "MV HORIZON",         voyage: "FAI 1998" },
+  { id: "FIX-2024-067", vessel: "MV OCEAN STAR",      voyage: "VOY-2024-045" },
+  { id: "FIX-2024-089", vessel: "MV PACIFIC VOYAGER", voyage: "VOY-2024-062" },
+  { id: "FIX-2024-045", vessel: "MV ATLANTIC PRIDE",  voyage: "VOY-2024-031" },
+  { id: "FIX-2024-112", vessel: "MV SOUTHERN CROSS",  voyage: "VOY-2024-078" },
+  { id: "FIX-2024-078", vessel: "MV EASTERN STAR",    voyage: "VOY-2024-055" },
+  { id: "FIX-2024-134", vessel: "MV NORTHERN LIGHT",  voyage: "VOY-2024-091" },
+  { id: "FIX-2024-056", vessel: "MV WESTERN SPIRIT",  voyage: "VOY-2024-039" },
+  { id: "FIX-2023-289", vessel: "MV HORIZON",         voyage: "VOY-2023-210" },
+  { id: "FIX-2024-101", vessel: "MV ARCTIC BREEZE",   voyage: "VOY-2024-071" },
+  { id: "FIX-2024-118", vessel: "MV TROPICAL WAVE",   voyage: "VOY-2024-082" },
+  { id: "FIX-2024-092", vessel: "MV GLOBAL TRADER",   voyage: "VOY-2024-065" },
+  { id: "FIX-2024-125", vessel: "MV LIBERTY BELLE",   voyage: "VOY-2024-088" },
 ];
+
+// Version 2.0 — "all available voyages" for the Claims add/edit overlay's Voyage
+// field; selecting a voyage auto-populates (and locks) Vessel from this list.
+export const VOYAGE_LIST: { voyage: string; vessel: string }[] = ALL_FIXTURES.map(
+  (f) => ({ voyage: f.voyage, vessel: f.vessel })
+);
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
 
