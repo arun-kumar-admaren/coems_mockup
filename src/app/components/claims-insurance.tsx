@@ -391,6 +391,18 @@ export function ClaimsInsurance() {
     setIsSheetOpen(true);
   };
 
+  // Opens a specific claim's edit overlay when navigated here from a linked-claim
+  // click in another module (e.g. the Incidents Claims tab) — see the matching
+  // sessionStorage write + event dispatch in claims-incident-embedded.tsx.
+  useEffect(() => {
+    const pendingId = sessionStorage.getItem("coems-pending-claim-id");
+    if (pendingId) {
+      sessionStorage.removeItem("coems-pending-claim-id");
+      const claim = claims.find((c) => c.id === pendingId);
+      if (claim) handleEditClaim(claim);
+    }
+  }, []);
+
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };

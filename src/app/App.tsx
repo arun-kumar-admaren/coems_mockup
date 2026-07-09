@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "./components/sidebar";
 import { HSEQ } from "./components/hseq";
 import { ClaimsInsurance } from "./components/claims-insurance";
@@ -42,6 +42,15 @@ export default function App() {
     setVersion(v);
     localStorage.setItem("coems-version", v);
   };
+
+  // Cross-module bridge: a linked claim clicked inside an Incident's Claims tab
+  // dispatches this to jump to the Claims module; ClaimsInsurance itself opens
+  // the specific claim's edit overlay by reading sessionStorage on mount.
+  useEffect(() => {
+    const openClaims = () => setActiveSection("claims-insurance");
+    window.addEventListener("coems-open-claim", openClaims);
+    return () => window.removeEventListener("coems-open-claim", openClaims);
+  }, []);
 
   const renderContent = () => {
     switch (activeSection) {

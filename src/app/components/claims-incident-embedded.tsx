@@ -97,6 +97,15 @@ export function ClaimsIncidentEmbedded({
     }
   };
 
+  // Navigates to the Claims module and opens this claim's edit overlay.
+  // Bridges across the two top-level modules via sessionStorage + a custom
+  // event, since ClaimsInsurance is mounted fresh only once App switches
+  // activeSection — see the matching listener in claims-insurance.tsx and App.tsx.
+  const openClaimOverlay = (claimId: string) => {
+    sessionStorage.setItem("coems-pending-claim-id", claimId);
+    window.dispatchEvent(new CustomEvent("coems-open-claim"));
+  };
+
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -140,11 +149,15 @@ export function ClaimsIncidentEmbedded({
             {linkedClaims.map(claim => {
               const context = getContext(claim);
               return (
-                <div key={claim.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+                <div
+                  key={claim.id}
+                  className="border border-gray-200 rounded-lg bg-white overflow-hidden cursor-pointer hover:border-blue-300 transition-colors"
+                  onClick={() => openClaimOverlay(claim.id)}
+                >
 
                   {/* Card header */}
                   <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                    <span className="text-sm font-semibold text-blue-600 shrink-0">
+                    <span className="text-sm font-semibold text-blue-600 shrink-0 hover:underline">
                       {formatClaimNo(claim.claimNo, isV2)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded font-medium shrink-0 ${
@@ -167,7 +180,7 @@ export function ClaimsIncidentEmbedded({
                     <div className="ml-auto relative shrink-0">
                       <button
                         type="button"
-                        onClick={() => setOpenKebabId(openKebabId === claim.id ? null : claim.id)}
+                        onClick={(e) => { e.stopPropagation(); setOpenKebabId(openKebabId === claim.id ? null : claim.id); }}
                         className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
                       >
                         <MoreVertical className="size-4" />
@@ -176,10 +189,11 @@ export function ClaimsIncidentEmbedded({
                         <>
                           <div
                             className="fixed inset-0 z-[299]"
-                            onClick={() => setOpenKebabId(null)}
+                            onClick={(e) => { e.stopPropagation(); setOpenKebabId(null); }}
                           />
                           <div
                             className="absolute right-0 top-7 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-[300] py-1"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <button
                               type="button"
