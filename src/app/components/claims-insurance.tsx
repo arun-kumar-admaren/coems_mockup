@@ -640,6 +640,27 @@ export function ClaimsInsurance() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[1500px]">
               <thead>
+                {isV2 ? (
+                <tr className="bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 whitespace-nowrap">Claim No</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Voyage</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Vessel</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Related Fixture</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Type of Claim</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Type of Cover</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Broker</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Leading Insurer</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Date of Incident</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Date of Notif.</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Claimant</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Port Agent</th>
+                  <th className="px-4 py-3 whitespace-nowrap">PIC Legal</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Priority</th>
+                  <th className="px-4 py-3 whitespace-nowrap min-w-[200px]">Description</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 whitespace-nowrap text-center sticky right-0 bg-gray-50">Actions</th>
+                </tr>
+                ) : (
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <th className="px-4 py-3 whitespace-nowrap">Claim No</th>
                   <th className="px-4 py-3 whitespace-nowrap">Claim Context</th>
@@ -657,11 +678,12 @@ export function ClaimsInsurance() {
                   <th className="px-4 py-3 whitespace-nowrap text-center">Addl. Ins.</th>
                   <th className="px-4 py-3 whitespace-nowrap text-center sticky right-0 bg-gray-50">Actions</th>
                 </tr>
+                )}
               </thead>
               <tbody className="divide-y divide-gray-100 text-[13px]">
                 {filteredClaims.length === 0 ? (
                   <tr>
-                    <td colSpan={15} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={isV2 ? 17 : 15} className="px-4 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center">
                         <div className="bg-gray-100 p-3 rounded-full mb-3">
                           <Search className="h-6 w-6 text-gray-400" />
@@ -670,10 +692,78 @@ export function ClaimsInsurance() {
                       </div>
                     </td>
                   </tr>
+                ) : isV2 ? (
+                  filteredClaims.map((claim) => (
+                    <tr
+                      key={claim.id}
+                      className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                      onClick={() => handleEditClaim(claim)}
+                    >
+                      <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap group-hover:underline">
+                        {formatClaimNo(claim.claimNo, isV2)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.voyage || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.vessel || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {(claim as any).relatedFixtures?.length ? (claim as any).relatedFixtures.join(", ") : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.claimType || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.typeOfCover || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.broker || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.leadingInsurer || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.dateOfIncident || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.dateOfNotification || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.claimant || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {(claim as any).portAgent || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {(claim as any).picLegal?.length ? (claim as any).picLegal.join(", ") : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {claim.priority || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-900 font-medium truncate max-w-[250px]">
+                        {claim.description || claim.claimTitle || "-"}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          claim.status === 'Open' ? 'bg-blue-100 text-blue-800' :
+                          claim.status === 'Close' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {claim.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center sticky right-0 bg-white group-hover:bg-blue-50/50 transition-colors">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   filteredClaims.map((claim) => (
-                    <tr 
-                      key={claim.id} 
+                    <tr
+                      key={claim.id}
                       className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
                       onClick={() => handleEditClaim(claim)}
                     >
