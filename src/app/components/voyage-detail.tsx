@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { Checkbox } from "./ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { DatePicker } from "./ui/date-picker";
 import { cn } from "./ui/utils";
 import exampleImage from 'figma:asset/6931c210e64628b26cf918b8364d99257fc1fce7.png';
-import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, BROKERS, LEGAL_USERS, INSURERS, formatClaimNo } from "./claims-types";
+import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, BROKERS, PIC_LEGAL_OPTIONS, INSURERS, formatClaimNo } from "./claims-types";
 import { useVersion } from "../version-context";
 
 const INCIDENT_CATEGORIES = ["Cargo", "Environmental", "Near-Miss", "Personnel Accident", "Property Damage", "Security", "Technical", "Other"];
@@ -283,6 +284,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
   const [voyageClaims, setVoyageClaims] = React.useState<any[]>([]);
   const [isClaimSheetOpen, setIsClaimSheetOpen] = React.useState(false);
   const [editingClaim, setEditingClaim] = React.useState<any | null>(null);
+  const [picLegalOpen, setPicLegalOpen] = React.useState(false);
 
   const initialClaimFormState = React.useMemo<any>(() => ({
     id: "",
@@ -307,7 +309,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
     claimantReference: "",
     representativeOfClaimantPresent: "",
     portAgent: "none",
-    picLegal: "",
+    picLegal: [] as string[],
     status: "none",
     priority: "None",
   }), [voyage.vessel, voyage.number]);
@@ -321,7 +323,10 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
 
   const openEditClaim = (claim: any) => {
     setEditingClaim(claim);
-    setClaimFormData({ ...claim });
+    setClaimFormData({
+      ...claim,
+      picLegal: Array.isArray(claim.picLegal) ? claim.picLegal : (claim.picLegal ? [claim.picLegal] : []),
+    });
     setIsClaimSheetOpen(true);
   };
 
@@ -1481,15 +1486,39 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
 
               {/* PIC Legal — v2.0 field-parity */}
               {isV2 && (
-              <div className="space-y-2">
+              <div className="space-y-2 relative">
                 <Label>PIC Legal</Label>
-                <Select value={claimFormData.picLegal || "none"} onValueChange={(val) => updateClaimField("picLegal", val === "none" ? "" : val)}>
-                  <SelectTrigger><SelectValue placeholder="Select legal member" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Select legal member</SelectItem>
-                    {LEGAL_USERS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <button
+                  type="button"
+                  onClick={() => setPicLegalOpen((o) => !o)}
+                  className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <span className={claimFormData.picLegal?.length ? "text-gray-900" : "text-muted-foreground"}>
+                    {claimFormData.picLegal?.length ? claimFormData.picLegal.join(", ") : "Select PIC Legal"}
+                  </span>
+                  <ChevronDown className="size-4 text-gray-400 flex-shrink-0" />
+                </button>
+                {picLegalOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[500]" onClick={() => setPicLegalOpen(false)} />
+                    <div className="absolute left-0 right-0 z-[510] mt-1 rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+                      {PIC_LEGAL_OPTIONS.map((p) => (
+                        <label key={p} className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 rounded hover:bg-gray-50 cursor-pointer select-none">
+                          <Checkbox
+                            checked={claimFormData.picLegal?.includes(p)}
+                            onCheckedChange={(checked) =>
+                              setClaimFormData((f: any) => ({
+                                ...f,
+                                picLegal: checked ? [...(f.picLegal || []), p] : (f.picLegal || []).filter((x: string) => x !== p),
+                              }))
+                            }
+                          />
+                          {p}
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               )}
             </div>

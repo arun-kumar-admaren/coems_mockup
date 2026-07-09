@@ -56,7 +56,7 @@ export interface Claim {
   // Parties
   claimant: string;
   claimantReference: string;
-  picLegal: string;
+  picLegal: string[];
   broker: string;
   brokerReference: string;
   brokerContact: string;
@@ -173,6 +173,9 @@ export const LEGAL_USERS = [
   "Suresh Babu",
 ];
 
+// Version 2.0 — PIC Legal values per client spec (multi-select), same codes as Legal Review's PIC Legal field.
+export const PIC_LEGAL_OPTIONS = ["AVD", "AL", "MM", "MW", "LP", "MR"];
+
 export const BROKERS = [
   "Howden",
   "Maritime Insurance Brokers",
@@ -274,7 +277,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2024-120",
     claimant: "ABC Shipping Ltd",
     claimantReference: "ABC-CLM-2024-045",
-    picLegal: "Priya Nair",
+    picLegal: ["Priya Nair"],
     broker: "Maritime Insurance Brokers",
     brokerReference: "MIB-2024-089",
     brokerContact: "James Wilson",
@@ -320,7 +323,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2024-145",
     claimant: "Pacific Marine Services",
     claimantReference: "PMS-2024-089",
-    picLegal: "",
+    picLegal: [],
     broker: "Global Marine Insurance",
     brokerReference: "GMI-2024-102",
     brokerContact: "Linda Kovacs",
@@ -366,7 +369,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "",
     claimant: "Charter Co International",
     claimantReference: "CCI-2024-033",
-    picLegal: "",
+    picLegal: [],
     broker: "Maritime Risk Solutions",
     brokerReference: "",
     brokerContact: "Tom Richards",
@@ -412,7 +415,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2024-089",
     claimant: "Crew Member — John Smith",
     claimantReference: "CREW-2024-012",
-    picLegal: "",
+    picLegal: [],
     broker: "Seaborne Insurance Group",
     brokerReference: "SIG-2024-089",
     brokerContact: "Rachel Kim",
@@ -458,7 +461,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "",
     claimant: "Eastern Trade Corporation",
     claimantReference: "ETC-2024-055",
-    picLegal: "",
+    picLegal: [],
     broker: "Marine Legal & Insurance",
     brokerReference: "MLI-2024-078",
     brokerContact: "Chris Fenton",
@@ -504,7 +507,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2024-201",
     claimant: "Port Authority",
     claimantReference: "PA-2024-134",
-    picLegal: "",
+    picLegal: [],
     broker: "International Marine Brokers",
     brokerReference: "IMB-2024-134",
     brokerContact: "Paul Haynes",
@@ -550,7 +553,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2024-167",
     claimant: "Global Commodities Inc",
     claimantReference: "GCI-2024-056",
-    picLegal: "",
+    picLegal: [],
     broker: "Maritime Insurance Brokers",
     brokerReference: "MIB-2024-167",
     brokerContact: "James Wilson",
@@ -596,7 +599,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2023-445",
     claimant: "Horizon Shipping Ltd",
     claimantReference: "HSL-2023-289",
-    picLegal: "",
+    picLegal: [],
     broker: "Global Marine Insurance",
     brokerReference: "GMI-2023-445",
     brokerContact: "Linda Kovacs",
@@ -646,7 +649,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "",
     claimant: "Nordic Shipping AS",
     claimantReference: "NSA-2024-101",
-    picLegal: "",
+    picLegal: [],
     broker: "Seaborne Insurance Group",
     brokerReference: "SIG-2024-101",
     brokerContact: "Rachel Kim",
@@ -692,7 +695,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "INC-2024-178",
     claimant: "Crew Member — Miguel Santos",
     claimantReference: "CREW-2024-019",
-    picLegal: "",
+    picLegal: [],
     broker: "Maritime Risk Solutions",
     brokerReference: "MRS-2024-178",
     brokerContact: "Tom Richards",
@@ -738,7 +741,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "",
     claimant: "International Trade Partners",
     claimantReference: "ITP-2024-092",
-    picLegal: "",
+    picLegal: [],
     broker: "Marine Legal & Insurance",
     brokerReference: "MLI-2024-092",
     brokerContact: "Chris Fenton",
@@ -784,7 +787,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     incidentNo: "",
     claimant: "Continental Logistics",
     claimantReference: "CL-2024-125",
-    picLegal: "",
+    picLegal: [],
     broker: "International Marine Brokers",
     brokerReference: "IMB-2024-125",
     brokerContact: "Paul Haynes",

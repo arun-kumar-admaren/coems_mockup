@@ -33,7 +33,7 @@ import {
 } from "./ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "./ui/utils";
-import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
+import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, PIC_LEGAL_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
 import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
@@ -201,7 +201,7 @@ const INITIAL_FORM_DATA = {
   incidentNo: "none",
   claimant: "",
   claimantReference: "",
-  picLegal: "",
+  picLegal: [] as string[],
   broker: "none",
   brokerReference: "",
   brokerContact: "",
@@ -280,6 +280,7 @@ export function ClaimsInsurance() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showHeaderKebab, setShowHeaderKebab] = useState(false);
+  const [picLegalOpen, setPicLegalOpen] = useState(false);
 
   // Radix Dialog sets pointer-events:none on <body> while the Sheet is open, which blocks
   // all portaled sub-overlays (Incidents, Insurance, Legal Review edit panels).
@@ -351,7 +352,7 @@ export function ClaimsInsurance() {
       incidentNo: claim.incidentNo || "none",
       claimant: claim.claimant || "",
       claimantReference: claim.claimantReference || "",
-      picLegal: (claim as any).picLegal || "",
+      picLegal: Array.isArray((claim as any).picLegal) ? (claim as any).picLegal : ((claim as any).picLegal ? [(claim as any).picLegal] : []),
       broker: claim.broker || "none",
       brokerReference: claim.brokerReference || "",
       brokerContact: claim.brokerContact || "",
@@ -1199,13 +1200,49 @@ export function ClaimsInsurance() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>PIC Legal</Label>
-                      <Select value={formData.picLegal || "none"} onValueChange={(val) => updateField("picLegal", val === "none" ? "" : val)}>
-                        <SelectTrigger><SelectValue placeholder="Select legal member" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Select legal member</SelectItem>
-                          {LEGAL_USERS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      {isV2 ? (
+                        <div className="space-y-2 relative">
+                          <button
+                            type="button"
+                            onClick={() => setPicLegalOpen((o) => !o)}
+                            className="flex items-center justify-between w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          >
+                            <span className={formData.picLegal.length ? "text-gray-900" : "text-muted-foreground"}>
+                              {formData.picLegal.length ? formData.picLegal.join(", ") : "Select PIC Legal"}
+                            </span>
+                            <ChevronDown className="size-4 text-gray-400 flex-shrink-0" />
+                          </button>
+                          {picLegalOpen && (
+                            <>
+                              <div className="fixed inset-0 z-[500]" onClick={() => setPicLegalOpen(false)} />
+                              <div className="absolute left-0 right-0 z-[510] mt-1 rounded-md border border-gray-200 bg-white p-1 shadow-lg">
+                                {PIC_LEGAL_OPTIONS.map((p) => (
+                                  <label key={p} className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 rounded hover:bg-gray-50 cursor-pointer select-none">
+                                    <Checkbox
+                                      checked={formData.picLegal.includes(p)}
+                                      onCheckedChange={(checked) =>
+                                        setFormData((f: any) => ({
+                                          ...f,
+                                          picLegal: checked ? [...f.picLegal, p] : f.picLegal.filter((x: string) => x !== p),
+                                        }))
+                                      }
+                                    />
+                                    {p}
+                                  </label>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <Select value={formData.picLegal[0] || "none"} onValueChange={(val) => updateField("picLegal", val === "none" ? [] : [val])}>
+                          <SelectTrigger><SelectValue placeholder="Select legal member" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select legal member</SelectItem>
+                            {LEGAL_USERS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
 
