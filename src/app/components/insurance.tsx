@@ -419,7 +419,7 @@ export function Insurance() {
 
   const handleOpenAdd = () => {
     const newNo = isV2
-      ? `UHL-IN-${new Date().getFullYear()}-${String(policies.length + 1).padStart(4, "0")}`
+      ? `UHL-INS-${new Date().getFullYear()}-${String(policies.length + 1).padStart(3, "0")}`
       : `INS-${new Date().getFullYear()}-${String(policies.length + 1).padStart(3, "0")}`;
     setFormData({ ...EMPTY_FORM, policyNo: newNo });
     setEditingId(null);

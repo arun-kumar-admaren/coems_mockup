@@ -233,6 +233,7 @@ const INITIAL_FORM_DATA = {
   damageAsKnown: "",
   stepsTaken: "",
   requiredAssistanceFromInsurance: "none",
+  requiredAssistanceRemarks: "",
   representativeOfClaimantPresent: "",
   portAgent: "none",
 };
@@ -302,7 +303,6 @@ export function ClaimsInsurance() {
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [editParties, setEditParties] = useState<ExternalParty[]>([]);
   const [openPartyKebabId, setOpenPartyKebabId] = useState<string | null>(null);
-  const [additionalInfoOpen, setAdditionalInfoOpen] = useState(true);
 
   // Filtered Claims
   const filteredClaims = useMemo(() => {
@@ -334,7 +334,6 @@ export function ClaimsInsurance() {
     setFormData({ ...INITIAL_FORM_DATA, claimNo: newNo, status: isV2 ? "Open" : INITIAL_FORM_DATA.status });
     setEditingId(null);
     setEditParties([]);
-    setAdditionalInfoOpen(true);
     setIsSheetOpen(true);
   };
 
@@ -387,7 +386,6 @@ export function ClaimsInsurance() {
     } as any);
     setEditingId(claim.id);
     setEditParties((claim as any).externalParties || SEED_PARTIES[claim.id] || []);
-    setAdditionalInfoOpen(true);
     setIsSheetOpen(true);
   };
 
@@ -1885,6 +1883,12 @@ export function ClaimsInsurance() {
                     <Textarea value={formData.claimTitle} onChange={(e) => updateField("claimTitle", e.target.value)} placeholder="Brief summary of the claim for list view..." className="resize-none min-h-[80px]" />
                   </div>
 
+                  {/* Steps taken so far */}
+                  <div className="space-y-2">
+                    <Label>Steps taken so far</Label>
+                    <Textarea value={(formData as any).stepsTaken || ""} onChange={(e) => updateField("stepsTaken" as any, e.target.value)} placeholder="Describe the steps taken..." className="resize-none min-h-[80px]" />
+                  </div>
+
                   {/* Required assistance from insurance */}
                   <div className="space-y-2">
                     <Label>Required assistance from insurance</Label>
@@ -1897,6 +1901,13 @@ export function ClaimsInsurance() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {(formData as any).requiredAssistanceFromInsurance === "Yes" && (
+                    <div className="space-y-2">
+                      <Label>Remarks</Label>
+                      <Textarea value={(formData as any).requiredAssistanceRemarks || ""} onChange={(e) => updateField("requiredAssistanceRemarks" as any, e.target.value)} placeholder="Describe the assistance required from insurance..." className="resize-none min-h-[80px]" />
+                    </div>
+                  )}
 
                   {/* Claimant (mandatory) + Claimant Reference Number */}
                   <div className="grid grid-cols-2 gap-4">
@@ -1918,19 +1929,6 @@ export function ClaimsInsurance() {
                       <SelectContent>
                         <SelectItem value="none">Select port agent</SelectItem>
                         {PORT_AGENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Claim Status (mandatory, defaults to Open) */}
-                  <div className="space-y-2">
-                    <Label>Claim Status <span className="text-red-500">*</span></Label>
-                    <Select value={formData.status} onValueChange={(val) => updateField("status", val)}>
-                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Select status</SelectItem>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Close">Close</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -2021,18 +2019,9 @@ export function ClaimsInsurance() {
                     </div>
                   </div>
 
-                  {/* Additional Information — collapsible, expanded by default in the main Claims module */}
-                  <div className="border border-gray-200 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setAdditionalInfoOpen((o) => !o)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left"
-                    >
-                      <h3 className="text-sm font-semibold text-gray-900">Additional Information</h3>
-                      <ChevronDown className={cn("size-4 text-gray-400 transition-transform", additionalInfoOpen && "rotate-180")} />
-                    </button>
-                    {additionalInfoOpen && (
-                      <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+                  {/* Additional Information — a proper (non-collapsible) section in the main Claims module */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Additional Information</h3>
 
                         {/* Type of Claim + Type of Cover */}
                         <div className="grid grid-cols-2 gap-4">
@@ -2116,6 +2105,19 @@ export function ClaimsInsurance() {
                           </div>
                         </div>
 
+                        {/* Claim Status (mandatory, defaults to Open) — moved here after Status Description */}
+                        <div className="space-y-2">
+                          <Label>Claim Status <span className="text-red-500">*</span></Label>
+                          <Select value={formData.status} onValueChange={(val) => updateField("status", val)}>
+                            <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Select status</SelectItem>
+                              <SelectItem value="Open">Open</SelectItem>
+                              <SelectItem value="Close">Close</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         {/* Recovery (renamed from "Liability & Recovery"; Liability Position and Liability Assessment Notes removed) */}
                         <div className="space-y-4">
                           <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Recovery</h3>
@@ -2131,46 +2133,6 @@ export function ClaimsInsurance() {
                               </SelectContent>
                             </Select>
                           </div>
-
-                          {(formData as any).recoveryRightExists === "Yes" && (
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label>Recovery Against</Label>
-                                <Select value={(formData as any).recoveryAgainst || "none"} onValueChange={(val) => updateField("recoveryAgainst", val)}>
-                                  <SelectTrigger><SelectValue placeholder="Select party" /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">Select party</SelectItem>
-                                    <SelectItem value="Owner">Owner</SelectItem>
-                                    <SelectItem value="Charterer">Charterer</SelectItem>
-                                    <SelectItem value="Shipper">Shipper</SelectItem>
-                                    <SelectItem value="Receiver">Receiver</SelectItem>
-                                    <SelectItem value="Terminal">Terminal</SelectItem>
-                                    <SelectItem value="Stevedore">Stevedore</SelectItem>
-                                    <SelectItem value="Insurer">Insurer</SelectItem>
-                                    <SelectItem value="Surveyor">Surveyor</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label>Recovery Route</Label>
-                                <Select value={(formData as any).recoveryRoute || "none"} onValueChange={(val) => updateField("recoveryRoute", val)}>
-                                  <SelectTrigger><SelectValue placeholder="Select route" /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none">Select route</SelectItem>
-                                    <SelectItem value="Insurance">Insurance</SelectItem>
-                                    <SelectItem value="Contractual">Contractual</SelectItem>
-                                    <SelectItem value="Legal">Legal</SelectItem>
-                                    <SelectItem value="Direct Settlement">Direct Settlement</SelectItem>
-                                    <SelectItem value="Arbitration">Arbitration</SelectItem>
-                                    <SelectItem value="Litigation">Litigation</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          )}
                         </div>
 
                         {/* Resolution — Edit only; renamed from "Resolution & Security", only Resolution Path retained, moved inside Additional Information after Recovery */}
@@ -2195,8 +2157,6 @@ export function ClaimsInsurance() {
                             </div>
                           </div>
                         )}
-                      </div>
-                    )}
                   </div>
 
                   {/* External Parties — Edit only, unchanged from today's layout */}

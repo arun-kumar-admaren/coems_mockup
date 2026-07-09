@@ -306,6 +306,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
     damageAsKnown: "",
     stepsTaken: "",
     requiredAssistanceFromInsurance: "none",
+    requiredAssistanceRemarks: "",
     claimant: "",
     claimantReference: "",
     representativeOfClaimantPresent: "",
@@ -1598,6 +1599,12 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                 <Textarea value={claimFormData.claimTitle} onChange={(e) => updateClaimField("claimTitle", e.target.value)} placeholder="Brief summary of the claim..." className="resize-none min-h-[80px]" />
               </div>
 
+              {/* Steps taken so far */}
+              <div className="space-y-2">
+                <Label>Steps taken so far</Label>
+                <Textarea value={claimFormData.stepsTaken || ""} onChange={(e) => updateClaimField("stepsTaken", e.target.value)} placeholder="Describe the steps taken..." className="resize-none min-h-[80px]" />
+              </div>
+
               {/* Required assistance from insurance */}
               <div className="space-y-2">
                 <Label>Required assistance from insurance</Label>
@@ -1610,6 +1617,13 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                   </SelectContent>
                 </Select>
               </div>
+
+              {claimFormData.requiredAssistanceFromInsurance === "Yes" && (
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <Textarea value={claimFormData.requiredAssistanceRemarks || ""} onChange={(e) => updateClaimField("requiredAssistanceRemarks", e.target.value)} placeholder="Describe the assistance required from insurance..." className="resize-none min-h-[80px]" />
+                </div>
+              )}
 
               {/* Claimant (mandatory) + Claimant Reference Number */}
               <div className="grid grid-cols-2 gap-4">
@@ -1631,19 +1645,6 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                   <SelectContent>
                     <SelectItem value="none">Select port agent</SelectItem>
                     {PORT_AGENTS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Claim Status (mandatory, defaults to Open) */}
-              <div className="space-y-2">
-                <Label>Claim Status <span className="text-red-500">*</span></Label>
-                <Select value={claimFormData.status || "none"} onValueChange={(val) => updateClaimField("status", val)}>
-                  <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Select status</SelectItem>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="Close">Close</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1779,6 +1780,19 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                       </div>
                     </div>
 
+                    {/* Claim Status (mandatory, defaults to Open) — moved here after Status Description */}
+                    <div className="space-y-2">
+                      <Label>Claim Status <span className="text-red-500">*</span></Label>
+                      <Select value={claimFormData.status || "none"} onValueChange={(val) => updateClaimField("status", val)}>
+                        <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select status</SelectItem>
+                          <SelectItem value="Open">Open</SelectItem>
+                          <SelectItem value="Close">Close</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {/* Recovery (renamed from "Liability & Recovery") */}
                     <div className="space-y-4">
                       <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Recovery</h3>
@@ -1794,45 +1808,6 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                           </SelectContent>
                         </Select>
                       </div>
-
-                      {claimFormData.recoveryRightExists === "Yes" && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Recovery Against</Label>
-                            <Select value={claimFormData.recoveryAgainst || "none"} onValueChange={(val) => updateClaimField("recoveryAgainst", val)}>
-                              <SelectTrigger><SelectValue placeholder="Select party" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Select party</SelectItem>
-                                <SelectItem value="Owner">Owner</SelectItem>
-                                <SelectItem value="Charterer">Charterer</SelectItem>
-                                <SelectItem value="Shipper">Shipper</SelectItem>
-                                <SelectItem value="Receiver">Receiver</SelectItem>
-                                <SelectItem value="Terminal">Terminal</SelectItem>
-                                <SelectItem value="Stevedore">Stevedore</SelectItem>
-                                <SelectItem value="Insurer">Insurer</SelectItem>
-                                <SelectItem value="Surveyor">Surveyor</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Recovery Route</Label>
-                            <Select value={claimFormData.recoveryRoute || "none"} onValueChange={(val) => updateClaimField("recoveryRoute", val)}>
-                              <SelectTrigger><SelectValue placeholder="Select route" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Select route</SelectItem>
-                                <SelectItem value="Insurance">Insurance</SelectItem>
-                                <SelectItem value="Contractual">Contractual</SelectItem>
-                                <SelectItem value="Legal">Legal</SelectItem>
-                                <SelectItem value="Direct Settlement">Direct Settlement</SelectItem>
-                                <SelectItem value="Arbitration">Arbitration</SelectItem>
-                                <SelectItem value="Litigation">Litigation</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}

@@ -33,7 +33,6 @@ const LABELS_V2 = [
   "Contract Review Chartering", "Contract Review Projects", "NDA Review",
   "Insurance Request", "KYC Assistance", "Others",
 ];
-const PIC_LEGAL_OPTIONS = ["AVD", "AL", "MM", "MW", "LP", "MR"];
 const ACCOUNTS = [
   "Atlantic Resources", "East Asia Traders", "Global Shipping Co",
   "Mediterranean Lines", "Nordic Transport", "Pacific Bulk",
@@ -109,6 +108,9 @@ const USERS = [
   "Jacson Tom",
   "Safna Basheer",
 ];
+
+// Version 2.0 — PIC Legal follow-up: list actual users, not the AVD/AL/... codes.
+const PIC_LEGAL_OPTIONS = USERS;
 
 const getItemCategory = (item: string): string => {
   for (const [cat, items] of Object.entries(ITEMS_BY_CATEGORY)) {
@@ -194,7 +196,9 @@ const EMPTY_FORM: ReviewForm = {
 };
 
 const generateReviewNumber = (count: number, isV2: boolean) =>
-  `${isV2 ? "UHL-L" : "REV"}-2026-${String(count).padStart(4, "0")}`;
+  isV2
+    ? `UHL-L-2026-${String(count).padStart(3, "0")}`
+    : `REV-2026-${String(count).padStart(4, "0")}`;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -545,10 +549,6 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                 <div>
                   <span className="text-gray-400">Review Raised By</span>
                   <div className="text-gray-700 font-medium mt-0.5">{review.reviewRaisedBy || "—"}</div>
-                </div>
-                <div>
-                  <span className="text-gray-400">To Be Reviewed By</span>
-                  <div className="text-gray-700 font-medium mt-0.5">{review.toBeReviewedBy || "—"}</div>
                 </div>
                 <div>
                   <span className="text-gray-400">Created</span>
@@ -909,19 +909,6 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Review Raised By</Label>
                 <Select value={form.reviewRaisedBy} onValueChange={(v) => setForm((f) => ({ ...f, reviewRaisedBy: v }))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select user" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[600]">
-                    {USERS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* To Be Reviewed By */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-gray-700">To Be Reviewed By</Label>
-                <Select value={form.toBeReviewedBy} onValueChange={(v) => setForm((f) => ({ ...f, toBeReviewedBy: v }))}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>

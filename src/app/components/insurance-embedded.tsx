@@ -181,7 +181,7 @@ const SEED_RECORDS: InsuranceRecord[] = [
 
 const generatePolicyNo = (count: number, isV2: boolean = false) =>
   isV2
-    ? `UHL-IN-${new Date().getFullYear()}-${String(count).padStart(4, "0")}`
+    ? `UHL-INS-${new Date().getFullYear()}-${String(count).padStart(3, "0")}`
     : `INS-${new Date().getFullYear()}-${String(count).padStart(3, "0")}`;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -325,7 +325,8 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
   return (
     <div className="p-6">
 
-      {/* Action bar */}
+      {/* Action bar — Add/Link Insurance removed in v2.0; linking now happens from the Insurance module's own add overlay (Fixture/Vessel fields there) */}
+      {!isV2 && (
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={openCreate}
@@ -390,13 +391,16 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
           <div className="fixed inset-0 z-[199]" onClick={() => { setIsLinkOpen(false); setLinkSearch(""); }} />
         )}
       </div>
+      )}
 
       {/* Cards */}
       {sortedLinked.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center gap-3 text-gray-400">
           <Shield className="size-10 opacity-30" />
           <p className="text-sm font-medium">No insurance records linked yet</p>
-          <p className="text-xs">Use "Add New Insurance" or "Link Insurance" to get started.</p>
+          <p className="text-xs">
+            {isV2 ? "Link this record from the Insurance module's add overlay." : "Use \"Add New Insurance\" or \"Link Insurance\" to get started."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
@@ -484,8 +488,8 @@ export function InsuranceEmbedded({ moduleType, moduleId }: InsuranceEmbeddedPro
         </div>
       )}
 
-      {/* ── Add New Insurance Sheet (Portal) ──────────────────────────────────── */}
-      {isSheetOpen && createPortal(
+      {/* ── Add New Insurance Sheet (Portal) — v1.0 only, see action bar above ── */}
+      {!isV2 && isSheetOpen && createPortal(
         <>
           <div className="fixed inset-0 bg-black/20 z-[300]" onClick={() => setIsSheetOpen(false)} />
           <div className="fixed inset-y-0 right-0 w-[580px] bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.15)] z-[310] flex flex-col animate-in slide-in-from-right duration-300">

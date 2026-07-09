@@ -23,7 +23,7 @@ export const TYPE_OF_COVER_V2 = [
   "War",
 ];
 
-// Version 2.0 — display-format an Insurance No as UHL-IN-[YYYY]-[XXXX].
+// Version 2.0 — display-format an Insurance No as UHL-INS-[YYYY]-[XXX].
 // Applies to pre-seeded records (e.g. "INS-2026-001") so existing records also
 // reflect the v2.0 numbering convention; numbers already in the new format
 // (newly created in v2.0) pass through unchanged.
@@ -31,5 +31,5 @@ export const formatInsuranceNo = (policyNo: string, isV2: boolean): string => {
   if (!isV2 || !policyNo) return policyNo;
   const m = policyNo.match(/^INS-(\d{4})-(\d+)$/);
   if (!m) return policyNo;
-  return `UHL-IN-${m[1]}-${m[2].padStart(4, "0")}`;
+  return `UHL-INS-${m[1]}-${m[2].padStart(3, "0")}`;
 };
