@@ -2070,163 +2070,32 @@ export function ClaimsInsurance() {
                             </div>
                           )}
                         </div>
+
+                        {/* Resolution — Edit only; renamed from "Resolution & Security", only Resolution Path retained, moved inside Additional Information after Recovery */}
+                        {editingId && (
+                          <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Resolution</h3>
+                            <div className="space-y-2">
+                              <Label>Resolution Path</Label>
+                              <Select value={(formData as any).resolutionPath || "none"} onValueChange={(val) => updateField("resolutionPath", val)}>
+                                <SelectTrigger><SelectValue placeholder="Select resolution path" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Select path</SelectItem>
+                                  <SelectItem value="Under Negotiation">Under Negotiation</SelectItem>
+                                  <SelectItem value="Settlement">Settlement</SelectItem>
+                                  <SelectItem value="Defense">Defense</SelectItem>
+                                  <SelectItem value="Recovery">Recovery</SelectItem>
+                                  <SelectItem value="Litigation">Litigation</SelectItem>
+                                  <SelectItem value="Arbitration">Arbitration</SelectItem>
+                                  <SelectItem value="Closed without Action">Closed without Action</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-
-                  {/* Resolution & Security — Edit only, unchanged from today's layout */}
-                  {editingId && <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Resolution &amp; Security</h3>
-
-                    {/* Resolution Path */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Resolution Path <span className="text-red-500">*</span></Label>
-                        <Select value={(formData as any).resolutionPath || "none"} onValueChange={(val) => updateField("resolutionPath", val)}>
-                          <SelectTrigger><SelectValue placeholder="Select resolution path" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Select path</SelectItem>
-                            <SelectItem value="Under Negotiation">Under Negotiation</SelectItem>
-                            <SelectItem value="Settlement">Settlement</SelectItem>
-                            <SelectItem value="Defense">Defense</SelectItem>
-                            <SelectItem value="Recovery">Recovery</SelectItem>
-                            <SelectItem value="Litigation">Litigation</SelectItem>
-                            <SelectItem value="Arbitration">Arbitration</SelectItem>
-                            <SelectItem value="Closed without Action">Closed without Action</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Security Provided */}
-                      <div className="space-y-2">
-                        <Label>Security Provided</Label>
-                        <Select
-                          value={(formData as any).securityProvided || "No"}
-                          onValueChange={(val) => {
-                            updateField("securityProvided", val);
-                            if (val === "No") {
-                              updateField("securityType", "");
-                              updateField("securityAmount", "");
-                              updateField("securityCurrency", "USD");
-                              updateField("securityIssuedDate", "");
-                              updateField("securityReleasedDate", "");
-                            }
-                          }}
-                        >
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="No">No</SelectItem>
-                            <SelectItem value="Yes">Yes</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Security fields — shown only when Security Provided = Yes */}
-                    {(formData as any).securityProvided === "Yes" && (
-                      <div className="space-y-4 pl-4 border-l-2 border-blue-100">
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Security Type */}
-                          <div className="space-y-2">
-                            <Label>Security Type <span className="text-red-500">*</span></Label>
-                            <Select value={(formData as any).securityType || "none"} onValueChange={(val) => updateField("securityType", val)}>
-                              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Select type</SelectItem>
-                                <SelectItem value="Letter of Undertaking (LOU)">Letter of Undertaking (LOU)</SelectItem>
-                                <SelectItem value="Bank Guarantee">Bank Guarantee</SelectItem>
-                                <SelectItem value="Club Letter">Club Letter</SelectItem>
-                                <SelectItem value="Cash Deposit">Cash Deposit</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {(formData as any).securityType === "Other" && (
-                              <Input
-                                value={(formData as any).securityTypeOther || ""}
-                                onChange={(e) => updateField("securityTypeOther", e.target.value)}
-                                placeholder="Describe security type..."
-                                className="mt-2"
-                              />
-                            )}
-                          </div>
-
-                          {/* Security Currency */}
-                          <div className="space-y-2">
-                            <Label>Security Currency</Label>
-                            <Select value={(formData as any).securityCurrency || "USD"} onValueChange={(val) => updateField("securityCurrency", val)}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {["USD","EUR","GBP","SGD","AED","Other"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          {/* Security Amount */}
-                          <div className="space-y-2">
-                            <Label>Security Amount</Label>
-                            <Input
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              value={(formData as any).securityAmount || ""}
-                              onChange={(e) => updateField("securityAmount", e.target.value)}
-                              placeholder="0.00"
-                            />
-                            {(formData as any).securityAmount && parseFloat((formData as any).securityAmount) <= 0 && (
-                              <p className="text-xs text-red-500">Amount must be greater than 0</p>
-                            )}
-                          </div>
-
-                          {/* Security Issued Date */}
-                          <div className="space-y-2">
-                            <Label>Security Issued Date</Label>
-                            <Input
-                              type="date"
-                              value={(formData as any).securityIssuedDate || ""}
-                              onChange={(e) => updateField("securityIssuedDate", e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Security Released Date */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Security Released Date</Label>
-                            <Input
-                              type="date"
-                              value={(formData as any).securityReleasedDate || ""}
-                              onChange={(e) => {
-                                const issued = (formData as any).securityIssuedDate;
-                                if (issued && e.target.value && e.target.value < issued) return;
-                                updateField("securityReleasedDate", e.target.value);
-                              }}
-                            />
-                            {(formData as any).securityIssuedDate && (
-                              <p className="text-xs text-gray-400">Must be on or after the issued date. Leave blank if still active.</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Resolution Notes */}
-                    <div className="space-y-2">
-                      <Label>
-                        Resolution Notes
-                        {["Defense","Litigation","Arbitration","Closed without Action"].includes((formData as any).resolutionPath) && (
-                          <span className="ml-2 text-xs font-normal text-amber-600">(Recommended for this resolution path)</span>
-                        )}
-                      </Label>
-                      <Textarea
-                        value={(formData as any).resolutionNotes || ""}
-                        onChange={(e) => updateField("resolutionNotes", e.target.value)}
-                        placeholder="Negotiation summary, defense strategy, arbitration rationale, or reason for closing without action..."
-                        className="resize-none min-h-[80px]"
-                      />
-                    </div>
-                  </div>}
 
                   {/* External Parties — Edit only, unchanged from today's layout */}
                   {editingId && <div className="space-y-3 pt-2">
@@ -2362,6 +2231,7 @@ export function ClaimsInsurance() {
                   claimId={editingId!}
                   claimStatus={formData.status}
                   createdDate={(formData as any).createdDate}
+                  isV2={isV2}
                 />
               </TabsContent>
 

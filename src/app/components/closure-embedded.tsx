@@ -273,9 +273,10 @@ interface ClosureEmbeddedProps {
   claimId: string;
   claimStatus: string;
   createdDate?: string;
+  isV2?: boolean;
 }
 
-export function ClosureEmbedded({ claimId, claimStatus, createdDate }: ClosureEmbeddedProps) {
+export function ClosureEmbedded({ claimId, claimStatus, createdDate, isV2 }: ClosureEmbeddedProps) {
   const isClosed = claimStatus === "Close";
   const [state, setState] = useState<ClosureState>(() => buildClosureSeed(claimId, claimStatus));
 
@@ -294,6 +295,26 @@ export function ClosureEmbedded({ claimId, claimStatus, createdDate }: ClosureEm
       : "bg-amber-50 border-amber-200 text-amber-700";
 
   const dateMin = createdDate || "";
+
+  if (isV2) {
+    return (
+      <div className="p-6 space-y-6">
+        <FieldWrap label="Closure Reason" required={isClosed}>
+          <Select value={state.closureReason || "none"} onValueChange={v => set("closureReason", v === "none" ? "" : v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select reason" /></SelectTrigger>
+            <SelectContent className="z-[300]">
+              <SelectItem value="none">Select reason</SelectItem>
+              {CLOSURE_REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </FieldWrap>
+
+        <FieldWrap label="Lessons Learned">
+          <Textarea value={state.lessonsLearned} onChange={e => set("lessonsLearned", e.target.value)} placeholder="Business, operational, or legal learning from this claim..." className="resize-none min-h-[80px] text-sm" />
+        </FieldWrap>
+      </div>
+    );
+  }
 
   return (
         <div className="p-6 space-y-8">
