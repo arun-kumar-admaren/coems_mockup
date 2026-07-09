@@ -3,6 +3,7 @@ import { Lock, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import { Checkbox } from "./ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ interface ClosureState {
   finalOutcomeCategory: string;
   closedBy: string;
   lessonsLearned: string;
+  lessonsLearnedConfirmed: boolean;
   repeatRiskFlag: string;
   repeatRiskRemarks: string;
   recommendedPreventiveAction: string;
@@ -57,7 +59,7 @@ const SYSTEM_USERS = [
 function buildClosureSeed(claimId: string, claimStatus: string): ClosureState {
   const base: ClosureState = {
     closureReason: "", closureDate: "", closureSummary: "", finalOutcomeCategory: "",
-    closedBy: "", lessonsLearned: "", repeatRiskFlag: "No", repeatRiskRemarks: "",
+    closedBy: "", lessonsLearned: "", lessonsLearnedConfirmed: false, repeatRiskFlag: "No", repeatRiskRemarks: "",
     recommendedPreventiveAction: "", closureApprovalRequired: "No",
     closureApprovedBy: "", closureApprovedDate: "", internalClosureNotes: "",
   };
@@ -280,7 +282,7 @@ export function ClosureEmbedded({ claimId, claimStatus, createdDate, isV2 }: Clo
   const isClosed = claimStatus === "Close";
   const [state, setState] = useState<ClosureState>(() => buildClosureSeed(claimId, claimStatus));
 
-  const set = (field: keyof ClosureState, value: string) =>
+  const set = (field: keyof ClosureState, value: string | boolean) =>
     setState(prev => ({ ...prev, [field]: value }));
 
   const mandatoryFilled = isClosed
@@ -309,9 +311,16 @@ export function ClosureEmbedded({ claimId, claimStatus, createdDate, isV2 }: Clo
           </Select>
         </FieldWrap>
 
-        <FieldWrap label="Lessons Learned">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-gray-700 flex items-center gap-2">
+            <Checkbox
+              checked={state.lessonsLearnedConfirmed}
+              onCheckedChange={(checked) => set("lessonsLearnedConfirmed", !!checked)}
+            />
+            Lessons Learned
+          </Label>
           <Textarea value={state.lessonsLearned} onChange={e => set("lessonsLearned", e.target.value)} placeholder="Business, operational, or legal learning from this claim..." className="resize-none min-h-[80px] text-sm" />
-        </FieldWrap>
+        </div>
       </div>
     );
   }
