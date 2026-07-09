@@ -174,6 +174,7 @@ export const LEGAL_USERS = [
 ];
 
 export const BROKERS = [
+  "Howden",
   "Maritime Insurance Brokers",
   "Global Marine Insurance",
   "Seaborne Insurance Group",

@@ -33,7 +33,7 @@ import {
 } from "./ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "./ui/utils";
-import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES, PORT_AGENTS, INSURERS, formatClaimNo } from "./claims-types";
+import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, VESSELS, ALL_FIXTURES, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
 import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
@@ -1112,12 +1112,7 @@ export function ClaimsInsurance() {
                         <SelectTrigger><SelectValue placeholder="Select broker" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Select broker</SelectItem>
-                          <SelectItem value="Maritime Insurance Brokers">Maritime Insurance Brokers</SelectItem>
-                          <SelectItem value="Global Marine Insurance">Global Marine Insurance</SelectItem>
-                          <SelectItem value="Seaborne Insurance Group">Seaborne Insurance Group</SelectItem>
-                          <SelectItem value="International Marine Brokers">International Marine Brokers</SelectItem>
-                          <SelectItem value="Maritime Risk Solutions">Maritime Risk Solutions</SelectItem>
-                          <SelectItem value="Marine Legal & Insurance">Marine Legal &amp; Insurance</SelectItem>
+                          {BROKERS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
