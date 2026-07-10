@@ -349,7 +349,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
       const claimNo = editingClaim
         ? claimFormData.claimNo
         : isV2
-          ? `UHL-CL-${new Date().getFullYear()}-${String(prev.length + 1).padStart(4, "0")}`
+          ? `UHL-CL-${new Date().getFullYear()}-${String(prev.length + 1).padStart(3, "0")}`
           : `CLM-${new Date().getFullYear()}-V${String(prev.length + 1).padStart(2, "0")}`;
       const claim = { ...claimFormData, id: claimId, claimNo };
       const updated = editingClaim

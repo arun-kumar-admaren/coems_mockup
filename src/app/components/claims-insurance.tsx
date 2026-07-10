@@ -329,7 +329,7 @@ export function ClaimsInsurance() {
 
   const handleOpenAdd = () => {
     const newNo = isV2
-      ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(4, "0")}`
+      ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`
       : `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`;
     setFormData({ ...INITIAL_FORM_DATA, claimNo: newNo, status: isV2 ? "Open" : INITIAL_FORM_DATA.status });
     setEditingId(null);
@@ -432,7 +432,7 @@ export function ClaimsInsurance() {
     const claimToSave: Claim = {
       id: editingId || Math.random().toString(36).substr(2, 9),
       claimNo: formData.claimNo || (isV2
-        ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(4, "0")}`
+        ? `UHL-CL-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`
         : `CLM-${new Date().getFullYear()}-${String(claims.length + 1).padStart(3, "0")}`),
       claimType: formData.claimType as ClaimType,
       typeOfCover: formData.typeOfCover === "none" ? "" : formData.typeOfCover,
