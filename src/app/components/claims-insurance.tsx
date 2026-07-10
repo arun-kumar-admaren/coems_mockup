@@ -564,6 +564,7 @@ export function ClaimsInsurance() {
                 </div>
                 
                 <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                  {!isV2 && (
                   <div className="space-y-2">
                     <Label className="text-xs">Claim Context</Label>
                     <Select value={filters.context} onValueChange={(val) => setFilters(prev => ({ ...prev, context: val }))}>
@@ -575,6 +576,7 @@ export function ClaimsInsurance() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label className="text-xs">Claim Type</Label>
