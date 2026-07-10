@@ -835,6 +835,59 @@ export function Insurance() {
                 </div>
                 </>)}
 
+                {/* Related to — v2.0 only. Client no longer wants Insurance add/linked from the Fixture or
+                    Vessel edit overlays; instead the Insurance record itself picks exactly one Fixture or
+                    one Vessel here. Reuses the same insuranceCategory/fixture/vessel fields as v1.0's
+                    Category & Entity block so listing/module-display logic needs no changes. */}
+                {isV2 && (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="space-y-2">
+                    <Label>Related to</Label>
+                    <Select
+                      value={formData.insuranceCategory}
+                      onValueChange={(v) => {
+                        updateField("insuranceCategory", v);
+                        updateField("fixture", "");
+                        updateField("vessel", "");
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select</SelectItem>
+                        <SelectItem value="Fixture">Fixture</SelectItem>
+                        <SelectItem value="Vessel">Vessel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.insuranceCategory === "Fixture" && (
+                    <div className="space-y-2">
+                      <Label>Select Fixture</Label>
+                      <Select value={formData.fixture} onValueChange={(v) => updateField("fixture", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select fixture" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select fixture</SelectItem>
+                          {FIXTURES.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {formData.insuranceCategory === "Vessel" && (
+                    <div className="space-y-2">
+                      <Label>Select Vessel</Label>
+                      <Select value={formData.vessel} onValueChange={(v) => updateField("vessel", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select vessel" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Select vessel</SelectItem>
+                          {VESSELS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+                )}
+
                 <SubHeader>Cover &amp; Policy</SubHeader>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
