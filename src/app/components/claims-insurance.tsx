@@ -856,6 +856,13 @@ export function ClaimsInsurance() {
               </tbody>
             </table>
           </div>
+
+          {filteredClaims.length > 0 && (
+            <div className="mt-auto border-t border-gray-100 px-4 py-2.5 flex items-center justify-between text-xs text-gray-500 bg-gray-50/60">
+              <span>Found <span className="font-medium text-gray-700">{filteredClaims.length}</span> record{filteredClaims.length !== 1 ? "s" : ""}</span>
+              <span>{filteredClaims.length} of {claims.length} total</span>
+            </div>
+          )}
         </div>
       </div>
 
