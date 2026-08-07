@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
   Search, SlidersHorizontal, Menu, Bell, Plus, MoreVertical,
-  Shield, Check,
+  Shield, Check, ChevronDown,
 } from "lucide-react";
 import {
   Sheet,
@@ -154,6 +154,60 @@ interface InsuranceRecord {
   taxRate: number;
   taxAmount: number;
   totalPremiumInclTax: number;
+  // Version 2.0 — per-cover-type field groups (COEMS-21212), all optional, all always present
+  hmDisbursements?: number;
+  hmFreightTotalLoss?: number;
+  hmEquipment?: number;
+  hmFreightAllRisks?: number;
+  hmIvTotal?: number;
+  hmPaDeductible?: number;
+  hmAmd?: number;
+  hmLeadingHmUnderwriter?: string;
+  hmLeadingIvUnderwriter?: string;
+  hmRate?: number;
+  hmIvRate?: number;
+  hmPremium?: number;
+  hmUpfrontPerformanceBonus?: number;
+  hmPremiumNetOfUpb?: number;
+  hmIvPremium?: number;
+  lohSumInsuredNew?: number;
+  lohLeadingUnderwriter?: string;
+  lohRateNew?: number;
+  lohPremiumNew?: number;
+  warHm?: number;
+  warIv?: number;
+  warTsi?: number;
+  warLeadingUnderwriter?: string;
+  warRate?: number;
+  warLohDaily?: number;
+  warLohBasis?: number;
+  warLohTsi?: number;
+  piClub?: string;
+  piGrossPremiumInclRi?: number;
+  piRatePerGtInclRi?: number;
+  piRiAlone?: number;
+  piOgdPb?: number;
+  piNetPremium?: number;
+  fdd?: number;
+  fddPremium?: number;
+  clPi?: number;
+  clPiPremium?: number;
+  clFdd?: number;
+  clFddPremium?: number;
+  sdInsurer?: string;
+  sdDailyEnteredSum?: number;
+  sdRate?: number;
+  sdPremium?: number;
+  sdUpfrontNcb?: number;
+  sdPremiumNetOfNcb?: number;
+  totalAnnualPremiumExclTax?: number;
+  totalDailyPremiumExclTax?: number;
+  totalAnnualPremiumInclTax?: number;
+  totalDailyPremiumInclTax?: number;
+  costExtendedCoversExclTax?: number;
+  costExtendedCoversInclTax?: number;
+  totalCostInclExtendedCoversExclTax?: number;
+  totalCostInclExtendedCoversInclTax?: number;
   // Parties
   broker: string;
   brokerReferenceNumber: string;
@@ -215,6 +269,17 @@ const EMPTY_FORM: Omit<InsuranceRecord, "id" | "createdAt"> = {
   taxRate: 0,
   taxAmount: 0,
   totalPremiumInclTax: 0,
+  hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
+  hmPaDeductible: 0, hmAmd: 0, hmLeadingHmUnderwriter: "", hmLeadingIvUnderwriter: "",
+  hmRate: 0, hmIvRate: 0, hmPremium: 0, hmUpfrontPerformanceBonus: 0, hmPremiumNetOfUpb: 0, hmIvPremium: 0,
+  lohSumInsuredNew: 0, lohLeadingUnderwriter: "", lohRateNew: 0, lohPremiumNew: 0,
+  warHm: 0, warIv: 0, warTsi: 0, warLeadingUnderwriter: "", warRate: 0, warLohDaily: 0, warLohBasis: 0, warLohTsi: 0,
+  piClub: "", piGrossPremiumInclRi: 0, piRatePerGtInclRi: 0, piRiAlone: 0, piOgdPb: 0, piNetPremium: 0,
+  fdd: 0, fddPremium: 0, clPi: 0, clPiPremium: 0, clFdd: 0, clFddPremium: 0,
+  sdInsurer: "", sdDailyEnteredSum: 0, sdRate: 0, sdPremium: 0, sdUpfrontNcb: 0, sdPremiumNetOfNcb: 0,
+  totalAnnualPremiumExclTax: 0, totalDailyPremiumExclTax: 0, totalAnnualPremiumInclTax: 0, totalDailyPremiumInclTax: 0,
+  costExtendedCoversExclTax: 0, costExtendedCoversInclTax: 0,
+  totalCostInclExtendedCoversExclTax: 0, totalCostInclExtendedCoversInclTax: 0,
   broker: "none",
   brokerReferenceNumber: "",
   brokerContact: "",
@@ -335,6 +400,32 @@ function SubHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Version 2.0 — collapsible field group for the per-cover-type field sets (COEMS-21212).
+// Collapsed by default; expanding one group has no effect on the others.
+function CollapsibleFieldGroup({
+  title, isOpen, onToggle, children,
+}: {
+  title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-gray-200 rounded-lg">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
+        <ChevronDown className={cn("size-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-1 border-t border-gray-100 grid grid-cols-2 gap-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CurrencyInput({
   label, value, onChange, currency, placeholder, mandatory,
 }: {
@@ -388,6 +479,9 @@ export function Insurance() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({ category: "none", status: "none", vessel: "none", biannualDeclaration: [] as string[], intendedVessel: [] as string[] });
   const [intendedVesselFilterSearch, setIntendedVesselFilterSearch] = useState("");
+  // Version 2.0 — per-cover-type field groups (COEMS-21212), all collapsed by default
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (key: string) => setExpandedGroups((g) => ({ ...g, [key]: !g[key] }));
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<InsuranceRecord, "id" | "createdAt">>(EMPTY_FORM);
@@ -1152,6 +1246,104 @@ export function Insurance() {
                     <CurrencyInput label="Total Premium Incl. Tax" value={formData.totalPremiumInclTax} onChange={(v) => updateField("totalPremiumInclTax", v)} currency={formData.currency} />
                   </div>
                 </div>
+
+                {/* Version 2.0 — per-cover-type field groups (COEMS-21212). No conditional logic
+                    tied to Type of Cover — all 6 groups are always present, collapsed by default. */}
+                {isV2 && (
+                <div className="space-y-3 mt-4">
+                  <CollapsibleFieldGroup title="Hull & Machinery + Increased Value" isOpen={!!expandedGroups.hm} onToggle={() => toggleGroup("hm")}>
+                    <CurrencyInput label="Disbursements" value={formData.hmDisbursements ?? 0} onChange={(v) => updateField("hmDisbursements", v)} currency={formData.currency} />
+                    <CurrencyInput label="Freight Total Loss" value={formData.hmFreightTotalLoss ?? 0} onChange={(v) => updateField("hmFreightTotalLoss", v)} currency={formData.currency} />
+                    <CurrencyInput label="Equipment (H&M)" value={formData.hmEquipment ?? 0} onChange={(v) => updateField("hmEquipment", v)} currency={formData.currency} />
+                    <CurrencyInput label="Freight All Risks" value={formData.hmFreightAllRisks ?? 0} onChange={(v) => updateField("hmFreightAllRisks", v)} currency={formData.currency} />
+                    <CurrencyInput label="IV Total" value={formData.hmIvTotal ?? 0} onChange={(v) => updateField("hmIvTotal", v)} currency={formData.currency} />
+                    <CurrencyInput label="PA Deductible" value={formData.hmPaDeductible ?? 0} onChange={(v) => updateField("hmPaDeductible", v)} currency={formData.currency} />
+                    <CurrencyInput label="AMD" value={formData.hmAmd ?? 0} onChange={(v) => updateField("hmAmd", v)} currency={formData.currency} />
+                    <div className="space-y-2">
+                      <Label>Leading H&M Underwriter</Label>
+                      <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.hmLeadingHmUnderwriter ?? ""} onChange={(e) => updateField("hmLeadingHmUnderwriter", e.target.value)} placeholder="e.g. Gard M&E" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Leading IV Underwriter</Label>
+                      <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.hmLeadingIvUnderwriter ?? ""} onChange={(e) => updateField("hmLeadingIvUnderwriter", e.target.value)} placeholder="e.g. Gard M&E" />
+                    </div>
+                    <PercentInput label="H&M Rate (%)" value={formData.hmRate ?? 0} onChange={(v) => updateField("hmRate", v)} />
+                    <PercentInput label="IV Rate (%)" value={formData.hmIvRate ?? 0} onChange={(v) => updateField("hmIvRate", v)} />
+                    <CurrencyInput label="H&M Premium" value={formData.hmPremium ?? 0} onChange={(v) => updateField("hmPremium", v)} currency={formData.currency} />
+                    <CurrencyInput label="Upfront Performance Bonus (PB/CC)" value={formData.hmUpfrontPerformanceBonus ?? 0} onChange={(v) => updateField("hmUpfrontPerformanceBonus", v)} currency={formData.currency} />
+                    <CurrencyInput label="H&M Premium Net of Upfront Performance Bonus" value={formData.hmPremiumNetOfUpb ?? 0} onChange={(v) => updateField("hmPremiumNetOfUpb", v)} currency={formData.currency} />
+                    <CurrencyInput label="IV Premium" value={formData.hmIvPremium ?? 0} onChange={(v) => updateField("hmIvPremium", v)} currency={formData.currency} />
+                  </CollapsibleFieldGroup>
+
+                  <CollapsibleFieldGroup title="Loss of Hire" isOpen={!!expandedGroups.loh} onToggle={() => toggleGroup("loh")}>
+                    <CurrencyInput label="LoH Sum Insured" value={formData.lohSumInsuredNew ?? 0} onChange={(v) => updateField("lohSumInsuredNew", v)} currency={formData.currency} />
+                    <div className="space-y-2">
+                      <Label>LoH Leading Underwriter</Label>
+                      <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.lohLeadingUnderwriter ?? ""} onChange={(e) => updateField("lohLeadingUnderwriter", e.target.value)} placeholder="e.g. Gard M&E" />
+                    </div>
+                    <PercentInput label="LoH Rate (%)" value={formData.lohRateNew ?? 0} onChange={(v) => updateField("lohRateNew", v)} />
+                    <CurrencyInput label="LoH Premium" value={formData.lohPremiumNew ?? 0} onChange={(v) => updateField("lohPremiumNew", v)} currency={formData.currency} />
+                  </CollapsibleFieldGroup>
+
+                  <CollapsibleFieldGroup title="War Risks" isOpen={!!expandedGroups.war} onToggle={() => toggleGroup("war")}>
+                    <CurrencyInput label="War H&M (sum)" value={formData.warHm ?? 0} onChange={(v) => updateField("warHm", v)} currency={formData.currency} />
+                    <CurrencyInput label="War IV (sum)" value={formData.warIv ?? 0} onChange={(v) => updateField("warIv", v)} currency={formData.currency} />
+                    <CurrencyInput label="War TSI (sum)" value={formData.warTsi ?? 0} onChange={(v) => updateField("warTsi", v)} currency={formData.currency} />
+                    <div className="space-y-2">
+                      <Label>War-Leading Underwriter</Label>
+                      <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.warLeadingUnderwriter ?? ""} onChange={(e) => updateField("warLeadingUnderwriter", e.target.value)} placeholder="e.g. NHC" />
+                    </div>
+                    <PercentInput label="War Rate (%)" value={formData.warRate ?? 0} onChange={(v) => updateField("warRate", v)} />
+                    <CurrencyInput label="War LoH Daily" value={formData.warLohDaily ?? 0} onChange={(v) => updateField("warLohDaily", v)} currency={formData.currency} />
+                    <div className="space-y-2">
+                      <Label>War LoH Basis</Label>
+                      <Input type="number" min={0} value={formData.warLohBasis ?? 0} onChange={(e) => updateField("warLohBasis", Number(e.target.value))} />
+                    </div>
+                    <CurrencyInput label="War LoH TSI" value={formData.warLohTsi ?? 0} onChange={(v) => updateField("warLohTsi", v)} currency={formData.currency} />
+                  </CollapsibleFieldGroup>
+
+                  <CollapsibleFieldGroup title="P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D" isOpen={!!expandedGroups.pi} onToggle={() => toggleGroup("pi")}>
+                    <div className="space-y-2">
+                      <Label>P&I Club</Label>
+                      <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.piClub ?? ""} onChange={(e) => updateField("piClub", e.target.value)} placeholder="e.g. Gard" />
+                    </div>
+                    <CurrencyInput label="Gross Premium P&I Incl. R/I" value={formData.piGrossPremiumInclRi ?? 0} onChange={(v) => updateField("piGrossPremiumInclRi", v)} currency={formData.currency} />
+                    <CurrencyInput label="Rate per GT Incl. R/I" value={formData.piRatePerGtInclRi ?? 0} onChange={(v) => updateField("piRatePerGtInclRi", v)} currency={formData.currency} />
+                    <CurrencyInput label="R/I (Reinsurance) Alone" value={formData.piRiAlone ?? 0} onChange={(v) => updateField("piRiAlone", v)} currency={formData.currency} />
+                    <CurrencyInput label="10% OGD (Gard) / 10% PB (London)" value={formData.piOgdPb ?? 0} onChange={(v) => updateField("piOgdPb", v)} currency={formData.currency} />
+                    <CurrencyInput label="Net Premium P&I" value={formData.piNetPremium ?? 0} onChange={(v) => updateField("piNetPremium", v)} currency={formData.currency} />
+                    <CurrencyInput label="FD&D" value={formData.fdd ?? 0} onChange={(v) => updateField("fdd", v)} currency={formData.currency} />
+                    <CurrencyInput label="Premium FD&D" value={formData.fddPremium ?? 0} onChange={(v) => updateField("fddPremium", v)} currency={formData.currency} />
+                    <CurrencyInput label="C/L P&I" value={formData.clPi ?? 0} onChange={(v) => updateField("clPi", v)} currency={formData.currency} />
+                    <CurrencyInput label="Premium TCL P&I" value={formData.clPiPremium ?? 0} onChange={(v) => updateField("clPiPremium", v)} currency={formData.currency} />
+                    <CurrencyInput label="C/L FD&D" value={formData.clFdd ?? 0} onChange={(v) => updateField("clFdd", v)} currency={formData.currency} />
+                    <CurrencyInput label="Premium TCL FD&D" value={formData.clFddPremium ?? 0} onChange={(v) => updateField("clFddPremium", v)} currency={formData.currency} />
+                  </CollapsibleFieldGroup>
+
+                  <CollapsibleFieldGroup title="Strike and Delay" isOpen={!!expandedGroups.sd} onToggle={() => toggleGroup("sd")}>
+                    <div className="space-y-2">
+                      <Label>Insurer (Strike and Delay)</Label>
+                      <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.sdInsurer ?? ""} onChange={(e) => updateField("sdInsurer", e.target.value)} placeholder="e.g. NorthStandard" />
+                    </div>
+                    <CurrencyInput label="Daily Entered Sum" value={formData.sdDailyEnteredSum ?? 0} onChange={(v) => updateField("sdDailyEnteredSum", v)} currency={formData.currency} />
+                    <CurrencyInput label="Rate (Strike and Delay)" value={formData.sdRate ?? 0} onChange={(v) => updateField("sdRate", v)} currency={formData.currency} />
+                    <CurrencyInput label="Premium (Strike and Delay)" value={formData.sdPremium ?? 0} onChange={(v) => updateField("sdPremium", v)} currency={formData.currency} />
+                    <CurrencyInput label="Upfront NCB 10%" value={formData.sdUpfrontNcb ?? 0} onChange={(v) => updateField("sdUpfrontNcb", v)} currency={formData.currency} />
+                    <CurrencyInput label="Premium Net of NCB" value={formData.sdPremiumNetOfNcb ?? 0} onChange={(v) => updateField("sdPremiumNetOfNcb", v)} currency={formData.currency} />
+                  </CollapsibleFieldGroup>
+
+                  <CollapsibleFieldGroup title="Total insurance costs (rollup)" isOpen={!!expandedGroups.total} onToggle={() => toggleGroup("total")}>
+                    <CurrencyInput label="Total Annual Premium, Excl. Tax" value={formData.totalAnnualPremiumExclTax ?? 0} onChange={(v) => updateField("totalAnnualPremiumExclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Total Daily Premium, Excl. Tax" value={formData.totalDailyPremiumExclTax ?? 0} onChange={(v) => updateField("totalDailyPremiumExclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Total Annual Premium, Incl. Tax" value={formData.totalAnnualPremiumInclTax ?? 0} onChange={(v) => updateField("totalAnnualPremiumInclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Total Daily Premium, Incl. Tax" value={formData.totalDailyPremiumInclTax ?? 0} onChange={(v) => updateField("totalDailyPremiumInclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Cost of Extended Covers (ECL/CCC), Excl. Tax" value={formData.costExtendedCoversExclTax ?? 0} onChange={(v) => updateField("costExtendedCoversExclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Cost of Extended Covers (ECL/CCC), Incl. Tax" value={formData.costExtendedCoversInclTax ?? 0} onChange={(v) => updateField("costExtendedCoversInclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Total Cost Incl. Extended Covers, Excl. Tax" value={formData.totalCostInclExtendedCoversExclTax ?? 0} onChange={(v) => updateField("totalCostInclExtendedCoversExclTax", v)} currency={formData.currency} />
+                    <CurrencyInput label="Total Cost Incl. Extended Covers, Incl. Tax" value={formData.totalCostInclExtendedCoversInclTax ?? 0} onChange={(v) => updateField("totalCostInclExtendedCoversInclTax", v)} currency={formData.currency} />
+                  </CollapsibleFieldGroup>
+                </div>
+                )}
               </div>
 
               {/* ── 3. Parties ──────────────────────────────────────────────── */}
