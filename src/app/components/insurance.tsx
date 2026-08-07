@@ -21,6 +21,7 @@ import {
 } from "./ui/select";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { Checkbox } from "./ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -33,7 +34,9 @@ import { TYPE_OF_COVER_V2, formatInsuranceNo } from "./insurance-constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const INSURANCE_STATUSES = ["Active", "Expired", "Cancelled", "Closed"];
+const INSURANCE_STATUSES_V1 = ["Active", "Expired", "Cancelled", "Closed"];
+// Version 2.0 — "Closed" removed, "Foreseen" added as a new pre-Active status (confirmed 2026-07-28)
+const INSURANCE_STATUSES_V2 = ["Foreseen", "Active", "Expired", "Cancelled"];
 const INSURANCE_CATEGORIES = ["Fixture", "Vessel", "Crew"];
 
 
@@ -101,6 +104,7 @@ const FIXTURES = [
 ];
 
 const STATUS_STYLES: Record<string, string> = {
+  Foreseen:  "bg-cyan-100 text-cyan-700",
   Active:    "bg-green-100 text-green-800",
   Expired:   "bg-gray-100 text-gray-700",
   Cancelled:        "bg-red-100 text-red-700",
@@ -135,6 +139,8 @@ interface InsuranceRecord {
   insuranceTypeClauseType: string;
   policyNumber: string;
   policyCoverReference: string;
+  intendedVessel: string; // Version 2.0 — standalone, no relation to insuranceCategory/fixture/vessel
+  biannualDeclarationToBroker: boolean; // Version 2.0
   // Financials — Coverage Values
   currency: string;
   sumInsured: number;
@@ -196,6 +202,8 @@ const EMPTY_FORM: Omit<InsuranceRecord, "id" | "createdAt"> = {
   insuranceTypeClauseType: "none",
   policyNumber: "",
   policyCoverReference: "",
+  intendedVessel: "none",
+  biannualDeclarationToBroker: false,
   currency: "USD",
   sumInsured: 0,
   totalSumInsured: 0,
@@ -245,6 +253,7 @@ const INITIAL_DATA: InsuranceRecord[] = [
     typeOfCover: "Hull & Machinery", insuranceTypeClauseType: "Institute Time Clauses Hull",
 
     policyNumber: "POL-2026-HM-001", policyCoverReference: "REF-HM-001",
+    intendedVessel: "MV OCEAN STAR", biannualDeclarationToBroker: true,
     currency: "USD", sumInsured: 40312500, totalSumInsured: 53750000,
     deductible: 63975, dailyIndemnity: 0, basisTerms: "",
     premiumRate: 0.181992, annualPremium: 73366, taxRate: 3, taxAmount: 2201, totalPremiumInclTax: 75567,
@@ -268,6 +277,7 @@ const INITIAL_DATA: InsuranceRecord[] = [
     typeOfCover: "Charterers' P&I", insuranceTypeClauseType: "P&I Rules",
 
     policyNumber: "POL-2026-PI-002", policyCoverReference: "REF-PI-002",
+    intendedVessel: "none", biannualDeclarationToBroker: false,
     currency: "USD", sumInsured: 10000000, totalSumInsured: 10000000,
     deductible: 15000, dailyIndemnity: 0, basisTerms: "",
     premiumRate: 0.8718, annualPremium: 87180, taxRate: 19, taxAmount: 16564, totalPremiumInclTax: 103744,
@@ -291,6 +301,7 @@ const INITIAL_DATA: InsuranceRecord[] = [
     typeOfCover: "Crew Liability", insuranceTypeClauseType: "Bespoke / Other",
 
     policyNumber: "", policyCoverReference: "",
+    intendedVessel: "MV PACIFIC VOYAGER", biannualDeclarationToBroker: false,
     currency: "USD", sumInsured: 500000, totalSumInsured: 500000,
     deductible: 5000, dailyIndemnity: 22000, basisTerms: "14/180/180",
     premiumRate: 0, annualPremium: 0, taxRate: 0, taxAmount: 0, totalPremiumInclTax: 0,
@@ -375,7 +386,8 @@ export function Insurance() {
   const isV2 = useVersion() === "2.0";
   const [policies, setPolicies] = useState<InsuranceRecord[]>(INITIAL_DATA);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState({ category: "none", status: "none", vessel: "none" });
+  const [filters, setFilters] = useState({ category: "none", status: "none", vessel: "none", biannualDeclaration: [] as string[], intendedVessel: [] as string[] });
+  const [intendedVesselFilterSearch, setIntendedVesselFilterSearch] = useState("");
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<InsuranceRecord, "id" | "createdAt">>(EMPTY_FORM);
@@ -398,12 +410,16 @@ export function Insurance() {
 
       const matchesCategory = filters.category === "none" || p.insuranceCategory === filters.category;
       const matchesStatus   = filters.status   === "none" || p.insuranceStatus   === filters.status;
+      const matchesBiannual = filters.biannualDeclaration.length === 0 ||
+        filters.biannualDeclaration.includes(p.biannualDeclarationToBroker ? "Yes" : "No");
+      const matchesIntendedVessel = filters.intendedVessel.length === 0 ||
+        filters.intendedVessel.includes(p.intendedVessel);
 
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesCategory && matchesStatus && matchesBiannual && matchesIntendedVessel;
     });
   }, [policies, searchQuery, filters]);
 
-  const activeFilterCount = Object.values(filters).filter((v) => v !== "none").length;
+  const activeFilterCount = Object.values(filters).filter((v) => Array.isArray(v) ? v.length > 0 : v !== "none").length;
 
   const linkedEntity = (p: InsuranceRecord) => {
     if (p.insuranceCategory === "Vessel") return p.vessel || "—";
@@ -464,6 +480,8 @@ export function Insurance() {
     : formData.insuranceCategory !== "none"
       ? TYPE_OF_COVER_BY_CATEGORY[formData.insuranceCategory] ?? []
       : [];
+
+  const statusOptions = isV2 ? INSURANCE_STATUSES_V2 : INSURANCE_STATUSES_V1;
 
   const isLoH = formData.typeOfCover === "Loss of Hire" || formData.typeOfCover === "Loss of hire (LOH)";
 
@@ -529,7 +547,7 @@ export function Insurance() {
                   {activeFilterCount > 0 && (
                     <Button variant="ghost" size="sm"
                       className="h-auto p-0 text-[11px] text-red-500 hover:text-red-600 hover:bg-transparent"
-                      onClick={() => setFilters({ category: "none", status: "none", vessel: "none" })}
+                      onClick={() => setFilters({ category: "none", status: "none", vessel: "none", biannualDeclaration: [], intendedVessel: [] })}
                     >Clear All</Button>
                   )}
                 </div>
@@ -552,16 +570,70 @@ export function Insurance() {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="All Statuses" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">All Statuses</SelectItem>
-                        {INSURANCE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {isV2 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Bi-annual Declaration to Broker</Label>
+                    <div className="space-y-1.5">
+                      {["Yes", "No"].map((opt) => (
+                        <label key={opt} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
+                          <Checkbox
+                            checked={filters.biannualDeclaration.includes(opt)}
+                            onCheckedChange={(checked) =>
+                              setFilters((f) => ({
+                                ...f,
+                                biannualDeclaration: checked
+                                  ? [...f.biannualDeclaration, opt]
+                                  : f.biannualDeclaration.filter((x) => x !== opt),
+                              }))
+                            }
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  )}
+
+                  {isV2 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Intended Vessel</Label>
+                    <Input
+                      value={intendedVesselFilterSearch}
+                      onChange={(e) => setIntendedVesselFilterSearch(e.target.value)}
+                      placeholder="Search vessels..."
+                      className="h-8 text-xs"
+                    />
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {VESSELS.filter((v) => v.toLowerCase().includes(intendedVesselFilterSearch.toLowerCase())).map((v) => (
+                        <label key={v} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
+                          <Checkbox
+                            checked={filters.intendedVessel.includes(v)}
+                            onCheckedChange={(checked) =>
+                              setFilters((f) => ({
+                                ...f,
+                                intendedVessel: checked
+                                  ? [...f.intendedVessel, v]
+                                  : f.intendedVessel.filter((x) => x !== v),
+                              }))
+                            }
+                          />
+                          {v}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  )}
                 </div>
               </PopoverContent>
             </Popover>
 
             <div className="flex bg-white rounded-md border border-gray-200 overflow-hidden shadow-sm h-9">
-              {(["All", "Active", "Expired", "Cancelled", "Closed"] as const).map((tab) => (
+              {["All", ...statusOptions].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setFilters((f) => ({ ...f, status: tab === "All" ? "none" : tab }))}
@@ -594,6 +666,7 @@ export function Insurance() {
                   <th className="px-4 py-3 whitespace-nowrap">Insurance No</th>
                   {!isV2 && <th className="px-4 py-3 whitespace-nowrap">Category</th>}
                   <th className="px-4 py-3 whitespace-nowrap">Type of Cover</th>
+                  {isV2 && <th className="px-4 py-3 whitespace-nowrap">Intended Vessel</th>}
                   <th className="px-4 py-3 whitespace-nowrap">Linked Entity</th>
                   <th className="px-4 py-3 whitespace-nowrap">Broker</th>
                   <th className="px-4 py-3 whitespace-nowrap">Insurer / Club</th>
@@ -603,6 +676,7 @@ export function Insurance() {
                   <th className="px-4 py-3 whitespace-nowrap text-right">Sum Insured</th>
                   <th className="px-4 py-3 whitespace-nowrap text-right">Annual Premium</th>
                   <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                  {isV2 && <th className="px-4 py-3 whitespace-nowrap">Bi-annual Declaration to Broker</th>}
                   <th className="px-4 py-3 whitespace-nowrap text-center sticky right-0 bg-gray-50">Actions</th>
                 </tr>
               </thead>
@@ -640,6 +714,7 @@ export function Insurance() {
                       </td>
                       )}
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{p.typeOfCover || "—"}</td>
+                      {isV2 && <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{p.intendedVessel && p.intendedVessel !== "none" ? p.intendedVessel : "—"}</td>}
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{linkedEntity(p)}</td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{p.broker || "—"}</td>
                       <td className="px-4 py-3 text-gray-700 font-medium whitespace-nowrap">{p.insurerClub || "—"}</td>
@@ -657,6 +732,13 @@ export function Insurance() {
                           {p.insuranceStatus || "—"}
                         </span>
                       </td>
+                      {isV2 && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${p.biannualDeclarationToBroker ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                          {p.biannualDeclarationToBroker ? "Yes" : "No"}
+                        </span>
+                      </td>
+                      )}
                       <td className="px-4 py-3 text-center sticky right-0 bg-white group-hover:bg-blue-50/50 transition-colors">
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
                           <MoreVertical className="size-4" />
@@ -910,6 +992,22 @@ export function Insurance() {
                     )}
                   </div>
 
+                  {/* Version 2.0 — new, standalone field (Part 6): no relation to Related to/Fixture/Vessel */}
+                  {isV2 && (
+                  <div className="space-y-2">
+                    <Label>Intended Vessel</Label>
+                    <Select value={formData.intendedVessel} onValueChange={(v) => updateField("intendedVessel", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select vessel" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select vessel</SelectItem>
+                        {VESSELS.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  )}
+
+                  {/* Version 1.0 only — removed in v2.0 per client comment (Part 1) */}
+                  {!isV2 && (<>
                   <div className="space-y-2">
                     <Label>Insurance Type / Clause Type</Label>
                     <Select value={formData.insuranceTypeClauseType} onValueChange={(v) => updateField("insuranceTypeClauseType", v)}>
@@ -940,8 +1038,53 @@ export function Insurance() {
                       placeholder="e.g. REF-001"
                     />
                   </div>
+                  </>)}
                 </div>
               </div>
+
+              {/* ── 1b. Broker, Insurer & Policy Dates (Version 2.0 reorder, Part 2) ──── */}
+              {isV2 && (
+              <div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Broker</Label>
+                    <Select value={formData.broker} onValueChange={(v) => updateField("broker", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select broker" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select broker</SelectItem>
+                        {BROKERS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Insurer / Club <span className="text-red-500">*</span></Label>
+                    <Select value={formData.insurerClub} onValueChange={(v) => updateField("insurerClub", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select insurer / club" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Select insurer / club</SelectItem>
+                        {INSURERS_CLUBS.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Policy Start Date <span className="text-red-500">*</span></Label>
+                    <Input type="date" value={formData.policyStartDate} onChange={(e) => updateField("policyStartDate", e.target.value)} />
+                  </div>
+                  <div className="flex items-end gap-2 pb-2.5">
+                    <Checkbox
+                      id="biannualDeclarationToBroker"
+                      checked={formData.biannualDeclarationToBroker}
+                      onCheckedChange={(checked) => updateField("biannualDeclarationToBroker", Boolean(checked))}
+                    />
+                    <Label htmlFor="biannualDeclarationToBroker" className="cursor-pointer">Bi-annual Declaration to Broker</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Policy End Date <span className="text-red-500">*</span></Label>
+                    <Input type="date" value={formData.policyEndDate} onChange={(e) => updateField("policyEndDate", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+              )}
 
               {/* ── 2. Financials ─────────────────────────────────────────────── */}
               <div>
@@ -1015,6 +1158,8 @@ export function Insurance() {
               <div>
                 <SectionHeader>Parties</SectionHeader>
 
+                {/* Version 1.0 only — Broker and Insurer/Club moved up next to Type of Cover in v2.0 (Part 2) */}
+                {!isV2 && (<>
                 <SubHeader>Broker</SubHeader>
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="space-y-2">
@@ -1046,9 +1191,12 @@ export function Insurance() {
                     />
                   </div>
                 </div>
+                </>)}
 
                 <SubHeader>Insurer</SubHeader>
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Version 1.0 only — moved up next to Type of Cover in v2.0 (Part 2) */}
+                  {!isV2 && (
                   <div className="space-y-2">
                     <Label>Insurer / Club <span className="text-red-500">*</span></Label>
                     <Select value={formData.insurerClub} onValueChange={(v) => updateField("insurerClub", v)}>
@@ -1059,6 +1207,8 @@ export function Insurance() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
+                  {/* Leading Underwriter stays here, on its own, in both versions (Part 2's explicit exception) */}
                   <div className="space-y-2">
                     <Label>Leading Underwriter</Label>
                     <input
@@ -1068,6 +1218,8 @@ export function Insurance() {
                       placeholder="e.g. Gard M&E, NHC"
                     />
                   </div>
+                  {/* Version 1.0 only — removed in v2.0 per client comment (Part 1) */}
+                  {!isV2 && (
                   <div className="space-y-2 col-span-2">
                     <Label>Insurer Contact</Label>
                     <input
@@ -1077,6 +1229,7 @@ export function Insurance() {
                       placeholder="Contact name or email"
                     />
                   </div>
+                  )}
                 </div>
               </div>
 
@@ -1088,6 +1241,8 @@ export function Insurance() {
                     <Label>Date of Notification to Broker</Label>
                     <Input type="date" value={formData.dateOfNotificationToBroker} onChange={(e) => updateField("dateOfNotificationToBroker", e.target.value)} />
                   </div>
+                  {/* Version 1.0 only — Policy Start/End Date moved up next to Type of Cover in v2.0 (Part 2) */}
+                  {!isV2 && (<>
                   <div className="space-y-2">
                     <Label>Policy Start Date <span className="text-red-500">*</span></Label>
                     <Input type="date" value={formData.policyStartDate} onChange={(e) => updateField("policyStartDate", e.target.value)} />
@@ -1096,6 +1251,7 @@ export function Insurance() {
                     <Label>Policy End Date <span className="text-red-500">*</span></Label>
                     <Input type="date" value={formData.policyEndDate} onChange={(e) => updateField("policyEndDate", e.target.value)} />
                   </div>
+                  </>)}
                   <div className="space-y-2">
                     <Label>Renewal Terms</Label>
                     <input
@@ -1118,7 +1274,7 @@ export function Insurance() {
                       <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Select status</SelectItem>
-                        {INSURANCE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
