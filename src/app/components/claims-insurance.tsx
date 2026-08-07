@@ -33,7 +33,7 @@ import {
 } from "./ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { cn } from "./ui/utils";
-import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, PIC_LEGAL_OPTIONS, VESSELS, ALL_FIXTURES, VOYAGE_LIST, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
+import { Claim, ClaimType, ClaimStatus, Priority, RecoverableBy, CostAllocation, INITIAL_CLAIMS_DATA, CLAIM_TYPES, CLAIM_STATUSES, TYPE_OF_COVER_OPTIONS, TYPE_OF_COVER_TO_CLAIM_TYPES, PRIORITY_OPTIONS, RECOVERABLE_BY_OPTIONS, LEGAL_USERS, PIC_LEGAL_OPTIONS, VESSELS, ALL_FIXTURES, VOYAGE_LIST, PORT_AGENTS, INSURERS, BROKERS, formatClaimNo } from "./claims-types";
 import { IncidentsEmbedded } from "./incidents-embedded";
 import { InsuranceClaimsEmbedded } from "./insurance-claims-embedded";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
@@ -208,6 +208,7 @@ const INITIAL_FORM_DATA = {
   brokerReference: "",
   brokerContact: "",
   leadingInsurer: "",
+  insurerReference: "",
   insurerContact: "",
   claimEstimate: 0,
   claimAmount: 0,
@@ -278,7 +279,12 @@ export function ClaimsInsurance() {
     status: "none",
     vessel: "none",
     context: "none",
+    insurer: [] as string[], // Version 2.0 — COEMS-21137
+    insurerReferenceSearch: "",
+    dateOfNotificationFrom: "",
+    dateOfNotificationTo: "",
   });
+  const [insurerFilterSearch, setInsurerFilterSearch] = useState("");
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -318,8 +324,15 @@ export function ClaimsInsurance() {
       const matchesStatus = filters.status === "none" || claim.status === filters.status;
       const matchesVessel = filters.vessel === "none" || claim.vessel === filters.vessel;
       const matchesContext = filters.context === "none" || ((claim as any).claimContext || "Incident Related") === filters.context;
+      const matchesInsurer = filters.insurer.length === 0 || filters.insurer.includes(claim.leadingInsurer);
+      const matchesInsurerReference = !filters.insurerReferenceSearch ||
+        ((claim as any).insurerReference || "").toLowerCase().includes(filters.insurerReferenceSearch.toLowerCase());
+      const matchesDateOfNotification =
+        (!filters.dateOfNotificationFrom || (claim.dateOfNotification && claim.dateOfNotification >= filters.dateOfNotificationFrom)) &&
+        (!filters.dateOfNotificationTo || (claim.dateOfNotification && claim.dateOfNotification <= filters.dateOfNotificationTo));
 
-      return matchesSearch && matchesType && matchesStatus && matchesVessel && matchesContext;
+      return matchesSearch && matchesType && matchesStatus && matchesVessel && matchesContext &&
+        matchesInsurer && matchesInsurerReference && matchesDateOfNotification;
     });
   }, [claims, searchQuery, filters, isV2]);
 
@@ -360,6 +373,7 @@ export function ClaimsInsurance() {
       brokerReference: claim.brokerReference || "",
       brokerContact: claim.brokerContact || "",
       leadingInsurer: claim.leadingInsurer || "",
+      insurerReference: (claim as any).insurerReference || "",
       insurerContact: claim.insurerContact || "",
       claimEstimate: claim.claimEstimate || 0,
       claimAmount: claim.claimAmount || 0,
@@ -451,6 +465,7 @@ export function ClaimsInsurance() {
       brokerReference: formData.brokerReference,
       brokerContact: formData.brokerContact,
       leadingInsurer: formData.leadingInsurer,
+      insurerReference: (formData as any).insurerReference || "",
       insurerContact: formData.insurerContact,
       claimEstimate: formData.claimEstimate,
       claimAmount: formData.claimAmount,
@@ -548,14 +563,14 @@ export function ClaimsInsurance() {
               <PopoverContent className="w-[300px] p-4" align="start">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-medium text-sm leading-none">Filter Claims</h4>
-                  {(Object.values(filters).some(v => v !== "none") || searchQuery) && (
+                  {(Object.values(filters).some(v => Array.isArray(v) ? v.length > 0 : v !== "none" && v !== "") || searchQuery) && (
                      <Button 
                        variant="ghost" 
                        size="sm"
                        className="h-auto p-0 text-[11px] text-red-500 hover:text-red-600 hover:bg-transparent"
                        onClick={() => {
                          setSearchQuery("");
-                         setFilters({ type: "none", status: "none", vessel: "none", context: "none" });
+                         setFilters({ type: "none", status: "none", vessel: "none", context: "none", insurer: [], insurerReferenceSearch: "", dateOfNotificationFrom: "", dateOfNotificationTo: "" });
                        }}
                      >
                        Clear All
@@ -611,6 +626,56 @@ export function ClaimsInsurance() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {isV2 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Date of Notification to Broker</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input type="date" className="h-8 text-xs" value={filters.dateOfNotificationFrom} onChange={(e) => setFilters(prev => ({ ...prev, dateOfNotificationFrom: e.target.value }))} />
+                      <Input type="date" className="h-8 text-xs" value={filters.dateOfNotificationTo} onChange={(e) => setFilters(prev => ({ ...prev, dateOfNotificationTo: e.target.value }))} />
+                    </div>
+                  </div>
+                  )}
+
+                  {isV2 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Insurer</Label>
+                    <Input
+                      value={insurerFilterSearch}
+                      onChange={(e) => setInsurerFilterSearch(e.target.value)}
+                      placeholder="Search insurers..."
+                      className="h-8 text-xs"
+                    />
+                    <div className="space-y-1.5 max-h-28 overflow-y-auto">
+                      {INSURERS.filter(i => i.toLowerCase().includes(insurerFilterSearch.toLowerCase())).map((i) => (
+                        <label key={i} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
+                          <Checkbox
+                            checked={filters.insurer.includes(i)}
+                            onCheckedChange={(checked) =>
+                              setFilters((f) => ({
+                                ...f,
+                                insurer: checked ? [...f.insurer, i] : f.insurer.filter((x) => x !== i),
+                              }))
+                            }
+                          />
+                          {i}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  )}
+
+                  {isV2 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Insurer Reference Number</Label>
+                    <Input
+                      value={filters.insurerReferenceSearch}
+                      onChange={(e) => setFilters(prev => ({ ...prev, insurerReferenceSearch: e.target.value }))}
+                      placeholder="Search reference number..."
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  )}
                 </div>
               </PopoverContent>
             </Popover>
@@ -658,10 +723,11 @@ export function ClaimsInsurance() {
                   <th className="px-4 py-3 whitespace-nowrap">Voyage</th>
                   <th className="px-4 py-3 whitespace-nowrap">Vessel</th>
                   <th className="px-4 py-3 whitespace-nowrap">Related Fixture</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Type of Claim</th>
                   <th className="px-4 py-3 whitespace-nowrap">Type of Cover</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Type of Claim</th>
                   <th className="px-4 py-3 whitespace-nowrap">Broker</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Leading Insurer</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Insurer</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Insurer Reference Number</th>
                   <th className="px-4 py-3 whitespace-nowrap">Date of Incident</th>
                   <th className="px-4 py-3 whitespace-nowrap">Date of Notif.</th>
                   <th className="px-4 py-3 whitespace-nowrap">Claimant</th>
@@ -695,7 +761,7 @@ export function ClaimsInsurance() {
               <tbody className="divide-y divide-gray-100 text-[13px]">
                 {filteredClaims.length === 0 ? (
                   <tr>
-                    <td colSpan={isV2 ? 17 : 15} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={isV2 ? 18 : 15} className="px-4 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center">
                         <div className="bg-gray-100 p-3 rounded-full mb-3">
                           <Search className="h-6 w-6 text-gray-400" />
@@ -724,16 +790,19 @@ export function ClaimsInsurance() {
                         {(claim as any).relatedFixtures?.length ? (claim as any).relatedFixtures.join(", ") : "-"}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {claim.claimType || "-"}
+                        {claim.typeOfCover || "-"}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {claim.typeOfCover || "-"}
+                        {claim.claimType || "-"}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {claim.broker || "-"}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {claim.leadingInsurer || "-"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                        {(claim as any).insurerReference || "-"}
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {claim.dateOfIncident || "-"}
@@ -1988,7 +2057,7 @@ export function ClaimsInsurance() {
                     </div>
                   )}
 
-                  {/* PIC Legal (optional) */}
+                  {/* PIC Legal (optional) + Date of Notification to Broker (repositioned here, COEMS-21137) */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>PIC Legal</Label>
@@ -2026,31 +2095,51 @@ export function ClaimsInsurance() {
                         )}
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label>Date of Notification to Broker</Label>
+                      <Input type="date" value={formData.dateOfNotification} onChange={(e) => updateField("dateOfNotification", e.target.value)} />
+                    </div>
                   </div>
 
                   {/* Additional Information — a proper (non-collapsible) section in the main Claims module */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Additional Information</h3>
 
-                        {/* Type of Claim + Type of Cover */}
+                        {/* Type of Cover + Type of Claim — reordered (Cover first), Claim dependent/filtered on Cover (COEMS-21182) */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Type of Claim</Label>
-                            <Select value={formData.claimType} onValueChange={(val) => updateField("claimType", val)}>
-                              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Select type</SelectItem>
-                                {CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
                             <Label>Type of Cover</Label>
-                            <Select value={formData.typeOfCover} onValueChange={(val) => updateField("typeOfCover", val)}>
+                            <Select
+                              value={formData.typeOfCover}
+                              onValueChange={(val) => {
+                                const allowed = TYPE_OF_COVER_TO_CLAIM_TYPES[val] || [];
+                                setFormData((f: any) => ({
+                                  ...f,
+                                  typeOfCover: val,
+                                  claimType: allowed.includes(f.claimType) ? f.claimType : "none",
+                                }));
+                              }}
+                            >
                               <SelectTrigger><SelectValue placeholder="Select cover" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">Select cover</SelectItem>
                                 {TYPE_OF_COVER_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Type of Claim</Label>
+                            <Select
+                              value={formData.claimType}
+                              onValueChange={(val) => updateField("claimType", val)}
+                              disabled={!formData.typeOfCover || formData.typeOfCover === "none"}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={!formData.typeOfCover || formData.typeOfCover === "none" ? "Select Type of Cover first" : "Select type"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Select type</SelectItem>
+                                {(TYPE_OF_COVER_TO_CLAIM_TYPES[formData.typeOfCover] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
@@ -2074,21 +2163,21 @@ export function ClaimsInsurance() {
                           </div>
                         </div>
 
-                        {/* Leading Insurer + Date of Notification */}
+                        {/* Insurer (renamed from "Leading Insurer") + Insurer Reference Number (new, COEMS-21137) */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Leading Insurer</Label>
+                            <Label>Insurer</Label>
                             <Select value={formData.leadingInsurer || "none"} onValueChange={(val) => updateField("leadingInsurer", val === "none" ? "" : val)}>
-                              <SelectTrigger><SelectValue placeholder="Select leading insurer" /></SelectTrigger>
+                              <SelectTrigger><SelectValue placeholder="Select insurer" /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="none">Select leading insurer</SelectItem>
+                                <SelectItem value="none">Select insurer</SelectItem>
                                 {INSURERS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label>Date of Notification to Broker</Label>
-                            <Input type="date" value={formData.dateOfNotification} onChange={(e) => updateField("dateOfNotification", e.target.value)} />
+                            <Label>Insurer Reference Number</Label>
+                            <Input value={(formData as any).insurerReference || ""} onChange={(e) => updateField("insurerReference" as any, e.target.value)} placeholder="e.g. INS-REF-2024-001" />
                           </div>
                         </div>
 

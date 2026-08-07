@@ -1,24 +1,36 @@
 // ─── Claim Types ─────────────────────────────────────────────────────────────
 
+// Version 2.0 — generic, cover-independent claim types (COEMS-21182), replacing the
+// old compound cover+claim strings (e.g. "P&I cargo"). Filtered dynamically by
+// TYPE_OF_COVER_TO_CLAIM_TYPES based on the claim's selected Type of Cover.
 export type ClaimType =
   | "Cargo"
-  | "Commercial"
-  | "Damage to hull"
-  | "Equipment (disbursement)"
+  | "Crew"
+  | "Property Damage"
+  | "Personal Injury"
+  | "Pollution"
+  | "Pre-Loading Survey"
+  | "Wreck Removal"
+  | "Other"
+  | "Damage To Hull"
+  | "FD&D"
+  | "Loss of Hire"
+  | "Strike and Delay"
+  | "Cyber"
+  | "Particular Average"
+  | "FFO"
+  | "Third Party Liability (other than FFO)"
+  | "Machinery"
+  | "General Average"
+  | "Total Loss"
+  | "Equipment"
   | "H&M"
-  | "H&M fixed and floating objects"
-  | "H&M Particular average"
-  | "HSE"
-  | "Increased value"
-  | "Other claim type"
-  | "P&I cargo"
-  | "P&I crew"
-  | "P&I FD&D"
-  | "P&I FFO"
-  | "P&I personal injury"
-  | "P&I pollution"
-  | "Pre-loading survey (disbursement)"
-  | "Strike & delay";
+  | "IV"
+  | "P&I"
+  | "Indemnities"
+  | "Waiver of General Average Contribution and/or Possessory Lien"
+  | "Irrecoverable General Average Contribution"
+  | "Third Party Liability";
 
 export type ClaimStatus = "Open" | "Close";
 
@@ -61,6 +73,7 @@ export interface Claim {
   brokerReference: string;
   brokerContact: string;
   leadingInsurer: string;
+  insurerReference: string; // Version 2.0 — new, free text, next to Insurer (COEMS-21137)
   insurerContact: string;
   // Dates
   dateOfIncident: string;
@@ -100,52 +113,79 @@ export interface Claim {
 
 export const CLAIM_TYPES: ClaimType[] = [
   "Cargo",
-  "Commercial",
-  "Damage to hull",
-  "Equipment (disbursement)",
+  "Crew",
+  "Property Damage",
+  "Personal Injury",
+  "Pollution",
+  "Pre-Loading Survey",
+  "Wreck Removal",
+  "Other",
+  "Damage To Hull",
+  "FD&D",
+  "Loss of Hire",
+  "Strike and Delay",
+  "Cyber",
+  "Particular Average",
+  "FFO",
+  "Third Party Liability (other than FFO)",
+  "Machinery",
+  "General Average",
+  "Total Loss",
+  "Equipment",
   "H&M",
-  "H&M fixed and floating objects",
-  "H&M Particular average",
-  "HSE",
-  "Increased value",
-  "Other claim type",
-  "P&I cargo",
-  "P&I crew",
-  "P&I FD&D",
-  "P&I FFO",
-  "P&I personal injury",
-  "P&I pollution",
-  "Pre-loading survey (disbursement)",
-  "Strike & delay",
+  "IV",
+  "P&I",
+  "Indemnities",
+  "Waiver of General Average Contribution and/or Possessory Lien",
+  "Irrecoverable General Average Contribution",
+  "Third Party Liability",
 ];
 
 export const CLAIM_STATUSES: ClaimStatus[] = ["Open", "Close"];
 
 export const PRIORITY_OPTIONS: Priority[] = ["None", "Low", "Medium", "High", "Overdue"];
 
+// Version 2.0 — shares the same 16-value list confirmed for Insurance (COEMS-21182).
 export const TYPE_OF_COVER_OPTIONS: string[] = [
-  "Charterer's liability (CL)",
-  "Charterer's loss of profit",
-  "Charterer's loss of use",
-  "Comp. carrier's liability (CCC)",
-  "Comp. general liability (CGL)",
-  "Ext. cargo liability cover (ECL)",
-  "Ext. contractual cover (ECC)",
-  "Extended crew cover",
-  "Extra war risk insurance (EWRI)",
-  "Freight, demurrage, defense (FD&D)",
-  "Hull and machinery (H&M)",
-  "Kidnap, ransom protection (K&R)",
-  "Loss of hire (LOH)",
-  "Northern Sea Route buy back (NSR)",
-  "Professional indemnity",
-  "Project insurance",
-  "Property insurance",
   "Protection & Indemnity (P&I)",
-  "Strike and delay",
-  "TCL and FD&D",
-  "War",
+  "Charterer's Liability (CL)",
+  "FD&D (UHL as charterer)",
+  "Loss of Hire (LOH)",
+  "Strike and Delay",
+  "Hull and Machinery (H&M)",
+  "Increased Value (IV)",
+  "FD&D (UHL as owner)",
+  "Extra War Risk insurance (EWRI)",
+  "War Risk",
+  "Extended Crew Cover (P&I extension)",
+  "Comprehensive Carrier's Liability Cover (CCC)",
+  "Comprehensive General Liability (CGL)",
+  "Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)",
+  "Transport insurance",
+  "Professional indemnity",
 ];
+
+// Version 2.0 — confirmed Type of Cover → Type of Claim mapping (COEMS-21182).
+// Drives the dependent/filtered Type of Claim dropdown: disabled until a Type of
+// Cover is picked, then limited to exactly the values listed here for that cover.
+export const TYPE_OF_COVER_TO_CLAIM_TYPES: Record<string, ClaimType[]> = {
+  "Protection & Indemnity (P&I)": ["Cargo", "Crew", "Property Damage", "Personal Injury", "Pollution", "Pre-Loading Survey", "Wreck Removal", "Other"],
+  "Charterer's Liability (CL)": ["Cargo", "Damage To Hull", "Personal Injury", "Pre-Loading Survey", "Property Damage", "Other"],
+  "FD&D (UHL as charterer)": ["FD&D"],
+  "Loss of Hire (LOH)": ["Loss of Hire"],
+  "Strike and Delay": ["Strike and Delay", "Cyber"],
+  "Hull and Machinery (H&M)": ["Particular Average", "FFO", "Third Party Liability (other than FFO)", "Machinery", "General Average", "Total Loss"],
+  "Increased Value (IV)": ["Total Loss", "Equipment"],
+  "FD&D (UHL as owner)": ["FD&D"],
+  "Extra War Risk insurance (EWRI)": ["H&M", "IV", "Loss of Hire", "P&I", "Other"],
+  "War Risk": ["H&M", "IV", "Loss of Hire", "P&I", "Other"],
+  "Extended Crew Cover (P&I extension)": ["Other"],
+  "Comprehensive Carrier's Liability Cover (CCC)": ["Cargo", "Property Damage", "Personal Injury", "Pollution", "Indemnities", "Waiver of General Average Contribution and/or Possessory Lien", "Irrecoverable General Average Contribution", "Other"],
+  "Comprehensive General Liability (CGL)": ["Other"],
+  "Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)": ["Cargo", "Property Damage", "Personal Injury", "Pollution", "Indemnities", "Waiver of General Average Contribution and/or Possessory Lien", "Irrecoverable General Average Contribution", "Other"],
+  "Transport insurance": ["Equipment"],
+  "Professional indemnity": ["Third Party Liability"],
+};
 
 export const RECOVERABLE_BY_OPTIONS: RecoverableBy[] = [
   "Insurance",
@@ -275,7 +315,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     id: "1",
     claimNo: "CLM-2024-001",
     claimType: "Cargo",
-    typeOfCover: "Ext. cargo liability cover (ECL)",
+    typeOfCover: "Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)",
     priority: "High",
     vessel: "MV OCEAN STAR",
     fixture: "FIX-2024-067",
@@ -295,6 +335,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "MIB-2024-089",
     brokerContact: "James Wilson",
     leadingInsurer: "London P&I Club",
+    insurerReference: "",
     insurerContact: "Sarah Connor",
     dateOfIncident: "2024-02-15",
     dateOfNotification: "2024-02-18",
@@ -320,8 +361,8 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "2",
     claimNo: "CLM-2024-002",
-    claimType: "H&M",
-    typeOfCover: "Hull and machinery (H&M)",
+    claimType: "Particular Average",
+    typeOfCover: "Hull and Machinery (H&M)",
     priority: "High",
     vessel: "MV PACIFIC VOYAGER",
     fixture: "FIX-2024-089",
@@ -341,6 +382,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "GMI-2024-102",
     brokerContact: "Linda Kovacs",
     leadingInsurer: "American Club",
+    insurerReference: "",
     insurerContact: "Mark Spencer",
     dateOfIncident: "2024-03-01",
     dateOfNotification: "2024-03-02",
@@ -366,8 +408,9 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "3",
     claimNo: "CLM-2024-003",
-    claimType: "Commercial",
-    typeOfCover: "Freight, demurrage, defense (FD&D)",
+    claimType: "FD&D",
+    // Migration note: old data didn't capture charterer vs owner side; defaulted to charterer.
+    typeOfCover: "FD&D (UHL as charterer)",
     priority: "Medium",
     vessel: "MV ATLANTIC PRIDE",
     fixture: "FIX-2024-045",
@@ -387,6 +430,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "",
     brokerContact: "Tom Richards",
     leadingInsurer: "NorthStandard",
+    insurerReference: "",
     insurerContact: "",
     dateOfIncident: "2024-01-20",
     dateOfNotification: "2024-01-25",
@@ -412,7 +456,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "4",
     claimNo: "CLM-2024-004",
-    claimType: "P&I personal injury",
+    claimType: "Personal Injury",
     typeOfCover: "Protection & Indemnity (P&I)",
     priority: "Medium",
     vessel: "MV SOUTHERN CROSS",
@@ -433,6 +477,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "SIG-2024-089",
     brokerContact: "Rachel Kim",
     leadingInsurer: "Britannia",
+    insurerReference: "",
     insurerContact: "David Hawkins",
     dateOfIncident: "2024-02-28",
     dateOfNotification: "2024-03-01",
@@ -458,8 +503,8 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "5",
     claimNo: "CLM-2024-005",
-    claimType: "P&I FD&D",
-    typeOfCover: "Freight, demurrage, defense (FD&D)",
+    claimType: "FD&D",
+    typeOfCover: "FD&D (UHL as charterer)",
     priority: "Low",
     vessel: "MV EASTERN STAR",
     fixture: "FIX-2024-078",
@@ -479,6 +524,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "MLI-2024-078",
     brokerContact: "Chris Fenton",
     leadingInsurer: "Skuld",
+    insurerReference: "",
     insurerContact: "Anna Bergström",
     dateOfIncident: "2024-01-10",
     dateOfNotification: "2024-01-15",
@@ -504,7 +550,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "6",
     claimNo: "CLM-2024-006",
-    claimType: "P&I cargo",
+    claimType: "Cargo",
     typeOfCover: "Protection & Indemnity (P&I)",
     priority: "Medium",
     vessel: "MV NORTHERN LIGHT",
@@ -525,6 +571,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "IMB-2024-134",
     brokerContact: "Paul Haynes",
     leadingInsurer: "Gard P&I",
+    insurerReference: "",
     insurerContact: "Ingrid Solberg",
     dateOfIncident: "2024-03-10",
     dateOfNotification: "2024-03-12",
@@ -550,8 +597,8 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "7",
     claimNo: "CLM-2024-007",
-    claimType: "P&I pollution",
-    typeOfCover: "Ext. contractual cover (ECC)",
+    claimType: "Pollution",
+    typeOfCover: "Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)",
     priority: "Overdue",
     vessel: "MV WESTERN SPIRIT",
     fixture: "FIX-2024-056",
@@ -571,6 +618,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "MIB-2024-167",
     brokerContact: "James Wilson",
     leadingInsurer: "UK Defence Club",
+    insurerReference: "",
     insurerContact: "Elena Moore",
     dateOfIncident: "2024-02-05",
     dateOfNotification: "2024-02-07",
@@ -596,8 +644,8 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "8",
     claimNo: "CLM-2023-145",
-    claimType: "H&M",
-    typeOfCover: "Hull and machinery (H&M)",
+    claimType: "Machinery",
+    typeOfCover: "Hull and Machinery (H&M)",
     priority: "None",
     vessel: "MV HORIZON",
     fixture: "FIX-2023-289",
@@ -617,6 +665,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "GMI-2023-445",
     brokerContact: "Linda Kovacs",
     leadingInsurer: "London P&I Club",
+    insurerReference: "",
     insurerContact: "Andrew Barnes",
     dateOfIncident: "2023-11-15",
     dateOfNotification: "2023-11-16",
@@ -646,8 +695,8 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "9",
     claimNo: "CLM-2024-008",
-    claimType: "Commercial",
-    typeOfCover: "Freight, demurrage, defense (FD&D)",
+    claimType: "FD&D",
+    typeOfCover: "FD&D (UHL as charterer)",
     priority: "Low",
     vessel: "MV ARCTIC BREEZE",
     fixture: "FIX-2024-101",
@@ -667,6 +716,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "SIG-2024-101",
     brokerContact: "Rachel Kim",
     leadingInsurer: "Swedish Club",
+    insurerReference: "",
     insurerContact: "Björn Larsson",
     dateOfIncident: "2024-01-28",
     dateOfNotification: "2024-02-01",
@@ -692,7 +742,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "10",
     claimNo: "CLM-2024-009",
-    claimType: "P&I personal injury",
+    claimType: "Personal Injury",
     typeOfCover: "Protection & Indemnity (P&I)",
     priority: "None",
     vessel: "MV TROPICAL WAVE",
@@ -713,6 +763,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "MRS-2024-178",
     brokerContact: "Tom Richards",
     leadingInsurer: "UK P&I Club",
+    insurerReference: "",
     insurerContact: "Helen Watts",
     dateOfIncident: "2024-02-20",
     dateOfNotification: "2024-02-21",
@@ -738,8 +789,8 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
   {
     id: "11",
     claimNo: "CLM-2024-010",
-    claimType: "P&I FD&D",
-    typeOfCover: "Freight, demurrage, defense (FD&D)",
+    claimType: "FD&D",
+    typeOfCover: "FD&D (UHL as charterer)",
     priority: "Low",
     vessel: "MV GLOBAL TRADER",
     fixture: "FIX-2024-092",
@@ -759,6 +810,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "MLI-2024-092",
     brokerContact: "Chris Fenton",
     leadingInsurer: "UK Defence Club",
+    insurerReference: "",
     insurerContact: "Fiona Hughes",
     dateOfIncident: "2024-02-12",
     dateOfNotification: "2024-02-16",
@@ -785,7 +837,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     id: "12",
     claimNo: "CLM-2024-011",
     claimType: "Cargo",
-    typeOfCover: "Ext. cargo liability cover (ECL)",
+    typeOfCover: "Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)",
     priority: "Medium",
     vessel: "MV LIBERTY BELLE",
     fixture: "FIX-2024-125",
@@ -805,6 +857,7 @@ export const INITIAL_CLAIMS_DATA: Claim[] = [
     brokerReference: "IMB-2024-125",
     brokerContact: "Paul Haynes",
     leadingInsurer: "West of England",
+    insurerReference: "",
     insurerContact: "Nigel Foster",
     dateOfIncident: "2024-03-05",
     dateOfNotification: "2024-03-08",

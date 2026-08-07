@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { DatePicker } from "./ui/date-picker";
 import { cn } from "./ui/utils";
 import exampleImage from 'figma:asset/6931c210e64628b26cf918b8364d99257fc1fce7.png';
-import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, BROKERS, PIC_LEGAL_OPTIONS, INSURERS, formatClaimNo } from "./claims-types";
+import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, TYPE_OF_COVER_TO_CLAIM_TYPES, BROKERS, PIC_LEGAL_OPTIONS, INSURERS, formatClaimNo } from "./claims-types";
 import { useVersion } from "../version-context";
 
 const INCIDENT_CATEGORIES = ["Cargo", "Environmental", "Near-Miss", "Personnel Accident", "Property Damage", "Security", "Technical", "Other"];
@@ -300,6 +300,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
     broker: "none",
     brokerReference: "",
     leadingInsurer: "",
+    insurerReference: "", // Version 2.0 — new, free text, next to Insurer (COEMS-21137)
     dateOfNotification: "",
     dateOfIncident: "",
     location: "",
@@ -1649,7 +1650,8 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                 </Select>
               </div>
 
-              {/* PIC Legal (optional) */}
+              {/* PIC Legal (optional) + Date of Notification to Broker (repositioned here, COEMS-21137) */}
+              <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 relative">
                 <Label>PIC Legal</Label>
                 <button
@@ -1684,6 +1686,11 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                   </>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label>Date of Notification to Broker</Label>
+                <Input type="date" value={claimFormData.dateOfNotification || ""} onChange={(e) => updateClaimField("dateOfNotification", e.target.value)} />
+              </div>
+              </div>
 
               {/* Additional Information — collapsible, collapsed by default when created from Voyage */}
               <div className="border border-gray-200 rounded-lg">
@@ -1698,25 +1705,41 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                 {additionalInfoOpen && (
                   <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
 
-                    {/* Type of Claim + Type of Cover */}
+                    {/* Type of Cover + Type of Claim — reordered (Cover first), Claim dependent/filtered on Cover (COEMS-21182) */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Type of Claim</Label>
-                        <Select value={claimFormData.claimType || "none"} onValueChange={(val) => updateClaimField("claimType", val)}>
-                          <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Select type</SelectItem>
-                            {CLAIM_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
                         <Label>Type of Cover</Label>
-                        <Select value={claimFormData.typeOfCover || "none"} onValueChange={(val) => updateClaimField("typeOfCover", val)}>
+                        <Select
+                          value={claimFormData.typeOfCover || "none"}
+                          onValueChange={(val) => {
+                            const allowed = TYPE_OF_COVER_TO_CLAIM_TYPES[val] || [];
+                            setClaimFormData((f: any) => ({
+                              ...f,
+                              typeOfCover: val,
+                              claimType: allowed.includes(f.claimType) ? f.claimType : "none",
+                            }));
+                          }}
+                        >
                           <SelectTrigger><SelectValue placeholder="Select cover" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Select cover</SelectItem>
                             {TYPE_OF_COVER_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type of Claim</Label>
+                        <Select
+                          value={claimFormData.claimType || "none"}
+                          onValueChange={(val) => updateClaimField("claimType", val)}
+                          disabled={!claimFormData.typeOfCover || claimFormData.typeOfCover === "none"}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={!claimFormData.typeOfCover || claimFormData.typeOfCover === "none" ? "Select Type of Cover first" : "Select type"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Select type</SelectItem>
+                            {(TYPE_OF_COVER_TO_CLAIM_TYPES[claimFormData.typeOfCover] || []).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -1740,21 +1763,21 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                       </div>
                     </div>
 
-                    {/* Leading Insurer + Date of Notification */}
+                    {/* Insurer (renamed from "Leading Insurer") + Insurer Reference Number (new, COEMS-21137) */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Leading Insurer</Label>
+                        <Label>Insurer</Label>
                         <Select value={claimFormData.leadingInsurer || "none"} onValueChange={(val) => updateClaimField("leadingInsurer", val === "none" ? "" : val)}>
-                          <SelectTrigger><SelectValue placeholder="Select leading insurer" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select insurer" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Select leading insurer</SelectItem>
+                            <SelectItem value="none">Select insurer</SelectItem>
                             {INSURERS.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Date of Notification to Broker</Label>
-                        <Input type="date" value={claimFormData.dateOfNotification || ""} onChange={(e) => updateClaimField("dateOfNotification", e.target.value)} />
+                        <Label>Insurer Reference Number</Label>
+                        <Input value={claimFormData.insurerReference || ""} onChange={(e) => updateClaimField("insurerReference", e.target.value)} placeholder="e.g. INS-REF-2024-001" />
                       </div>
                     </div>
 
