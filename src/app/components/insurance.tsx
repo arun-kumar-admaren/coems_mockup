@@ -321,7 +321,7 @@ const INITIAL_DATA: InsuranceRecord[] = [
     insuranceOwner: "Nikhil Mathew", assignedTo: "John Doe",
     nextActionDate: "2026-07-01", nextActionNote: "Renew policy before expiry.",
     insuranceCategory: "Vessel", fixture: "", vessel: "MV OCEAN STAR", crew: "",
-    typeOfCover: "Hull & Machinery", insuranceTypeClauseType: "Institute Time Clauses Hull",
+    typeOfCover: "Hull and Machinery (H&M)", insuranceTypeClauseType: "Institute Time Clauses Hull",
 
     policyNumber: "POL-2026-HM-001", policyCoverReference: "REF-HM-001",
     intendedVessel: "MV OCEAN STAR", biannualDeclarationToBroker: true,
@@ -345,7 +345,7 @@ const INITIAL_DATA: InsuranceRecord[] = [
     insuranceOwner: "Jacson Tom", assignedTo: "Safna Basheer",
     nextActionDate: "", nextActionNote: "",
     insuranceCategory: "Fixture", fixture: "AEW-F-2026-407", vessel: "", crew: "",
-    typeOfCover: "Charterers' P&I", insuranceTypeClauseType: "P&I Rules",
+    typeOfCover: "Charterer's Liability (CL)", insuranceTypeClauseType: "P&I Rules",
 
     policyNumber: "POL-2026-PI-002", policyCoverReference: "REF-PI-002",
     intendedVessel: "none", biannualDeclarationToBroker: false,
@@ -369,7 +369,7 @@ const INITIAL_DATA: InsuranceRecord[] = [
     insuranceOwner: "Aiswaryaa Adminren", assignedTo: "Nikhil Mathew",
     nextActionDate: "2026-06-15", nextActionNote: "Awaiting approval from insurer.",
     insuranceCategory: "Crew", fixture: "", vessel: "", crew: "All crew — MV PACIFIC VOYAGER",
-    typeOfCover: "Crew Liability", insuranceTypeClauseType: "Bespoke / Other",
+    typeOfCover: "Extended Crew Cover (P&I extension)", insuranceTypeClauseType: "Bespoke / Other",
 
     policyNumber: "", policyCoverReference: "",
     intendedVessel: "MV PACIFIC VOYAGER", biannualDeclarationToBroker: false,
