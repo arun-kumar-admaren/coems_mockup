@@ -66,9 +66,11 @@ All other fields in the six groups (e.g. Disbursements, Freight Total Loss, PA D
 
 * A calculated field is visually distinguished from a manual field: grey background, non-editable, and a small **"(calculated)"** tag next to its label.
 
-### 5. Formulas — Hull & Machinery + Increased Value, Loss of Hire, P&I family, Strike and Delay
+### 5. Formulas, by group
 
 All formulas are taken directly from the source "Vessel Insurance Overview" workbook's cell formulas (not reverse-engineered from static values). **Tax Rate (%)** is the single shared field used as the rate input for every Tax calculation below — it is not duplicated per group.
+
+**Hull & Machinery + Increased Value**
 
 | # | Field | Formula |
 | --- | --- | --- |
@@ -80,21 +82,42 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 | 6 | Tax IV | ROUND(IV Premium × Tax Rate %, 2) |
 | 7 | Total Net Premium (H&M+IV) | H&M Premium Net of Upfront Performance Bonus + IV Premium |
 | 8 | Total Gross Premium Incl. Tax (H&M+IV) | Total Net Premium (H&M+IV) + Tax H&M + Tax IV |
+
+*(Note: Total Sum Insured (TSI) is the common field shared with Coverage Values, not a field inside this group — see section 8 for when it's shown here vs. there.)*
+
+**Loss of Hire**
+
+| # | Field | Formula |
+| --- | --- | --- |
 | 9 | LoH Sum Insured | 180 × Daily Indemnity (LoH) |
 | 10 | LoH Premium | ROUND(LoH Sum Insured × LoH Rate %, 0) |
 | 11 | Tax (LoH) | ROUND(LoH Premium × Tax Rate %, 2) |
 | 12 | Total Gross Premium Incl. Tax (LoH) | LoH Premium + Tax (LoH) |
+
+**P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D**
+
+| # | Field | Formula |
+| --- | --- | --- |
 | 13 | Net Premium P&I | ROUND(Gross Premium P&I Incl. R/I × 0.9, 0) |
 | 14 | 10% OGD (Gard) / 10% PB (London) | Gross Premium P&I Incl. R/I − Net Premium P&I |
 | 15 | Tax (P&I) | ROUND(Net Premium P&I × Tax Rate %, 2) |
 | 16 | Total Premium Incl. Tax (P&I) | Net Premium P&I + Tax (P&I) |
 | 17 | Tax (FD&D) | ROUND(Premium FD&D × Tax Rate %, 2) |
 | 18 | Total (FD&D) – Total Gross Premium Incl. Tax | Premium FD&D + Tax (FD&D) |
+
+*(C/L P&I and C/L FD&D have no formulas — the source workbook has none for them either; both stay manual, see section 4.)*
+
+**Strike and Delay**
+
+| # | Field | Formula |
+| --- | --- | --- |
 | 19 | Premium (Strike and Delay) | ROUND(Daily Entered Sum × Rate (Strike and Delay), 2) |
 | 20 | Upfront NCB 10% | ROUND(Premium (Strike and Delay) × 10%, 2) |
 | 21 | Premium Net of NCB | Premium (Strike and Delay) − Upfront NCB 10% |
 | 22 | Tax (Strike and Delay) | ROUND(Premium Net of NCB × Tax Rate %, 2) |
 | 23 | Premium Incl. Tax (Strike and Delay) | Premium Net of NCB + Tax (Strike and Delay) |
+
+**War Risks** and **Extended Covers (ECL/CCC/ECC)** have their own formulas too, covered separately in sections 6 and 7 since they work differently (a live mirror, and a fixed-rate uplift, rather than a Tax Rate (%)-driven chain).
 
 ### 6. War Risks: mirrored fields, not independent entry
 
