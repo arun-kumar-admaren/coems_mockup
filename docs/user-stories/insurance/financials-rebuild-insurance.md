@@ -171,7 +171,12 @@ This reverses COEMS-21212's "no dynamic field visibility, no conditional logic" 
 
 * 3 pre-existing Insurance records carried Type of Cover values from before this rebuild (e.g. "Hull & Machinery", "Charterers' P&I", "Crew Liability") that no longer match the current 16-value list, which meant their Type of Cover dropdown showed blank and every Financials group stayed disabled regardless of the record's actual cover type. These are corrected to their closest current equivalents: "Hull and Machinery (H&M)", "Charterer's Liability (CL)", and "Extended Crew Cover (P&I extension)".
 
-### 13. Out of scope / known gaps (unchanged from investigation, carried forward for visibility)
+### 13. Cover Details: Intended Vessel hidden when Related to = Vessel
+
+* In the Cover Details section (outside Financials), the **Intended Vessel** field (COEMS-21188) is only shown when **Related to** is **Fixture** or not yet selected. When **Related to = Vessel**, Intended Vessel is hidden — **Select Vessel** (shown directly under Related to) already captures the vessel, so asking for it a second time via Intended Vessel was redundant.
+* If a user had already picked an Intended Vessel and then switches Related to back to **Vessel**, the stored Intended Vessel value is cleared (reset to unselected) rather than left saved-but-hidden.
+
+### 14. Out of scope / known gaps (unchanged from investigation, carried forward for visibility)
 
 * **Rate per GT Incl. R/I** stays manual — no vessel Gross Tonnage (GT) field exists on the Insurance record to calculate it from.
 * **Cost of Extended Covers (ECL/CCC), Excl. Tax** stays manual — its source formula references a separate external workbook not available to this system.
