@@ -17,12 +17,12 @@ The following fields are **removed from the Financials section for Version 2.0 o
 | Removed field | Where it now lives instead |
 | --- | --- |
 | Sum Insured | H&M Sum Insured (Hull & Machinery + Increased Value group) |
-| Deductible | PA Deductible (Hull & Machinery + Increased Value group) |
 | Premium Rate (%) | H&M Rate (%) (Hull & Machinery + Increased Value group) |
 | Annual Premium | H&M Premium (Hull & Machinery + Increased Value group) |
 | Leading Underwriter | Leading H&M/IV/LoH/War Underwriter (each group has its own) |
 
-* Sum Insured and Deductible were previously mandatory fields; removing them for Version 2.0 means Insurance Status, Policy Start/End Date, and Insurer/Club remain the only mandatory Financials-adjacent fields.
+* Sum Insured was previously a mandatory field; removing it for Version 2.0 means Insurance Status, Policy Start/End Date, and Insurer/Club remain the only mandatory Financials-adjacent fields.
+* **Deductible is not removed** — see section 8. Unlike the four fields above, no other group besides Hull & Machinery + Increased Value models a deductible at all, so removing it outright would have left Loss of Hire, War Risks, the P&I family, Strike and Delay, and Extended Covers with no way to record one. It follows the same conditional hide/fallback rule as TSI/Tax Amount/Total Premium Incl. Tax instead (rethought per client feedback).
 
 ### 2. New field added: H&M Sum Insured
 
@@ -110,18 +110,19 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 * **Cost of Extended Covers (ECL/CCC), Incl. Tax** is calculated: `Cost of Extended Covers (ECL/CCC), Excl. Tax × 1.19` (a fixed 19% uplift baked into the source formula, independent of the Tax Rate (%) field).
 * These two fields move into their own new collapsible group, **Extended Covers (ECL/CCC/ECC)** (see section 10) — they are not part of the "Total insurance costs (rollup)" group any more (see section 9).
 
-### 8. Total Sum Insured (TSI) / Tax Amount / Total Premium Incl. Tax: conditional fallback
+### 8. Total Sum Insured (TSI) / Deductible / Tax Amount / Total Premium Incl. Tax: conditional fallback
 
-These three fields stay in the Financials section (Coverage Values / Premium Details), but whether they're shown as **read-only calculated** or **manual entry**, or **hidden** entirely, now depends on which Financials group is active for the record's Type of Cover (section 11):
+These four fields stay in the Financials section (Coverage Values / Premium Details), but whether they're shown as **read-only calculated** (TSI only) or **manual entry**, or **hidden** entirely, now depends on which Financials group is active for the record's Type of Cover (section 11):
 
 | Field | Hidden (group already shows the equivalent) | Falls back to manual entry |
 | --- | --- | --- |
 | Total Sum Insured (TSI) | Hull & Machinery + Increased Value, War Risks, Loss of Hire | P&I family, Strike and Delay, Extended Covers, or no Type of Cover selected yet |
+| Deductible | Hull & Machinery + Increased Value only (its PA Deductible covers it) | Loss of Hire, War Risks, P&I family, Strike and Delay, Extended Covers, or no Type of Cover selected yet |
 | Tax Amount | Hull & Machinery + Increased Value, Loss of Hire, P&I family, Strike and Delay, Extended Covers | War Risks, or no Type of Cover selected yet |
 | Total Premium Incl. Tax | Hull & Machinery + Increased Value, Loss of Hire, P&I family, Strike and Delay, Extended Covers | War Risks, or no Type of Cover selected yet |
 
-* This exists so that War Risks (which has no Tax/Total field of its own) and the three Type of Cover values with no matching group at all (section 11) still have somewhere to record a premium and tax figure — hiding these fields unconditionally would leave those policies with no way to capture financial data.
-* When shown as calculated, the value is derived from whichever single group is active (only one group is ever populated per record, since one record = one Type of Cover).
+* This exists so that War Risks (which has no Tax/Total field of its own, and whose unlocked H&M+IV group's PA Deductible belongs to a different policy) and the three Type of Cover values with no matching group at all (section 11) still have somewhere to record a deductible, premium, and tax figure — hiding these fields unconditionally would leave those policies with no way to capture that financial data.
+* Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax are calculated when shown, derived from whichever single group is active (only one group's numbers are ever real per record, since one record = one Type of Cover). Deductible has no group-level formula anywhere, so it's always a plain manual field wherever it's shown, never calculated.
 
 ### 9. "Total insurance costs (rollup)" group removed
 
