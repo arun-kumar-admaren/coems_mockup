@@ -155,6 +155,7 @@ interface InsuranceRecord {
   taxAmount: number;
   totalPremiumInclTax: number;
   // Version 2.0 — per-cover-type field groups (COEMS-21212), all optional, all always present
+  hmSumInsured?: number;
   hmDisbursements?: number;
   hmFreightTotalLoss?: number;
   hmEquipment?: number;
@@ -170,10 +171,16 @@ interface InsuranceRecord {
   hmUpfrontPerformanceBonus?: number;
   hmPremiumNetOfUpb?: number;
   hmIvPremium?: number;
+  hmTax?: number;
+  hmIvTax?: number;
+  hmTotalNetPremium?: number;
+  hmTotalGrossPremiumInclTax?: number;
   lohSumInsuredNew?: number;
   lohLeadingUnderwriter?: string;
   lohRateNew?: number;
   lohPremiumNew?: number;
+  lohTax?: number;
+  lohTotalGrossPremiumInclTax?: number;
   warHm?: number;
   warIv?: number;
   warTsi?: number;
@@ -188,8 +195,12 @@ interface InsuranceRecord {
   piRiAlone?: number;
   piOgdPb?: number;
   piNetPremium?: number;
+  piTax?: number;
+  piTotalPremiumInclTax?: number;
   fdd?: number;
   fddPremium?: number;
+  fddTax?: number;
+  fddTotalGrossPremiumInclTax?: number;
   clPi?: number;
   clPiPremium?: number;
   clFdd?: number;
@@ -200,6 +211,8 @@ interface InsuranceRecord {
   sdPremium?: number;
   sdUpfrontNcb?: number;
   sdPremiumNetOfNcb?: number;
+  sdTax?: number;
+  sdPremiumInclTax?: number;
   totalAnnualPremiumExclTax?: number;
   totalDailyPremiumExclTax?: number;
   totalAnnualPremiumInclTax?: number;
@@ -269,14 +282,15 @@ const EMPTY_FORM: Omit<InsuranceRecord, "id" | "createdAt"> = {
   taxRate: 0,
   taxAmount: 0,
   totalPremiumInclTax: 0,
-  hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
+  hmSumInsured: 0, hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
   hmPaDeductible: 0, hmAmd: 0, hmLeadingHmUnderwriter: "", hmLeadingIvUnderwriter: "",
   hmRate: 0, hmIvRate: 0, hmPremium: 0, hmUpfrontPerformanceBonus: 0, hmPremiumNetOfUpb: 0, hmIvPremium: 0,
-  lohSumInsuredNew: 0, lohLeadingUnderwriter: "", lohRateNew: 0, lohPremiumNew: 0,
+  hmTax: 0, hmIvTax: 0, hmTotalNetPremium: 0, hmTotalGrossPremiumInclTax: 0,
+  lohSumInsuredNew: 0, lohLeadingUnderwriter: "", lohRateNew: 0, lohPremiumNew: 0, lohTax: 0, lohTotalGrossPremiumInclTax: 0,
   warHm: 0, warIv: 0, warTsi: 0, warLeadingUnderwriter: "", warRate: 0, warLohDaily: 0, warLohBasis: 0, warLohTsi: 0,
-  piClub: "", piGrossPremiumInclRi: 0, piRatePerGtInclRi: 0, piRiAlone: 0, piOgdPb: 0, piNetPremium: 0,
-  fdd: 0, fddPremium: 0, clPi: 0, clPiPremium: 0, clFdd: 0, clFddPremium: 0,
-  sdInsurer: "", sdDailyEnteredSum: 0, sdRate: 0, sdPremium: 0, sdUpfrontNcb: 0, sdPremiumNetOfNcb: 0,
+  piClub: "", piGrossPremiumInclRi: 0, piRatePerGtInclRi: 0, piRiAlone: 0, piOgdPb: 0, piNetPremium: 0, piTax: 0, piTotalPremiumInclTax: 0,
+  fdd: 0, fddPremium: 0, fddTax: 0, fddTotalGrossPremiumInclTax: 0, clPi: 0, clPiPremium: 0, clFdd: 0, clFddPremium: 0,
+  sdInsurer: "", sdDailyEnteredSum: 0, sdRate: 0, sdPremium: 0, sdUpfrontNcb: 0, sdPremiumNetOfNcb: 0, sdTax: 0, sdPremiumInclTax: 0,
   totalAnnualPremiumExclTax: 0, totalDailyPremiumExclTax: 0, totalAnnualPremiumInclTax: 0, totalDailyPremiumInclTax: 0,
   costExtendedCoversExclTax: 0, costExtendedCoversInclTax: 0,
   totalCostInclExtendedCoversExclTax: 0, totalCostInclExtendedCoversInclTax: 0,
@@ -471,6 +485,35 @@ function PercentInput({
   );
 }
 
+// Version 2.0 — read-only display for fields auto-computed from a formula (COEMS-21212
+// Financials redesign). Visually distinct from CurrencyInput so users can tell at a
+// glance which fields are derived vs. manually entered.
+function CalculatedField({
+  label, value, currency, suffix,
+}: {
+  label: string; value: number; currency?: string; suffix?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-1">
+        {label}
+        <span className="text-[10px] font-normal text-gray-400">(calculated)</span>
+      </Label>
+      <div className="relative">
+        {currency && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium select-none">{currency}</span>
+        )}
+        <div className={cn(
+          "flex h-10 w-full items-center rounded-md border border-input bg-gray-50 text-sm text-gray-700",
+          currency ? "pl-11 pr-3" : "px-3"
+        )}>
+          {Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "0"}{suffix}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Insurance() {
@@ -578,6 +621,52 @@ export function Insurance() {
   const statusOptions = isV2 ? INSURANCE_STATUSES_V2 : INSURANCE_STATUSES_V1;
 
   const isLoH = formData.typeOfCover === "Loss of Hire" || formData.typeOfCover === "Loss of hire (LOH)";
+
+  // Version 2.0 — Financials formulas (COEMS-21212 rebuild), sourced from the client's
+  // "Vessel Insurance Overview" workbook. Mirrors that sheet's cell formulas 1:1.
+  const hmSumInsured = formData.hmSumInsured ?? 0;
+  const hmIvTotal = formData.hmIvTotal ?? 0;
+  const calcTsi = hmSumInsured + hmIvTotal; // W7 = Q7+V7
+  const calcHmPremium = Math.round(hmSumInsured * (formData.hmRate ?? 0) / 100); // AM7 = ROUND(Q7*AK7,0)
+  const calcHmPremiumNetOfUpb = calcHmPremium - (formData.hmUpfrontPerformanceBonus ?? 0); // AO7 = AM7-AN7
+  const calcHmTax = Math.round(calcHmPremiumNetOfUpb * (formData.taxRate ?? 0) / 100 * 100) / 100; // AQ7 = ROUND(AO7*AP7,2)
+  const calcIvPremium = Math.round(hmIvTotal * (formData.hmIvRate ?? 0) / 100); // AR7 = ROUND(V7*AL7,0)
+  const calcIvTax = Math.round(calcIvPremium * (formData.taxRate ?? 0) / 100 * 100) / 100; // AT7 = ROUND(AR7*AS7,2)
+  const calcHmTotalNetPremium = calcHmPremiumNetOfUpb + calcIvPremium; // AU7 = AO7+AR7
+  const calcHmTotalGrossPremiumInclTax = calcHmTotalNetPremium + calcHmTax + calcIvTax; // AV7 = AU7+AQ7+AT7
+
+  const calcLohSumInsured = 180 * (formData.dailyIndemnity ?? 0); // BS7 = 180*BQ7
+  const calcLohPremium = Math.round(calcLohSumInsured * (formData.lohRateNew ?? 0) / 100); // CA7 = ROUND(BS7*BZ7,0)
+  const calcLohTax = Math.round(calcLohPremium * (formData.taxRate ?? 0) / 100 * 100) / 100; // CC7 = ROUND(CA7*CB7,2)
+  const calcLohTotalGrossPremiumInclTax = calcLohPremium + calcLohTax; // CD7 = CA7+CC7
+
+  const calcWarHm = hmSumInsured; // CO7 = Q7 (mirror)
+  const calcWarIv = hmIvTotal; // CP7 = V7 (mirror)
+  const calcWarTsi = calcWarHm + calcWarIv; // CQ7 = CO7+CP7
+
+  const calcPiNetPremium = Math.round((formData.piGrossPremiumInclRi ?? 0) * 0.9); // DQ7 = ROUND(DM7*0.9,0)
+  const calcPiOgdPb = (formData.piGrossPremiumInclRi ?? 0) - calcPiNetPremium; // DP7 = DM7-DQ7
+  const calcPiTax = Math.round(calcPiNetPremium * (formData.taxRate ?? 0) / 100 * 100) / 100; // DS7 = ROUND(DQ7*DR7,2)
+  const calcPiTotalPremiumInclTax = calcPiNetPremium + calcPiTax; // DU7 = DQ7+DS7 (+DT7 London variant, not modeled)
+
+  const calcFddTax = Math.round((formData.fddPremium ?? 0) * (formData.taxRate ?? 0) / 100 * 100) / 100; // DY7 = ROUND(DW7*DX7,2)
+  const calcFddTotalGrossPremiumInclTax = (formData.fddPremium ?? 0) + calcFddTax; // DZ7 = DW7+DY7
+
+  const calcSdPremium = Math.round((formData.sdDailyEnteredSum ?? 0) * (formData.sdRate ?? 0) * 100) / 100; // GM7 = ROUND(GK7*GL7,2)
+  const calcSdUpfrontNcb = Math.round(calcSdPremium * 0.1 * 100) / 100; // GA7 = ROUND(FZ7*10%,2)
+  const calcSdPremiumNetOfNcb = calcSdPremium - calcSdUpfrontNcb; // GB7 = FZ7-GA7
+  const calcSdTax = Math.round(calcSdPremiumNetOfNcb * (formData.taxRate ?? 0) / 100 * 100) / 100; // GD7 = ROUND(GB7*GC7,2)
+  const calcSdPremiumInclTax = calcSdPremiumNetOfNcb + calcSdTax; // GE7 = GB7+GD7
+
+  const calcTotalAnnualPremiumExclTax = calcHmTotalNetPremium + calcLohPremium + calcPiNetPremium + (formData.fddPremium ?? 0) + calcSdPremiumNetOfNcb; // GT7
+  const calcTotalDailyPremiumExclTax = Math.round(calcTotalAnnualPremiumExclTax / 365 * 100) / 100; // GU7
+  const calcTotalAnnualPremiumInclTax = calcHmTotalGrossPremiumInclTax + calcLohTotalGrossPremiumInclTax + calcPiTotalPremiumInclTax + calcFddTotalGrossPremiumInclTax + calcSdPremiumInclTax; // GV7
+  const calcTotalDailyPremiumInclTax = Math.round(calcTotalAnnualPremiumInclTax / 365 * 100) / 100; // GW7
+  const calcCostExtendedCoversInclTax = Math.round((formData.costExtendedCoversExclTax ?? 0) * 1.19 * 100) / 100; // HE7 = ROUND(HD7*119%,2)
+  const calcTotalCostInclExtendedCoversExclTax = calcTotalAnnualPremiumExclTax + (formData.costExtendedCoversExclTax ?? 0); // HG7
+  const calcTotalCostInclExtendedCoversInclTax = calcTotalAnnualPremiumInclTax + calcCostExtendedCoversInclTax; // HH7
+
+  const calcTaxAmount = calcHmTax + calcIvTax + calcLohTax + calcPiTax + calcFddTax + calcSdTax;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1198,9 +1287,19 @@ export function Insurance() {
                     </Select>
                   </div>
 
+                  {/* Version 1.0 only — removed for v2.0, superseded by per-cover-type H&M Sum Insured / IV Total (COEMS-21212 Financials rebuild) */}
+                  {!isV2 && (
                   <CurrencyInput label="Sum Insured" value={formData.sumInsured} onChange={(v) => updateField("sumInsured", v)} currency={formData.currency} mandatory />
-                  <CurrencyInput label="Total Sum Insured (TSI)" value={formData.totalSumInsured} onChange={(v) => updateField("totalSumInsured", v)} currency={formData.currency} />
+                  )}
+                  {isV2 ? (
+                    <CalculatedField label="Total Sum Insured (TSI)" value={calcTsi} currency={formData.currency} />
+                  ) : (
+                    <CurrencyInput label="Total Sum Insured (TSI)" value={formData.totalSumInsured} onChange={(v) => updateField("totalSumInsured", v)} currency={formData.currency} />
+                  )}
+                  {/* Version 1.0 only — removed for v2.0 (COEMS-21212 Financials rebuild) */}
+                  {!isV2 && (
                   <CurrencyInput label="Deductible" value={formData.deductible} onChange={(v) => updateField("deductible", v)} currency={formData.currency} mandatory />
+                  )}
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1">
@@ -1238,12 +1337,23 @@ export function Insurance() {
 
                 <SubHeader>Premium Details</SubHeader>
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Version 1.0 only — removed for v2.0 (COEMS-21212 Financials rebuild) */}
+                  {!isV2 && (<>
                   <PercentInput label="Premium Rate (%)" value={formData.premiumRate} onChange={(v) => updateField("premiumRate", v)} placeholder="e.g. 0.181992" />
                   <CurrencyInput label="Annual Premium" value={formData.annualPremium} onChange={(v) => updateField("annualPremium", v)} currency={formData.currency} />
+                  </>)}
                   <PercentInput label="Tax Rate (%)" value={formData.taxRate} onChange={(v) => updateField("taxRate", v)} placeholder="e.g. 3" />
-                  <CurrencyInput label="Tax Amount" value={formData.taxAmount} onChange={(v) => updateField("taxAmount", v)} currency={formData.currency} />
+                  {isV2 ? (
+                    <CalculatedField label="Tax Amount" value={calcTaxAmount} currency={formData.currency} />
+                  ) : (
+                    <CurrencyInput label="Tax Amount" value={formData.taxAmount} onChange={(v) => updateField("taxAmount", v)} currency={formData.currency} />
+                  )}
                   <div className="col-span-2">
-                    <CurrencyInput label="Total Premium Incl. Tax" value={formData.totalPremiumInclTax} onChange={(v) => updateField("totalPremiumInclTax", v)} currency={formData.currency} />
+                    {isV2 ? (
+                      <CalculatedField label="Total Premium Incl. Tax" value={calcTotalAnnualPremiumInclTax} currency={formData.currency} />
+                    ) : (
+                      <CurrencyInput label="Total Premium Incl. Tax" value={formData.totalPremiumInclTax} onChange={(v) => updateField("totalPremiumInclTax", v)} currency={formData.currency} />
+                    )}
                   </div>
                 </div>
 
@@ -1252,6 +1362,7 @@ export function Insurance() {
                 {isV2 && (
                 <div className="space-y-3 mt-4">
                   <CollapsibleFieldGroup title="Hull & Machinery + Increased Value" isOpen={!!expandedGroups.hm} onToggle={() => toggleGroup("hm")}>
+                    <CurrencyInput label="H&M Sum Insured" value={formData.hmSumInsured ?? 0} onChange={(v) => updateField("hmSumInsured", v)} currency={formData.currency} />
                     <CurrencyInput label="Disbursements" value={formData.hmDisbursements ?? 0} onChange={(v) => updateField("hmDisbursements", v)} currency={formData.currency} />
                     <CurrencyInput label="Freight Total Loss" value={formData.hmFreightTotalLoss ?? 0} onChange={(v) => updateField("hmFreightTotalLoss", v)} currency={formData.currency} />
                     <CurrencyInput label="Equipment (H&M)" value={formData.hmEquipment ?? 0} onChange={(v) => updateField("hmEquipment", v)} currency={formData.currency} />
@@ -1269,26 +1380,33 @@ export function Insurance() {
                     </div>
                     <PercentInput label="H&M Rate (%)" value={formData.hmRate ?? 0} onChange={(v) => updateField("hmRate", v)} />
                     <PercentInput label="IV Rate (%)" value={formData.hmIvRate ?? 0} onChange={(v) => updateField("hmIvRate", v)} />
-                    <CurrencyInput label="H&M Premium" value={formData.hmPremium ?? 0} onChange={(v) => updateField("hmPremium", v)} currency={formData.currency} />
+                    <CalculatedField label="H&M Premium" value={calcHmPremium} currency={formData.currency} />
                     <CurrencyInput label="Upfront Performance Bonus (PB/CC)" value={formData.hmUpfrontPerformanceBonus ?? 0} onChange={(v) => updateField("hmUpfrontPerformanceBonus", v)} currency={formData.currency} />
-                    <CurrencyInput label="H&M Premium Net of Upfront Performance Bonus" value={formData.hmPremiumNetOfUpb ?? 0} onChange={(v) => updateField("hmPremiumNetOfUpb", v)} currency={formData.currency} />
-                    <CurrencyInput label="IV Premium" value={formData.hmIvPremium ?? 0} onChange={(v) => updateField("hmIvPremium", v)} currency={formData.currency} />
+                    <CalculatedField label="H&M Premium Net of Upfront Performance Bonus" value={calcHmPremiumNetOfUpb} currency={formData.currency} />
+                    <CalculatedField label="IV Premium" value={calcIvPremium} currency={formData.currency} />
+                    <CalculatedField label="Tax H&M" value={calcHmTax} currency={formData.currency} />
+                    <CalculatedField label="Tax IV" value={calcIvTax} currency={formData.currency} />
+                    <CalculatedField label="Total Net Premium (H&M+IV)" value={calcHmTotalNetPremium} currency={formData.currency} />
+                    <CalculatedField label="Total Gross Premium Incl. Tax (H&M+IV)" value={calcHmTotalGrossPremiumInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
                   <CollapsibleFieldGroup title="Loss of Hire" isOpen={!!expandedGroups.loh} onToggle={() => toggleGroup("loh")}>
-                    <CurrencyInput label="LoH Sum Insured" value={formData.lohSumInsuredNew ?? 0} onChange={(v) => updateField("lohSumInsuredNew", v)} currency={formData.currency} />
+                    <CalculatedField label="LoH Sum Insured" value={calcLohSumInsured} currency={formData.currency} />
                     <div className="space-y-2">
                       <Label>LoH Leading Underwriter</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.lohLeadingUnderwriter ?? ""} onChange={(e) => updateField("lohLeadingUnderwriter", e.target.value)} placeholder="e.g. Gard M&E" />
                     </div>
                     <PercentInput label="LoH Rate (%)" value={formData.lohRateNew ?? 0} onChange={(v) => updateField("lohRateNew", v)} />
-                    <CurrencyInput label="LoH Premium" value={formData.lohPremiumNew ?? 0} onChange={(v) => updateField("lohPremiumNew", v)} currency={formData.currency} />
+                    <CalculatedField label="LoH Premium" value={calcLohPremium} currency={formData.currency} />
+                    <CalculatedField label="Tax (LoH)" value={calcLohTax} currency={formData.currency} />
+                    <CalculatedField label="Total Gross Premium Incl. Tax (LoH)" value={calcLohTotalGrossPremiumInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
                   <CollapsibleFieldGroup title="War Risks" isOpen={!!expandedGroups.war} onToggle={() => toggleGroup("war")}>
-                    <CurrencyInput label="War H&M (sum)" value={formData.warHm ?? 0} onChange={(v) => updateField("warHm", v)} currency={formData.currency} />
-                    <CurrencyInput label="War IV (sum)" value={formData.warIv ?? 0} onChange={(v) => updateField("warIv", v)} currency={formData.currency} />
-                    <CurrencyInput label="War TSI (sum)" value={formData.warTsi ?? 0} onChange={(v) => updateField("warTsi", v)} currency={formData.currency} />
+                    {/* War H&M / War IV mirror the H&M+IV group's Sum Insured / IV Total 1:1 in the source workbook; War TSI is their sum */}
+                    <CalculatedField label="War H&M (sum)" value={calcWarHm} currency={formData.currency} />
+                    <CalculatedField label="War IV (sum)" value={calcWarIv} currency={formData.currency} />
+                    <CalculatedField label="War TSI (sum)" value={calcWarTsi} currency={formData.currency} />
                     <div className="space-y-2">
                       <Label>War-Leading Underwriter</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.warLeadingUnderwriter ?? ""} onChange={(e) => updateField("warLeadingUnderwriter", e.target.value)} placeholder="e.g. NHC" />
@@ -1308,12 +1426,17 @@ export function Insurance() {
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.piClub ?? ""} onChange={(e) => updateField("piClub", e.target.value)} placeholder="e.g. Gard" />
                     </div>
                     <CurrencyInput label="Gross Premium P&I Incl. R/I" value={formData.piGrossPremiumInclRi ?? 0} onChange={(v) => updateField("piGrossPremiumInclRi", v)} currency={formData.currency} />
+                    {/* No Gross Tonnage (GT) field exists on the Insurance record yet, so this stays manual — flagged for follow-up */}
                     <CurrencyInput label="Rate per GT Incl. R/I" value={formData.piRatePerGtInclRi ?? 0} onChange={(v) => updateField("piRatePerGtInclRi", v)} currency={formData.currency} />
                     <CurrencyInput label="R/I (Reinsurance) Alone" value={formData.piRiAlone ?? 0} onChange={(v) => updateField("piRiAlone", v)} currency={formData.currency} />
-                    <CurrencyInput label="10% OGD (Gard) / 10% PB (London)" value={formData.piOgdPb ?? 0} onChange={(v) => updateField("piOgdPb", v)} currency={formData.currency} />
-                    <CurrencyInput label="Net Premium P&I" value={formData.piNetPremium ?? 0} onChange={(v) => updateField("piNetPremium", v)} currency={formData.currency} />
+                    <CalculatedField label="10% OGD (Gard) / 10% PB (London)" value={calcPiOgdPb} currency={formData.currency} />
+                    <CalculatedField label="Net Premium P&I" value={calcPiNetPremium} currency={formData.currency} />
+                    <CalculatedField label="Tax (P&I)" value={calcPiTax} currency={formData.currency} />
+                    <CalculatedField label="Total Premium Incl. Tax (P&I)" value={calcPiTotalPremiumInclTax} currency={formData.currency} />
                     <CurrencyInput label="FD&D" value={formData.fdd ?? 0} onChange={(v) => updateField("fdd", v)} currency={formData.currency} />
                     <CurrencyInput label="Premium FD&D" value={formData.fddPremium ?? 0} onChange={(v) => updateField("fddPremium", v)} currency={formData.currency} />
+                    <CalculatedField label="Tax (FD&D)" value={calcFddTax} currency={formData.currency} />
+                    <CalculatedField label="Total (FD&D) - Total Gross Premium Incl. Tax" value={calcFddTotalGrossPremiumInclTax} currency={formData.currency} />
                     <CurrencyInput label="C/L P&I" value={formData.clPi ?? 0} onChange={(v) => updateField("clPi", v)} currency={formData.currency} />
                     <CurrencyInput label="Premium TCL P&I" value={formData.clPiPremium ?? 0} onChange={(v) => updateField("clPiPremium", v)} currency={formData.currency} />
                     <CurrencyInput label="C/L FD&D" value={formData.clFdd ?? 0} onChange={(v) => updateField("clFdd", v)} currency={formData.currency} />
@@ -1327,20 +1450,23 @@ export function Insurance() {
                     </div>
                     <CurrencyInput label="Daily Entered Sum" value={formData.sdDailyEnteredSum ?? 0} onChange={(v) => updateField("sdDailyEnteredSum", v)} currency={formData.currency} />
                     <CurrencyInput label="Rate (Strike and Delay)" value={formData.sdRate ?? 0} onChange={(v) => updateField("sdRate", v)} currency={formData.currency} />
-                    <CurrencyInput label="Premium (Strike and Delay)" value={formData.sdPremium ?? 0} onChange={(v) => updateField("sdPremium", v)} currency={formData.currency} />
-                    <CurrencyInput label="Upfront NCB 10%" value={formData.sdUpfrontNcb ?? 0} onChange={(v) => updateField("sdUpfrontNcb", v)} currency={formData.currency} />
-                    <CurrencyInput label="Premium Net of NCB" value={formData.sdPremiumNetOfNcb ?? 0} onChange={(v) => updateField("sdPremiumNetOfNcb", v)} currency={formData.currency} />
+                    <CalculatedField label="Premium (Strike and Delay)" value={calcSdPremium} currency={formData.currency} />
+                    <CalculatedField label="Upfront NCB 10%" value={calcSdUpfrontNcb} currency={formData.currency} />
+                    <CalculatedField label="Premium Net of NCB" value={calcSdPremiumNetOfNcb} currency={formData.currency} />
+                    <CalculatedField label="Tax (Strike and Delay)" value={calcSdTax} currency={formData.currency} />
+                    <CalculatedField label="Premium Incl. Tax (Strike and Delay)" value={calcSdPremiumInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
                   <CollapsibleFieldGroup title="Total insurance costs (rollup)" isOpen={!!expandedGroups.total} onToggle={() => toggleGroup("total")}>
-                    <CurrencyInput label="Total Annual Premium, Excl. Tax" value={formData.totalAnnualPremiumExclTax ?? 0} onChange={(v) => updateField("totalAnnualPremiumExclTax", v)} currency={formData.currency} />
-                    <CurrencyInput label="Total Daily Premium, Excl. Tax" value={formData.totalDailyPremiumExclTax ?? 0} onChange={(v) => updateField("totalDailyPremiumExclTax", v)} currency={formData.currency} />
-                    <CurrencyInput label="Total Annual Premium, Incl. Tax" value={formData.totalAnnualPremiumInclTax ?? 0} onChange={(v) => updateField("totalAnnualPremiumInclTax", v)} currency={formData.currency} />
-                    <CurrencyInput label="Total Daily Premium, Incl. Tax" value={formData.totalDailyPremiumInclTax ?? 0} onChange={(v) => updateField("totalDailyPremiumInclTax", v)} currency={formData.currency} />
+                    <CalculatedField label="Total Annual Premium, Excl. Tax" value={calcTotalAnnualPremiumExclTax} currency={formData.currency} />
+                    <CalculatedField label="Total Daily Premium, Excl. Tax" value={calcTotalDailyPremiumExclTax} currency={formData.currency} />
+                    <CalculatedField label="Total Annual Premium, Incl. Tax" value={calcTotalAnnualPremiumInclTax} currency={formData.currency} />
+                    <CalculatedField label="Total Daily Premium, Incl. Tax" value={calcTotalDailyPremiumInclTax} currency={formData.currency} />
+                    {/* References an external, non-vessel workbook in the source sheet — cannot be derived here, stays manual */}
                     <CurrencyInput label="Cost of Extended Covers (ECL/CCC), Excl. Tax" value={formData.costExtendedCoversExclTax ?? 0} onChange={(v) => updateField("costExtendedCoversExclTax", v)} currency={formData.currency} />
-                    <CurrencyInput label="Cost of Extended Covers (ECL/CCC), Incl. Tax" value={formData.costExtendedCoversInclTax ?? 0} onChange={(v) => updateField("costExtendedCoversInclTax", v)} currency={formData.currency} />
-                    <CurrencyInput label="Total Cost Incl. Extended Covers, Excl. Tax" value={formData.totalCostInclExtendedCoversExclTax ?? 0} onChange={(v) => updateField("totalCostInclExtendedCoversExclTax", v)} currency={formData.currency} />
-                    <CurrencyInput label="Total Cost Incl. Extended Covers, Incl. Tax" value={formData.totalCostInclExtendedCoversInclTax ?? 0} onChange={(v) => updateField("totalCostInclExtendedCoversInclTax", v)} currency={formData.currency} />
+                    <CalculatedField label="Cost of Extended Covers (ECL/CCC), Incl. Tax" value={calcCostExtendedCoversInclTax} currency={formData.currency} />
+                    <CalculatedField label="Total Cost Incl. Extended Covers, Excl. Tax" value={calcTotalCostInclExtendedCoversExclTax} currency={formData.currency} />
+                    <CalculatedField label="Total Cost Incl. Extended Covers, Incl. Tax" value={calcTotalCostInclExtendedCoversInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
                 </div>
                 )}
@@ -1400,7 +1526,8 @@ export function Insurance() {
                     </Select>
                   </div>
                   )}
-                  {/* Leading Underwriter stays here, on its own, in both versions (Part 2's explicit exception) */}
+                  {/* Version 1.0 only — removed for v2.0, superseded by per-cover-type Leading H&M/IV/LoH/War Underwriter fields (COEMS-21212 Financials rebuild) */}
+                  {!isV2 && (
                   <div className="space-y-2">
                     <Label>Leading Underwriter</Label>
                     <input
@@ -1410,6 +1537,7 @@ export function Insurance() {
                       placeholder="e.g. Gard M&E, NHC"
                     />
                   </div>
+                  )}
                   {/* Version 1.0 only — removed in v2.0 per client comment (Part 1) */}
                   {!isV2 && (
                   <div className="space-y-2 col-span-2">
