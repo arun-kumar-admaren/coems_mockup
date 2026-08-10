@@ -30,7 +30,7 @@ import {
 import { cn } from "./ui/utils";
 import { LegalReviewEmbedded } from "./legal-review-embedded";
 import { useVersion } from "../version-context";
-import { TYPE_OF_COVER_V2, formatInsuranceNo } from "./insurance-constants";
+import { TYPE_OF_COVER_V2, formatInsuranceNo, TYPE_OF_COVER_TO_FINANCIALS_GROUP } from "./insurance-constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -213,14 +213,8 @@ interface InsuranceRecord {
   sdPremiumNetOfNcb?: number;
   sdTax?: number;
   sdPremiumInclTax?: number;
-  totalAnnualPremiumExclTax?: number;
-  totalDailyPremiumExclTax?: number;
-  totalAnnualPremiumInclTax?: number;
-  totalDailyPremiumInclTax?: number;
   costExtendedCoversExclTax?: number;
   costExtendedCoversInclTax?: number;
-  totalCostInclExtendedCoversExclTax?: number;
-  totalCostInclExtendedCoversInclTax?: number;
   // Parties
   broker: string;
   brokerReferenceNumber: string;
@@ -291,9 +285,7 @@ const EMPTY_FORM: Omit<InsuranceRecord, "id" | "createdAt"> = {
   piClub: "", piGrossPremiumInclRi: 0, piRatePerGtInclRi: 0, piRiAlone: 0, piOgdPb: 0, piNetPremium: 0, piTax: 0, piTotalPremiumInclTax: 0,
   fdd: 0, fddPremium: 0, fddTax: 0, fddTotalGrossPremiumInclTax: 0, clPi: 0, clPiPremium: 0, clFdd: 0, clFddPremium: 0,
   sdInsurer: "", sdDailyEnteredSum: 0, sdRate: 0, sdPremium: 0, sdUpfrontNcb: 0, sdPremiumNetOfNcb: 0, sdTax: 0, sdPremiumInclTax: 0,
-  totalAnnualPremiumExclTax: 0, totalDailyPremiumExclTax: 0, totalAnnualPremiumInclTax: 0, totalDailyPremiumInclTax: 0,
   costExtendedCoversExclTax: 0, costExtendedCoversInclTax: 0,
-  totalCostInclExtendedCoversExclTax: 0, totalCostInclExtendedCoversInclTax: 0,
   broker: "none",
   brokerReferenceNumber: "",
   brokerContact: "",
@@ -417,21 +409,26 @@ function SubHeader({ children }: { children: React.ReactNode }) {
 // Version 2.0 — collapsible field group for the per-cover-type field sets (COEMS-21212).
 // Collapsed by default; expanding one group has no effect on the others.
 function CollapsibleFieldGroup({
-  title, isOpen, onToggle, children,
+  title, isOpen, onToggle, disabled, children,
 }: {
-  title: string; isOpen: boolean; onToggle: () => void; children: React.ReactNode;
+  title: string; isOpen: boolean; onToggle: () => void; disabled?: boolean; children: React.ReactNode;
 }) {
   return (
-    <div className="border border-gray-200 rounded-lg">
+    <div className={cn("border rounded-lg", disabled ? "border-gray-100 bg-gray-50/60" : "border-gray-200")}>
       <button
         type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={disabled ? undefined : onToggle}
+        disabled={disabled}
+        className={cn("w-full flex items-center justify-between px-4 py-3 text-left", disabled && "cursor-not-allowed")}
       >
-        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
-        <ChevronDown className={cn("size-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+        <h4 className={cn("text-sm font-medium", disabled ? "text-gray-400" : "text-gray-900")}>{title}</h4>
+        {disabled ? (
+          <span className="text-[10px] text-gray-400">Not applicable for selected Type of Cover</span>
+        ) : (
+          <ChevronDown className={cn("size-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+        )}
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="px-4 pb-4 pt-1 border-t border-gray-100 grid grid-cols-2 gap-4">
           {children}
         </div>
@@ -658,15 +655,17 @@ export function Insurance() {
   const calcSdTax = Math.round(calcSdPremiumNetOfNcb * (formData.taxRate ?? 0) / 100 * 100) / 100; // GD7 = ROUND(GB7*GC7,2)
   const calcSdPremiumInclTax = calcSdPremiumNetOfNcb + calcSdTax; // GE7 = GB7+GD7
 
-  const calcTotalAnnualPremiumExclTax = calcHmTotalNetPremium + calcLohPremium + calcPiNetPremium + (formData.fddPremium ?? 0) + calcSdPremiumNetOfNcb; // GT7
-  const calcTotalDailyPremiumExclTax = Math.round(calcTotalAnnualPremiumExclTax / 365 * 100) / 100; // GU7
+  // Feeds the common "Total Premium Incl. Tax" field. Only ever one group's numbers are
+  // non-zero per record (one Type of Cover each), so this isn't a cross-type rollup —
+  // it just carries through whichever single group applies (COEMS-21212 demo follow-up).
   const calcTotalAnnualPremiumInclTax = calcHmTotalGrossPremiumInclTax + calcLohTotalGrossPremiumInclTax + calcPiTotalPremiumInclTax + calcFddTotalGrossPremiumInclTax + calcSdPremiumInclTax; // GV7
-  const calcTotalDailyPremiumInclTax = Math.round(calcTotalAnnualPremiumInclTax / 365 * 100) / 100; // GW7
   const calcCostExtendedCoversInclTax = Math.round((formData.costExtendedCoversExclTax ?? 0) * 1.19 * 100) / 100; // HE7 = ROUND(HD7*119%,2)
-  const calcTotalCostInclExtendedCoversExclTax = calcTotalAnnualPremiumExclTax + (formData.costExtendedCoversExclTax ?? 0); // HG7
-  const calcTotalCostInclExtendedCoversInclTax = calcTotalAnnualPremiumInclTax + calcCostExtendedCoversInclTax; // HH7
 
   const calcTaxAmount = calcHmTax + calcIvTax + calcLohTax + calcPiTax + calcFddTax + calcSdTax;
+
+  // Version 2.0 — which single Financials group is enabled for the selected Type of
+  // Cover (client demo follow-up, COEMS-21212). null = no group applies (or none selected).
+  const activeFinancialsGroup = TYPE_OF_COVER_TO_FINANCIALS_GROUP[formData.typeOfCover] ?? null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1361,7 +1360,7 @@ export function Insurance() {
                     tied to Type of Cover — all 6 groups are always present, collapsed by default. */}
                 {isV2 && (
                 <div className="space-y-3 mt-4">
-                  <CollapsibleFieldGroup title="Hull & Machinery + Increased Value" isOpen={!!expandedGroups.hm} onToggle={() => toggleGroup("hm")}>
+                  <CollapsibleFieldGroup title="Hull & Machinery + Increased Value" isOpen={!!expandedGroups.hm} onToggle={() => toggleGroup("hm")} disabled={activeFinancialsGroup !== "hm"}>
                     <CurrencyInput label="H&M Sum Insured" value={formData.hmSumInsured ?? 0} onChange={(v) => updateField("hmSumInsured", v)} currency={formData.currency} />
                     <CurrencyInput label="Disbursements" value={formData.hmDisbursements ?? 0} onChange={(v) => updateField("hmDisbursements", v)} currency={formData.currency} />
                     <CurrencyInput label="Freight Total Loss" value={formData.hmFreightTotalLoss ?? 0} onChange={(v) => updateField("hmFreightTotalLoss", v)} currency={formData.currency} />
@@ -1390,7 +1389,7 @@ export function Insurance() {
                     <CalculatedField label="Total Gross Premium Incl. Tax (H&M+IV)" value={calcHmTotalGrossPremiumInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
-                  <CollapsibleFieldGroup title="Loss of Hire" isOpen={!!expandedGroups.loh} onToggle={() => toggleGroup("loh")}>
+                  <CollapsibleFieldGroup title="Loss of Hire" isOpen={!!expandedGroups.loh} onToggle={() => toggleGroup("loh")} disabled={activeFinancialsGroup !== "loh"}>
                     <CalculatedField label="LoH Sum Insured" value={calcLohSumInsured} currency={formData.currency} />
                     <div className="space-y-2">
                       <Label>LoH Leading Underwriter</Label>
@@ -1402,7 +1401,7 @@ export function Insurance() {
                     <CalculatedField label="Total Gross Premium Incl. Tax (LoH)" value={calcLohTotalGrossPremiumInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
-                  <CollapsibleFieldGroup title="War Risks" isOpen={!!expandedGroups.war} onToggle={() => toggleGroup("war")}>
+                  <CollapsibleFieldGroup title="War Risks" isOpen={!!expandedGroups.war} onToggle={() => toggleGroup("war")} disabled={activeFinancialsGroup !== "war"}>
                     {/* War H&M / War IV mirror the H&M+IV group's Sum Insured / IV Total 1:1 in the source workbook; War TSI is their sum */}
                     <CalculatedField label="War H&M (sum)" value={calcWarHm} currency={formData.currency} />
                     <CalculatedField label="War IV (sum)" value={calcWarIv} currency={formData.currency} />
@@ -1420,7 +1419,7 @@ export function Insurance() {
                     <CurrencyInput label="War LoH TSI" value={formData.warLohTsi ?? 0} onChange={(v) => updateField("warLohTsi", v)} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
-                  <CollapsibleFieldGroup title="P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D" isOpen={!!expandedGroups.pi} onToggle={() => toggleGroup("pi")}>
+                  <CollapsibleFieldGroup title="P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D" isOpen={!!expandedGroups.pi} onToggle={() => toggleGroup("pi")} disabled={activeFinancialsGroup !== "pi"}>
                     <div className="space-y-2">
                       <Label>P&I Club</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.piClub ?? ""} onChange={(e) => updateField("piClub", e.target.value)} placeholder="e.g. Gard" />
@@ -1443,7 +1442,7 @@ export function Insurance() {
                     <CurrencyInput label="Premium TCL FD&D" value={formData.clFddPremium ?? 0} onChange={(v) => updateField("clFddPremium", v)} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
-                  <CollapsibleFieldGroup title="Strike and Delay" isOpen={!!expandedGroups.sd} onToggle={() => toggleGroup("sd")}>
+                  <CollapsibleFieldGroup title="Strike and Delay" isOpen={!!expandedGroups.sd} onToggle={() => toggleGroup("sd")} disabled={activeFinancialsGroup !== "sd"}>
                     <div className="space-y-2">
                       <Label>Insurer (Strike and Delay)</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.sdInsurer ?? ""} onChange={(e) => updateField("sdInsurer", e.target.value)} placeholder="e.g. NorthStandard" />
@@ -1457,16 +1456,15 @@ export function Insurance() {
                     <CalculatedField label="Premium Incl. Tax (Strike and Delay)" value={calcSdPremiumInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
 
-                  <CollapsibleFieldGroup title="Total insurance costs (rollup)" isOpen={!!expandedGroups.total} onToggle={() => toggleGroup("total")}>
-                    <CalculatedField label="Total Annual Premium, Excl. Tax" value={calcTotalAnnualPremiumExclTax} currency={formData.currency} />
-                    <CalculatedField label="Total Daily Premium, Excl. Tax" value={calcTotalDailyPremiumExclTax} currency={formData.currency} />
-                    <CalculatedField label="Total Annual Premium, Incl. Tax" value={calcTotalAnnualPremiumInclTax} currency={formData.currency} />
-                    <CalculatedField label="Total Daily Premium, Incl. Tax" value={calcTotalDailyPremiumInclTax} currency={formData.currency} />
+                  {/* Replaces the old "Total insurance costs (rollup)" group — those fields summed across
+                      all 6 groups, which only made sense in the source Excel where one sheet tracks a
+                      vessel's entire multi-cover-type program side by side. Here one record = one Type
+                      of Cover, so a cross-group sum is meaningless; only the ECL/CCC/ECC cost figure
+                      (never a sum of other groups) carries over, into its own gated group (client demo follow-up). */}
+                  <CollapsibleFieldGroup title="Extended Covers (ECL/CCC/ECC)" isOpen={!!expandedGroups.ext} onToggle={() => toggleGroup("ext")} disabled={activeFinancialsGroup !== "ext"}>
                     {/* References an external, non-vessel workbook in the source sheet — cannot be derived here, stays manual */}
                     <CurrencyInput label="Cost of Extended Covers (ECL/CCC), Excl. Tax" value={formData.costExtendedCoversExclTax ?? 0} onChange={(v) => updateField("costExtendedCoversExclTax", v)} currency={formData.currency} />
                     <CalculatedField label="Cost of Extended Covers (ECL/CCC), Incl. Tax" value={calcCostExtendedCoversInclTax} currency={formData.currency} />
-                    <CalculatedField label="Total Cost Incl. Extended Covers, Excl. Tax" value={calcTotalCostInclExtendedCoversExclTax} currency={formData.currency} />
-                    <CalculatedField label="Total Cost Incl. Extended Covers, Incl. Tax" value={calcTotalCostInclExtendedCoversInclTax} currency={formData.currency} />
                   </CollapsibleFieldGroup>
                 </div>
                 )}
