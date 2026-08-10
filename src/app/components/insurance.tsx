@@ -681,6 +681,11 @@ export function Insurance() {
   // falls back to manual for them (rethought per client feedback on COEMS-21212).
   const groupHasOwnSumInsured = primaryFinancialsGroup !== null && ["hm", "war", "loh"].includes(primaryFinancialsGroup);
   const groupHasOwnTaxAndTotal = primaryFinancialsGroup !== null && ["hm", "loh", "pi", "sd", "ext"].includes(primaryFinancialsGroup);
+  // PA Deductible only exists inside the H&M+IV group — none of the other groups model a
+  // deductible at all, so Deductible stays a common fallback field for every other cover
+  // type (including War Risk, whose unlocked H&M+IV group describes a different policy's
+  // deductible, not this one's).
+  const groupHasOwnDeductible = primaryFinancialsGroup === "hm";
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1309,9 +1314,12 @@ export function Insurance() {
                   {(!isV2 || !groupHasOwnSumInsured) && (
                     <CurrencyInput label="Total Sum Insured (TSI)" value={formData.totalSumInsured} onChange={(v) => updateField("totalSumInsured", v)} currency={formData.currency} />
                   )}
-                  {/* Version 1.0 only — removed for v2.0 (COEMS-21212 Financials rebuild) */}
+                  {/* v1.0: always shown, mandatory. v2.0: hidden only when H&M/IV's own PA Deductible covers it; manual fallback otherwise (rethought per client feedback) */}
                   {!isV2 && (
                   <CurrencyInput label="Deductible" value={formData.deductible} onChange={(v) => updateField("deductible", v)} currency={formData.currency} mandatory />
+                  )}
+                  {(isV2 && !groupHasOwnDeductible) && (
+                    <CurrencyInput label="Deductible" value={formData.deductible} onChange={(v) => updateField("deductible", v)} currency={formData.currency} />
                   )}
 
                   <div className="space-y-2">
