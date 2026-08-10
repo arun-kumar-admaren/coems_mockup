@@ -623,7 +623,6 @@ export function Insurance() {
   // "Vessel Insurance Overview" workbook. Mirrors that sheet's cell formulas 1:1.
   const hmSumInsured = formData.hmSumInsured ?? 0;
   const hmIvTotal = formData.hmIvTotal ?? 0;
-  const calcTsi = hmSumInsured + hmIvTotal; // W7 = Q7+V7
   const calcHmPremium = Math.round(hmSumInsured * (formData.hmRate ?? 0) / 100); // AM7 = ROUND(Q7*AK7,0)
   const calcHmPremiumNetOfUpb = calcHmPremium - (formData.hmUpfrontPerformanceBonus ?? 0); // AO7 = AM7-AN7
   const calcHmTax = Math.round(calcHmPremiumNetOfUpb * (formData.taxRate ?? 0) / 100 * 100) / 100; // AQ7 = ROUND(AO7*AP7,2)
@@ -655,17 +654,21 @@ export function Insurance() {
   const calcSdTax = Math.round(calcSdPremiumNetOfNcb * (formData.taxRate ?? 0) / 100 * 100) / 100; // GD7 = ROUND(GB7*GC7,2)
   const calcSdPremiumInclTax = calcSdPremiumNetOfNcb + calcSdTax; // GE7 = GB7+GD7
 
-  // Feeds the common "Total Premium Incl. Tax" field. Only ever one group's numbers are
-  // non-zero per record (one Type of Cover each), so this isn't a cross-type rollup —
-  // it just carries through whichever single group applies (COEMS-21212 demo follow-up).
-  const calcTotalAnnualPremiumInclTax = calcHmTotalGrossPremiumInclTax + calcLohTotalGrossPremiumInclTax + calcPiTotalPremiumInclTax + calcFddTotalGrossPremiumInclTax + calcSdPremiumInclTax; // GV7
   const calcCostExtendedCoversInclTax = Math.round((formData.costExtendedCoversExclTax ?? 0) * 1.19 * 100) / 100; // HE7 = ROUND(HD7*119%,2)
-
-  const calcTaxAmount = calcHmTax + calcIvTax + calcLohTax + calcPiTax + calcFddTax + calcSdTax;
 
   // Version 2.0 — which single Financials group is enabled for the selected Type of
   // Cover (client demo follow-up, COEMS-21212). null = no group applies (or none selected).
   const activeFinancialsGroup = TYPE_OF_COVER_TO_FINANCIALS_GROUP[formData.typeOfCover] ?? null;
+
+  // The common Total Sum Insured (TSI) / Tax Amount / Total Premium Incl. Tax fields
+  // duplicate a group's own numbers whenever that group already models the equivalent —
+  // so they're hidden there, and only fall back to manual entry when the active group
+  // (or lack of one) has no equivalent of its own. War Risk has no Tax/Total fields in
+  // the source workbook at all, so it still needs the manual fallback despite having a
+  // group; P&I/Strike & Delay/Extended Covers have no Sum Insured concept, so TSI still
+  // falls back to manual for them (rethought per client feedback on COEMS-21212).
+  const groupHasOwnSumInsured = activeFinancialsGroup !== null && ["hm", "war", "loh"].includes(activeFinancialsGroup);
+  const groupHasOwnTaxAndTotal = activeFinancialsGroup !== null && ["hm", "loh", "pi", "sd", "ext"].includes(activeFinancialsGroup);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1290,9 +1293,8 @@ export function Insurance() {
                   {!isV2 && (
                   <CurrencyInput label="Sum Insured" value={formData.sumInsured} onChange={(v) => updateField("sumInsured", v)} currency={formData.currency} mandatory />
                   )}
-                  {isV2 ? (
-                    <CalculatedField label="Total Sum Insured (TSI)" value={calcTsi} currency={formData.currency} />
-                  ) : (
+                  {/* Hidden for v2.0 when the active group already shows its own Sum Insured equivalent (H&M+IV, War, LoH); manual fallback otherwise (P&I, Strike & Delay, Extended Covers, or no Type of Cover selected) */}
+                  {(!isV2 || !groupHasOwnSumInsured) && (
                     <CurrencyInput label="Total Sum Insured (TSI)" value={formData.totalSumInsured} onChange={(v) => updateField("totalSumInsured", v)} currency={formData.currency} />
                   )}
                   {/* Version 1.0 only — removed for v2.0 (COEMS-21212 Financials rebuild) */}
@@ -1342,18 +1344,15 @@ export function Insurance() {
                   <CurrencyInput label="Annual Premium" value={formData.annualPremium} onChange={(v) => updateField("annualPremium", v)} currency={formData.currency} />
                   </>)}
                   <PercentInput label="Tax Rate (%)" value={formData.taxRate} onChange={(v) => updateField("taxRate", v)} placeholder="e.g. 3" />
-                  {isV2 ? (
-                    <CalculatedField label="Tax Amount" value={calcTaxAmount} currency={formData.currency} />
-                  ) : (
+                  {/* Hidden for v2.0 when the active group already has its own Tax field(s) (H&M+IV, LoH, P&I, Strike & Delay, Extended Covers); manual fallback for War Risk (no Tax/Total in the source workbook) or no Type of Cover selected */}
+                  {(!isV2 || !groupHasOwnTaxAndTotal) && (
                     <CurrencyInput label="Tax Amount" value={formData.taxAmount} onChange={(v) => updateField("taxAmount", v)} currency={formData.currency} />
                   )}
-                  <div className="col-span-2">
-                    {isV2 ? (
-                      <CalculatedField label="Total Premium Incl. Tax" value={calcTotalAnnualPremiumInclTax} currency={formData.currency} />
-                    ) : (
+                  {(!isV2 || !groupHasOwnTaxAndTotal) && (
+                    <div className="col-span-2">
                       <CurrencyInput label="Total Premium Incl. Tax" value={formData.totalPremiumInclTax} onChange={(v) => updateField("totalPremiumInclTax", v)} currency={formData.currency} />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Version 2.0 — per-cover-type field groups (COEMS-21212). No conditional logic
