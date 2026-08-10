@@ -1133,6 +1133,7 @@ export function Insurance() {
                         updateField("insuranceCategory", v);
                         updateField("fixture", "");
                         updateField("vessel", "");
+                        if (v === "Vessel") updateField("intendedVessel", "none");
                       }}
                     >
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
@@ -1194,8 +1195,10 @@ export function Insurance() {
                     )}
                   </div>
 
-                  {/* Version 2.0 — new, standalone field (Part 6): no relation to Related to/Fixture/Vessel */}
-                  {isV2 && (
+                  {/* Version 2.0 — new, standalone field (Part 6): no relation to Related to/Fixture/Vessel.
+                      Hidden when Related to = Vessel, since Select Vessel there already captures the
+                      vessel and showing both would be asking the same question twice (client follow-up). */}
+                  {isV2 && formData.insuranceCategory !== "Vessel" && (
                   <div className="space-y-2">
                     <Label>Intended Vessel</Label>
                     <Select value={formData.intendedVessel} onValueChange={(v) => updateField("intendedVessel", v)}>
