@@ -128,7 +128,7 @@ The following fields are **read-only, calculated** — formulas in section 4:
 
 All other fields (Disbursements, Freight Total Loss, Leading H&M/IV/LoH/War Underwriter, H&M/IV/LoH/War/S&D Rate, P&I Club, Gross Premium P&I Incl. R/I, Rate per GT Incl. R/I, R/I Alone, FD&D, Premium FD&D, C/L P&I, Premium TCL P&I, C/L FD&D, Premium TCL FD&D, Insurer (S&D), Daily Entered Sum, Rate (S&D), War-Leading Underwriter, War Rate, War LoH Daily/Basis/TSI, Cost of Extended Covers Excl. Tax) are manual entry — no formula exists for them in the source (section 8 covers two of these specifically: Rate per GT Incl. R/I and Cost of Extended Covers Excl. Tax).
 
-* A calculated field is visually distinguished from a manual field: grey background, non-editable, with a small **"(calculated)"** tag next to its label.
+* A calculated field is visually distinguished from a manual field: grey background, non-editable, with a small **"(calculated)"** tag next to its label, plus a small grey caption underneath the field showing the formula that produced it (e.g. "= ROUND(Sum Insured × H&M Rate %, 0)" under H&M Premium). Tax Amount and Total Premium Incl. Tax show a generic "sum of the active Type of Cover's field(s)" caption instead, since their actual formula varies by which cover type is active (section 7).
 
 ### 4. Formulas, by group
 
