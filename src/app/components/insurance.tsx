@@ -623,7 +623,9 @@ export function Insurance() {
 
   const calcWarHm = hmSumInsured; // CO7 = Q7 (mirror)
   const calcWarIv = hmIvTotal; // CP7 = V7 (mirror)
-  const calcWarTsi = calcWarHm + calcWarIv; // CQ7 = CO7+CP7
+  // War TSI (= War H&M + War IV = Sum Insured + IV Total) is not displayed separately —
+  // it's identical to the common Total Sum Insured (TSI) field whenever War Risk is the
+  // active cover, same duplicate the source workbook itself has (CQ7 = CO7+CP7 = W7).
 
   const calcPiNetPremium = Math.round((formData.piGrossPremiumInclRi ?? 0) * 0.9); // DQ7 = ROUND(DM7*0.9,0)
   const calcPiOgdPb = (formData.piGrossPremiumInclRi ?? 0) - calcPiNetPremium; // DP7 = DM7-DQ7
@@ -640,6 +642,11 @@ export function Insurance() {
   const calcSdPremiumInclTax = calcSdPremiumNetOfNcb + calcSdTax; // GE7 = GB7+GD7
 
   const calcCostExtendedCoversInclTax = Math.round((formData.costExtendedCoversExclTax ?? 0) * 1.19 * 100) / 100; // HE7 = ROUND(HD7*119%,2)
+  // The 19% uplift baked into Cost of Extended Covers Incl. Tax IS this cover's tax amount —
+  // there's no separate "Tax (Extended Covers)" field, so it feeds the common Tax Amount /
+  // Total Premium Incl. Tax rollups directly (previously missing, so those two fields showed
+  // 0 for CCC/ECL/ECC records instead of the real figure).
+  const calcExtTax = calcCostExtendedCoversInclTax - (formData.costExtendedCoversExclTax ?? 0);
 
   // Version 2.0 — which Financials group(s) are enabled for the selected Type of Cover
   // (client demo follow-up, COEMS-21212). War Risk / EWRI unlock BOTH "war" and "hm" —
@@ -664,8 +671,8 @@ export function Insurance() {
   const groupHasOwnSumInsured = primaryFinancialsGroup !== null && ["hm", "war", "loh"].includes(primaryFinancialsGroup);
   const groupHasOwnTaxAndTotal = primaryFinancialsGroup !== null && ["hm", "loh", "pi", "sd", "ext"].includes(primaryFinancialsGroup);
   const calcTsi = hmSumInsured + hmIvTotal; // W7 = Q7+V7
-  const calcTaxAmount = calcHmTax + calcIvTax + calcLohTax + calcPiTax + calcFddTax + calcSdTax;
-  const calcTotalPremiumInclTax = calcHmTotalGrossPremiumInclTax + calcLohTotalGrossPremiumInclTax + calcPiTotalPremiumInclTax + calcFddTotalGrossPremiumInclTax + calcSdPremiumInclTax; // GV7
+  const calcTaxAmount = calcHmTax + calcIvTax + calcLohTax + calcPiTax + calcFddTax + calcSdTax + calcExtTax;
+  const calcTotalPremiumInclTax = calcHmTotalGrossPremiumInclTax + calcLohTotalGrossPremiumInclTax + calcPiTotalPremiumInclTax + calcFddTotalGrossPremiumInclTax + calcSdPremiumInclTax + calcCostExtendedCoversInclTax; // GV7
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1403,7 +1410,8 @@ export function Insurance() {
                     <CalculatedField label="Tax H&M" value={calcHmTax} currency={formData.currency} />
                     <CalculatedField label="Tax IV" value={calcIvTax} currency={formData.currency} />
                     <CalculatedField label="Total Net Premium (H&M+IV)" value={calcHmTotalNetPremium} currency={formData.currency} />
-                    <CalculatedField label="Total Gross Premium Incl. Tax (H&M+IV)" value={calcHmTotalGrossPremiumInclTax} currency={formData.currency} />
+                    {/* Total Gross Premium Incl. Tax (H&M+IV) is not shown separately — it's identical to
+                        the common Total Premium Incl. Tax field whenever H&M/IV is the only active cover. */}
                   </>)}
 
                   {isV2 && activeFinancialsGroups.includes("loh") && (<>
@@ -1414,15 +1422,17 @@ export function Insurance() {
                     </div>
                     <PercentInput label="LoH Rate (%)" value={formData.lohRateNew ?? 0} onChange={(v) => updateField("lohRateNew", v)} />
                     <CalculatedField label="LoH Premium" value={calcLohPremium} currency={formData.currency} />
-                    <CalculatedField label="Tax (LoH)" value={calcLohTax} currency={formData.currency} />
-                    <CalculatedField label="Total Gross Premium Incl. Tax (LoH)" value={calcLohTotalGrossPremiumInclTax} currency={formData.currency} />
+                    {/* Tax (LoH) and Total Gross Premium Incl. Tax (LoH) are not shown separately — Loss of
+                        Hire is the only contributor when it's the active cover, so they're identical to the
+                        common Tax Amount / Total Premium Incl. Tax fields. */}
                   </>)}
 
                   {isV2 && activeFinancialsGroups.includes("war") && (<>
-                    {/* War H&M / War IV mirror the H&M+IV fields above 1:1 in the source workbook; War TSI is their sum */}
+                    {/* War H&M / War IV mirror Sum Insured / IV Total 1:1 in the source workbook. War TSI
+                        (their sum) is not shown separately — it's identical to the common Total Sum
+                        Insured (TSI) field whenever War Risk is the active cover. */}
                     <CalculatedField label="War H&M (sum)" value={calcWarHm} currency={formData.currency} />
                     <CalculatedField label="War IV (sum)" value={calcWarIv} currency={formData.currency} />
-                    <CalculatedField label="War TSI (sum)" value={calcWarTsi} currency={formData.currency} />
                     <div className="space-y-2">
                       <Label>War-Leading Underwriter</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.warLeadingUnderwriter ?? ""} onChange={(e) => updateField("warLeadingUnderwriter", e.target.value)} placeholder="e.g. NHC" />
@@ -1469,8 +1479,9 @@ export function Insurance() {
                     <CalculatedField label="Premium (Strike and Delay)" value={calcSdPremium} currency={formData.currency} />
                     <CalculatedField label="Upfront NCB 10%" value={calcSdUpfrontNcb} currency={formData.currency} />
                     <CalculatedField label="Premium Net of NCB" value={calcSdPremiumNetOfNcb} currency={formData.currency} />
-                    <CalculatedField label="Tax (Strike and Delay)" value={calcSdTax} currency={formData.currency} />
-                    <CalculatedField label="Premium Incl. Tax (Strike and Delay)" value={calcSdPremiumInclTax} currency={formData.currency} />
+                    {/* Tax (Strike and Delay) and Premium Incl. Tax (Strike and Delay) are not shown
+                        separately — Strike and Delay is the only contributor when it's the active cover, so
+                        they're identical to the common Tax Amount / Total Premium Incl. Tax fields. */}
                   </>)}
 
                   {/* Replaces the old "Total insurance costs (rollup)" fields — those summed across all
@@ -1481,7 +1492,9 @@ export function Insurance() {
                   {isV2 && activeFinancialsGroups.includes("ext") && (<>
                     {/* References an external, non-vessel workbook in the source sheet — cannot be derived here, stays manual */}
                     <CurrencyInput label="Cost of Extended Covers (ECL/CCC), Excl. Tax" value={formData.costExtendedCoversExclTax ?? 0} onChange={(v) => updateField("costExtendedCoversExclTax", v)} currency={formData.currency} />
-                    <CalculatedField label="Cost of Extended Covers (ECL/CCC), Incl. Tax" value={calcCostExtendedCoversInclTax} currency={formData.currency} />
+                    {/* Cost of Extended Covers (ECL/CCC), Incl. Tax is not shown separately — Extended Covers
+                        is the only contributor when it's the active cover, so it's identical to the common
+                        Total Premium Incl. Tax field. */}
                   </>)}
                 </div>
               </div>
