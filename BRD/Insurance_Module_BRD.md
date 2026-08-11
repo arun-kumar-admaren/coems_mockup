@@ -131,65 +131,96 @@ Always visible, both versions, every Type of Cover:
 
 ### 5.3 Field inventory, by Type of Cover
 
-One row per field. **Type of Cover** lists every cover that field appears for — covers that share the exact same fields are listed together in one cell rather than the field being repeated in a separate table per cover.
+One table per set of Type of Cover values that share the exact same fields — the table title lists every cover that set applies to.
 
-| Type of Cover | Field | Field Type | Formula |
-| --- | --- | --- | --- |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Disbursements | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Freight Total Loss | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Equipment (H&M) | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Freight All Risks | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | IV Total | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | AMD | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Leading H&M Underwriter | Free Text | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Leading IV Underwriter | Free Text | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | H&M Rate (%) | Percentage | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | IV Rate (%) | Percentage | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | H&M Premium | Currency | ROUND(Sum Insured × H&M Rate %, 0) |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Upfront Performance Bonus (PB/CC) | Currency | Manual entry |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | H&M Premium Net of Upfront Performance Bonus | Currency | H&M Premium − Upfront Performance Bonus (PB/CC) |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | IV Premium | Currency | ROUND(IV Total × IV Rate %, 0) |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Tax H&M | Currency | ROUND(H&M Premium Net of Upfront Performance Bonus × Tax Rate %, 2) |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Tax IV | Currency | ROUND(IV Premium × Tax Rate %, 2) |
-| Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI) | Total Net Premium (H&M+IV) | Currency | H&M Premium Net of Upfront Performance Bonus + IV Premium |
-| Loss of Hire (LOH) | LoH Sum Insured | Currency | 180 × Daily Indemnity (LoH) |
-| Loss of Hire (LOH) | LoH Leading Underwriter | Free Text | Manual entry |
-| Loss of Hire (LOH) | LoH Rate (%) | Percentage | Manual entry |
-| Loss of Hire (LOH) | LoH Premium | Currency | ROUND(LoH Sum Insured × LoH Rate %, 0) |
-| War Risk, Extra War Risk insurance (EWRI) | War H&M (sum) | Currency | = Sum Insured (live mirror) |
-| War Risk, Extra War Risk insurance (EWRI) | War IV (sum) | Currency | = IV Total (live mirror) |
-| War Risk, Extra War Risk insurance (EWRI) | War-Leading Underwriter | Free Text | Manual entry |
-| War Risk, Extra War Risk insurance (EWRI) | War Rate (%) | Percentage | Manual entry |
-| War Risk, Extra War Risk insurance (EWRI) | War LoH Daily | Currency | Manual entry (confirmed no formula in source) |
-| War Risk, Extra War Risk insurance (EWRI) | War LoH Basis | Numeric | Manual entry |
-| War Risk, Extra War Risk insurance (EWRI) | War LoH TSI | Currency | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | P&I Club | Free Text | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Gross Premium P&I Incl. R/I | Currency | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Rate per GT Incl. R/I | Currency | Manual entry (no vessel GT field to calculate from — section 8) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | R/I (Reinsurance) Alone | Currency | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | 10% OGD (Gard) / 10% PB (London) | Currency | Gross Premium P&I Incl. R/I − Net Premium P&I |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Net Premium P&I | Currency | ROUND(Gross Premium P&I Incl. R/I × 0.9, 0) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Tax (P&I) | Currency | ROUND(Net Premium P&I × Tax Rate %, 2) — Gard-vessel variant only (section 8) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Total Premium Incl. Tax (P&I) | Currency | Net Premium P&I + Tax (P&I) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | FD&D | Currency | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Premium FD&D | Currency | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Tax (FD&D) | Currency | ROUND(Premium FD&D × Tax Rate %, 2) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Total (FD&D) – Total Gross Premium Incl. Tax | Currency | Premium FD&D + Tax (FD&D) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | C/L P&I | Currency | Manual entry (no formula in source) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Premium TCL P&I | Currency | Manual entry |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | C/L FD&D | Currency | Manual entry (no formula in source) |
-| Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension) | Premium TCL FD&D | Currency | Manual entry |
-| Strike and Delay | Insurer (Strike and Delay) | Free Text | Manual entry |
-| Strike and Delay | Daily Entered Sum | Currency | Manual entry |
-| Strike and Delay | Rate (Strike and Delay) | Currency | Manual entry |
-| Strike and Delay | Premium (Strike and Delay) | Currency | ROUND(Daily Entered Sum × Rate (Strike and Delay), 2) |
-| Strike and Delay | Upfront NCB 10% | Currency | ROUND(Premium (Strike and Delay) × 10%, 2) |
-| Strike and Delay | Premium Net of NCB | Currency | Premium (Strike and Delay) − Upfront NCB 10% |
-| Comprehensive Carrier's Liability Cover (CCC), Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC) | Cost of Extended Covers (ECL/CCC), Excl. Tax | Currency | Manual entry (source formula references an external, non-vessel workbook — section 8) |
+#### Hull and Machinery (H&M), Increased Value (IV), War Risk, Extra War Risk insurance (EWRI)
 
-**Comprehensive General Liability (CGL), Transport insurance, Professional indemnity** have no fields in this table — no fields or formulas exist for them anywhere in the source workbook. Only the constant fields (section 5.2) apply.
+| Field | Field Type | Formula |
+| --- | --- | --- |
+| Disbursements | Currency | Manual entry |
+| Freight Total Loss | Currency | Manual entry |
+| Equipment (H&M) | Currency | Manual entry |
+| Freight All Risks | Currency | Manual entry |
+| IV Total | Currency | Manual entry |
+| AMD | Currency | Manual entry |
+| Leading H&M Underwriter | Free Text | Manual entry |
+| Leading IV Underwriter | Free Text | Manual entry |
+| H&M Rate (%) | Percentage | Manual entry |
+| IV Rate (%) | Percentage | Manual entry |
+| H&M Premium | Currency | ROUND(Sum Insured × H&M Rate %, 0) |
+| Upfront Performance Bonus (PB/CC) | Currency | Manual entry |
+| H&M Premium Net of Upfront Performance Bonus | Currency | H&M Premium − Upfront Performance Bonus (PB/CC) |
+| IV Premium | Currency | ROUND(IV Total × IV Rate %, 0) |
+| Tax H&M | Currency | ROUND(H&M Premium Net of Upfront Performance Bonus × Tax Rate %, 2) |
+| Tax IV | Currency | ROUND(IV Premium × Tax Rate %, 2) |
+| Total Net Premium (H&M+IV) | Currency | H&M Premium Net of Upfront Performance Bonus + IV Premium |
 
-**War Risks has no Tax or Total field of its own**, and **C/L P&I / C/L FD&D have no Tax/Total fields** either — the source workbook has none for these.
+#### Loss of Hire (LOH)
+
+| Field | Field Type | Formula |
+| --- | --- | --- |
+| LoH Sum Insured | Currency | 180 × Daily Indemnity (LoH) |
+| LoH Leading Underwriter | Free Text | Manual entry |
+| LoH Rate (%) | Percentage | Manual entry |
+| LoH Premium | Currency | ROUND(LoH Sum Insured × LoH Rate %, 0) |
+
+#### War Risk, Extra War Risk insurance (EWRI)
+
+| Field | Field Type | Formula |
+| --- | --- | --- |
+| War H&M (sum) | Currency | = Sum Insured (live mirror) |
+| War IV (sum) | Currency | = IV Total (live mirror) |
+| War-Leading Underwriter | Free Text | Manual entry |
+| War Rate (%) | Percentage | Manual entry |
+| War LoH Daily | Currency | Manual entry (confirmed no formula in source) |
+| War LoH Basis | Numeric | Manual entry |
+| War LoH TSI | Currency | Manual entry |
+
+*War Risks has no Tax or Total field of its own — the source workbook has none for this cover.*
+
+#### Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), Extended Crew Cover (P&I extension)
+
+| Field | Field Type | Formula |
+| --- | --- | --- |
+| P&I Club | Free Text | Manual entry |
+| Gross Premium P&I Incl. R/I | Currency | Manual entry |
+| Rate per GT Incl. R/I | Currency | Manual entry (no vessel GT field to calculate from — section 10) |
+| R/I (Reinsurance) Alone | Currency | Manual entry |
+| 10% OGD (Gard) / 10% PB (London) | Currency | Gross Premium P&I Incl. R/I − Net Premium P&I |
+| Net Premium P&I | Currency | ROUND(Gross Premium P&I Incl. R/I × 0.9, 0) |
+| Tax (P&I) | Currency | ROUND(Net Premium P&I × Tax Rate %, 2) — Gard-vessel variant only (section 10) |
+| Total Premium Incl. Tax (P&I) | Currency | Net Premium P&I + Tax (P&I) |
+| FD&D | Currency | Manual entry |
+| Premium FD&D | Currency | Manual entry |
+| Tax (FD&D) | Currency | ROUND(Premium FD&D × Tax Rate %, 2) |
+| Total (FD&D) – Total Gross Premium Incl. Tax | Currency | Premium FD&D + Tax (FD&D) |
+| C/L P&I | Currency | Manual entry (no formula in source) |
+| Premium TCL P&I | Currency | Manual entry |
+| C/L FD&D | Currency | Manual entry (no formula in source) |
+| Premium TCL FD&D | Currency | Manual entry |
+
+*C/L P&I and C/L FD&D have no Tax/Total fields — no formula exists for them in the source.*
+
+#### Strike and Delay
+
+| Field | Field Type | Formula |
+| --- | --- | --- |
+| Insurer (Strike and Delay) | Free Text | Manual entry |
+| Daily Entered Sum | Currency | Manual entry |
+| Rate (Strike and Delay) | Currency | Manual entry |
+| Premium (Strike and Delay) | Currency | ROUND(Daily Entered Sum × Rate (Strike and Delay), 2) |
+| Upfront NCB 10% | Currency | ROUND(Premium (Strike and Delay) × 10%, 2) |
+| Premium Net of NCB | Currency | Premium (Strike and Delay) − Upfront NCB 10% |
+
+#### Comprehensive Carrier's Liability Cover (CCC), Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)
+
+| Field | Field Type | Formula |
+| --- | --- | --- |
+| Cost of Extended Covers (ECL/CCC), Excl. Tax | Currency | Manual entry (source formula references an external, non-vessel workbook — section 10) |
+
+#### Comprehensive General Liability (CGL), Transport insurance, Professional indemnity
+
+No fields — no fields or formulas exist for them anywhere in the source workbook. Only the constant fields (section 5.2) apply.
 
 ### 5.4 Type of Cover → which fields render
 
