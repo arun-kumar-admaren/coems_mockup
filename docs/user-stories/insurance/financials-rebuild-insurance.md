@@ -169,8 +169,6 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 | 17 | Tax (FD&D) | ROUND(Premium FD&D × Tax Rate %, 2) |
 | 18 | Total (FD&D) – Total Gross Premium Incl. Tax | Premium FD&D + Tax (FD&D) |
 
-*(C/L P&I and C/L FD&D have no formulas — both stay manual, section 3.)*
-
 **Strike and Delay**
 
 | # | Field | Formula |
