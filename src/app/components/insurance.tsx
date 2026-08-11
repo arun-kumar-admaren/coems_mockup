@@ -155,7 +155,6 @@ interface InsuranceRecord {
   taxAmount: number;
   totalPremiumInclTax: number;
   // Version 2.0 — per-cover-type field groups (COEMS-21212), all optional, all always present
-  hmSumInsured?: number;
   hmDisbursements?: number;
   hmFreightTotalLoss?: number;
   hmEquipment?: number;
@@ -275,7 +274,7 @@ const EMPTY_FORM: Omit<InsuranceRecord, "id" | "createdAt"> = {
   taxRate: 0,
   taxAmount: 0,
   totalPremiumInclTax: 0,
-  hmSumInsured: 0, hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
+  hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
   hmAmd: 0, hmLeadingHmUnderwriter: "", hmLeadingIvUnderwriter: "",
   hmRate: 0, hmIvRate: 0, hmPremium: 0, hmUpfrontPerformanceBonus: 0, hmPremiumNetOfUpb: 0, hmIvPremium: 0,
   hmTax: 0, hmIvTax: 0, hmTotalNetPremium: 0, hmTotalGrossPremiumInclTax: 0,
@@ -318,7 +317,7 @@ const EMPTY_FORM: Omit<InsuranceRecord, "id" | "createdAt"> = {
 // the newly-shown dynamic fields (client follow-up: dynamic fields, no grouping UI).
 const FINANCIALS_GROUP_FIELD_RESET: Partial<Omit<InsuranceRecord, "id" | "createdAt">> = {
   totalSumInsured: 0, taxAmount: 0, totalPremiumInclTax: 0,
-  hmSumInsured: 0, hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
+  hmDisbursements: 0, hmFreightTotalLoss: 0, hmEquipment: 0, hmFreightAllRisks: 0, hmIvTotal: 0,
   hmAmd: 0, hmLeadingHmUnderwriter: "", hmLeadingIvUnderwriter: "",
   hmRate: 0, hmIvRate: 0, hmPremium: 0, hmUpfrontPerformanceBonus: 0, hmPremiumNetOfUpb: 0, hmIvPremium: 0,
   hmTax: 0, hmIvTax: 0, hmTotalNetPremium: 0, hmTotalGrossPremiumInclTax: 0,
@@ -605,7 +604,9 @@ export function Insurance() {
 
   // Version 2.0 — Financials formulas (COEMS-21212 rebuild), sourced from the client's
   // "Vessel Insurance Overview" workbook. Mirrors that sheet's cell formulas 1:1.
-  const hmSumInsured = formData.hmSumInsured ?? 0;
+  // H&M Sum Insured is the same value as the common Sum Insured field (client follow-up
+  // reused the Deductible/PA Deductible precedent) — there's no separate hmSumInsured field.
+  const hmSumInsured = formData.sumInsured;
   const hmIvTotal = formData.hmIvTotal ?? 0;
   const calcHmPremium = Math.round(hmSumInsured * (formData.hmRate ?? 0) / 100); // AM7 = ROUND(Q7*AK7,0)
   const calcHmPremiumNetOfUpb = calcHmPremium - (formData.hmUpfrontPerformanceBonus ?? 0); // AO7 = AM7-AN7
@@ -1294,10 +1295,11 @@ export function Insurance() {
                     </Select>
                   </div>
 
-                  {/* Version 1.0 only — removed for v2.0, superseded by per-cover-type H&M Sum Insured / IV Total (COEMS-21212 Financials rebuild) */}
-                  {!isV2 && (
+                  {/* Common to both versions — the only Sum Insured field. Used directly as the H&M+IV
+                      formulas' insured value (H&M Premium, TSI, War H&M mirror) when H&M/IV/War is the
+                      active Type of Cover; otherwise it's just a plain constant field, same as Deductible
+                      (client follow-up: constant fields, same validation as before, no hiding). */}
                   <CurrencyInput label="Sum Insured" value={formData.sumInsured} onChange={(v) => updateField("sumInsured", v)} currency={formData.currency} mandatory />
-                  )}
                   {/* Always shown (client follow-up: constant, not hidden). Calculated when the active Type of
                       Cover's fields already model Sum Insured (H&M+IV, War, LoH); manual entry otherwise
                       (P&I, Strike & Delay, Extended Covers, or no Type of Cover selected). */}
@@ -1308,8 +1310,8 @@ export function Insurance() {
                   )}
                   {/* Common to both versions — the only Deductible field. PA Deductible was removed from
                       the Hull & Machinery + Increased Value group to avoid the two duplicating each other
-                      (client follow-up). Mandatory only in v1.0, matching its original validation posture. */}
-                  <CurrencyInput label="Deductible" value={formData.deductible} onChange={(v) => updateField("deductible", v)} currency={formData.currency} mandatory={!isV2} />
+                      (client follow-up). Same mandatory validation in both versions. */}
+                  <CurrencyInput label="Deductible" value={formData.deductible} onChange={(v) => updateField("deductible", v)} currency={formData.currency} mandatory />
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1">
@@ -1375,10 +1377,9 @@ export function Insurance() {
                   {isV2 && activeFinancialsGroups.includes("hm") && (<>
                     {primaryFinancialsGroup === "war" && (
                       <p className="col-span-2 text-xs text-gray-400 italic -mb-2">
-                        Hull &amp; Machinery / Increased Value fields below are the insured-value basis the War Risk premium is calculated from.
+                        War Risk premium is calculated from Sum Insured / IV Total above. Hull &amp; Machinery / Increased Value fields below are that cover's own details.
                       </p>
                     )}
-                    <CurrencyInput label="H&M Sum Insured" value={formData.hmSumInsured ?? 0} onChange={(v) => updateField("hmSumInsured", v)} currency={formData.currency} />
                     <CurrencyInput label="Disbursements" value={formData.hmDisbursements ?? 0} onChange={(v) => updateField("hmDisbursements", v)} currency={formData.currency} />
                     <CurrencyInput label="Freight Total Loss" value={formData.hmFreightTotalLoss ?? 0} onChange={(v) => updateField("hmFreightTotalLoss", v)} currency={formData.currency} />
                     <CurrencyInput label="Equipment (H&M)" value={formData.hmEquipment ?? 0} onChange={(v) => updateField("hmEquipment", v)} currency={formData.currency} />
