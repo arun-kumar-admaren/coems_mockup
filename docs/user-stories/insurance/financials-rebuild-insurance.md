@@ -10,30 +10,24 @@
 
 #### **acceptance criteria:**
 
-### 1. Common fields: removed, restored, or made constant
+### 1. Common fields are constant — the whole original Financials header is unconditional again
 
-The following fields were duplicated by a per-type equivalent and are **removed from the Financials section for Version 2.0 only** (Version 1.0 is unchanged):
+Every field in the Financials section's Coverage Values / Premium Details header — **Currency, Sum Insured, Total Sum Insured (TSI), Deductible, Daily Indemnity (LoH), Basis/Terms, Premium Rate (%), Annual Premium, Tax Rate (%), Tax Amount, Total Premium Incl. Tax** — is **constant**: always visible for every Type of Cover, in both versions, with the same validation Version 1.0 has always had (Sum Insured and Deductible mandatory, the rest optional). Only the per-cover-type fields below the header (section 11) are dynamic.
 
-| Removed field | Where it now lives instead |
-| --- | --- |
-| Sum Insured | H&M Sum Insured (Hull & Machinery + Increased Value fields) |
-| Leading Underwriter | Leading H&M/IV/LoH/War Underwriter (each cover type has its own) |
+This is the settled end state after three rounds of back-and-forth, worth recording so the reasoning isn't lost:
 
-* Sum Insured was previously a mandatory field; removing it for Version 2.0 means Insurance Status, Policy Start/End Date, and Insurer/Club remain the only mandatory Financials-adjacent fields.
+1. **First attempt**: Sum Insured, Deductible, Premium Rate (%), Annual Premium, and Leading Underwriter were removed for Version 2.0, on the theory that each was duplicated by a per-cover-type field (H&M Sum Insured, PA Deductible, H&M Rate, H&M Premium, Leading H&M/IV/LoH/War Underwriter).
+2. **Client follow-up**: that was too aggressive. A common field should only be removed when a Type of Cover's own field is a **genuine, literal duplicate** — the same value, not just a similarly-named one. Sum Insured and PA Deductible really were the same value (both meant "the H&M+IV insured value" / "the H&M+IV deductible"), so those two stay removed in spirit — but rather than deleting the common field, **the duplicate per-type field is what gets deleted**, and the common field becomes the single source of truth:
+   * **Deductible**: PA Deductible is removed from the Hull & Machinery + Increased Value fields. Deductible in Coverage Values is the one and only deductible field in the form.
+   * **Sum Insured**: "H&M Sum Insured" (originally added as its own field, see the old section 2 below) is removed from the Hull & Machinery + Increased Value fields. Sum Insured in Coverage Values is used directly, unconditionally, as the insured value in every formula that needs it — H&M Premium, Total Sum Insured (TSI) (section 4), and the War H&M mirror (section 5) — so no calculation is lost, it just reads from one field instead of two.
+3. **Premium Rate (%) and Annual Premium** never had a literal duplicate — each cover type's own Rate/Premium fields (H&M Rate, LoH Rate, War Rate, H&M Premium, LoH Premium, etc.) are more granular sub-component figures, not the same "one vessel-wide rate/premium" concept. Removing them didn't eliminate a duplicate, it just lost the field. Both are restored, unconditional, with the same plain manual-entry behavior they've always had (in Version 1.0 too — neither was ever calculated).
+4. **Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax** were never removed, but went through a phase of being hidden per Type of Cover. They're constant too now (section 8 covers the calculated/manual split, which still varies by Type of Cover even though visibility no longer does).
 
-The following fields went through a removal-then-restoration cycle and are now treated as **constant** — always visible regardless of Type of Cover, exactly like Currency or Tax Rate (%) always were. A client follow-up established the underlying rule: a common field only gets removed if a Type of Cover's own field is a genuine, literal duplicate of it (like Sum Insured/H&M Sum Insured, or Deductible/PA Deductible below); otherwise it stays constant, and any actual duplicate is what gets removed, not the common field:
+**Leading Underwriter is the only field that stays removed** — every cover type that has an underwriter concept (H&M, IV, LoH, War) genuinely has its own named underwriter, which can legitimately differ across them on the same policy, so there's no single "one vessel-wide underwriter" value for a common field to hold.
 
-* **Deductible** — briefly made conditional (hidden only for Hull & Machinery/Increased Value, since that group had its own "PA Deductible"), but PA Deductible turned out to just duplicate it. **PA Deductible is removed from the Hull & Machinery + Increased Value fields**; Deductible in Coverage Values is the one and only deductible field in the whole form, shown unconditionally.
-* **Premium Rate (%)** and **Annual Premium** — briefly removed outright for Version 2.0 on the assumption they were replaced by each cover type's own Rate/Premium fields (H&M Rate, LoH Rate, War Rate, etc.). On reflection there's no literal duplicate to point to — those per-type rates and premiums are more granular figures for a sub-component, not the same "one vessel-wide rate/premium" concept — so nothing was actually removed by deleting them, only lost. Both are restored, unconditional, with the same plain manual-entry behavior they've always had (in Version 1.0 too — neither field was ever calculated).
-* **Total Sum Insured (TSI)**, **Tax Amount**, and **Total Premium Incl. Tax** — these three are also constant now (see section 8 for the calculated/manual split, which still varies by Type of Cover even though visibility no longer does).
+### 2. New fields added: per-type Tax and Total fields
 
-### 2. New field added: H&M Sum Insured
-
-* The Hull & Machinery + Increased Value group is missing its own Sum Insured field in the original COEMS-21212 build — every downstream formula (TSI, H&M Premium, War H&M mirror) needs it. **H&M Sum Insured** (Currency, manual entry) is added as the first field in that group.
-
-### 3. New fields added: per-type Tax and Total fields
-
-The following 12 fields are added, one Tax + one Total pair per group that the source workbook actually calculates a tax/total for. All are **read-only, calculated** (see formulas in section 5) — the user never types into them.
+The following 12 fields are added, one Tax + one Total pair per group that the source workbook actually calculates a tax/total for. All are **read-only, calculated** (see formulas in section 4) — the user never types into them.
 
 | Group | Tax field (new) | Total field (new) |
 | --- | --- | --- |
@@ -44,41 +38,41 @@ The following 12 fields are added, one Tax + one Total pair per group that the s
 | P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D | Tax (FD&D) | Total (FD&D) – Total Gross Premium Incl. Tax |
 | Strike and Delay | Tax (Strike and Delay) | Premium Incl. Tax (Strike and Delay) |
 
-* War Risks has no Tax/Total fields — the source workbook has none for this group either (see section 6).
+* War Risks has no Tax/Total fields — the source workbook has none for this group either (see section 5).
 * C/L P&I and C/L FD&D (inside the P&I group) also have no Tax/Total fields — same reason, no formula exists for them in the source.
 
-### 4. Existing fields converted from manual entry to read-only, calculated
+### 3. Existing fields converted from manual entry to read-only, calculated
 
-The following fields already existed (added under COEMS-21212 as plain manual Currency inputs) and are now **read-only, calculated** instead — see section 5 for the exact formula each one uses:
+The following fields already existed (added under COEMS-21212 as plain manual Currency inputs) and are now **read-only, calculated** instead — see section 4 for the exact formula each one uses:
 
-* Total Sum Insured (TSI) — *(calculated only some of the time, see section 8)*
+* Total Sum Insured (TSI) — *(calculated only some of the time, see section 7)*
 * H&M Premium
 * H&M Premium Net of Upfront Performance Bonus
 * IV Premium
 * LoH Sum Insured
 * LoH Premium
-* War H&M (sum), War IV (sum), War TSI (sum) — see section 6
+* War H&M (sum), War IV (sum), War TSI (sum) — see section 5
 * 10% OGD (Gard) / 10% PB (London)
 * Net Premium P&I
 * Premium (Strike and Delay)
 * Upfront NCB 10%
 * Premium Net of NCB
-* Cost of Extended Covers (ECL/CCC), Incl. Tax — see section 7
+* Cost of Extended Covers (ECL/CCC), Incl. Tax — see section 6
 
-All other fields in the six groups (e.g. Disbursements, Freight Total Loss, Leading H&M/IV/LoH/War Underwriter, H&M/IV/LoH/War/S&D Rate, P&I Club, Gross Premium P&I Incl. R/I, Rate per GT Incl. R/I, R/I Alone, FD&D, Premium FD&D, C/L P&I, Premium TCL P&I, C/L FD&D, Premium TCL FD&D, Insurer (S&D), Daily Entered Sum, Rate (S&D), War-Leading Underwriter, War Rate, War LoH Daily/Basis/TSI, Cost of Extended Covers Excl. Tax) remain manual entry — the source workbook has no formula for them either (two exceptions called out explicitly in section 9: Rate per GT Incl. R/I and Cost of Extended Covers Excl. Tax).
+All other fields in the six groups (e.g. Disbursements, Freight Total Loss, Leading H&M/IV/LoH/War Underwriter, H&M/IV/LoH/War/S&D Rate, P&I Club, Gross Premium P&I Incl. R/I, Rate per GT Incl. R/I, R/I Alone, FD&D, Premium FD&D, C/L P&I, Premium TCL P&I, C/L FD&D, Premium TCL FD&D, Insurer (S&D), Daily Entered Sum, Rate (S&D), War-Leading Underwriter, War Rate, War LoH Daily/Basis/TSI, Cost of Extended Covers Excl. Tax) remain manual entry — the source workbook has no formula for them either (two exceptions called out explicitly in section 8: Rate per GT Incl. R/I and Cost of Extended Covers Excl. Tax).
 
 * A calculated field is visually distinguished from a manual field: grey background, non-editable, and a small **"(calculated)"** tag next to its label.
 
-### 5. Formulas, by group
+### 4. Formulas, by group
 
-All formulas are taken directly from the source "Vessel Insurance Overview" workbook's cell formulas (not reverse-engineered from static values). **Tax Rate (%)** is the single shared field used as the rate input for every Tax calculation below — it is not duplicated per group.
+All formulas are taken directly from the source "Vessel Insurance Overview" workbook's cell formulas (not reverse-engineered from static values). **Sum Insured** and **Tax Rate (%)** are the shared common fields used directly as inputs below — neither is duplicated per group.
 
 **Hull & Machinery + Increased Value**
 
 | # | Field | Formula |
 | --- | --- | --- |
-| 1 | Total Sum Insured (TSI) | H&M Sum Insured + IV Total |
-| 2 | H&M Premium | ROUND(H&M Sum Insured × H&M Rate %, 0) |
+| 1 | Total Sum Insured (TSI) | Sum Insured + IV Total |
+| 2 | H&M Premium | ROUND(Sum Insured × H&M Rate %, 0) |
 | 3 | H&M Premium Net of Upfront Performance Bonus | H&M Premium − Upfront Performance Bonus (PB/CC) |
 | 4 | Tax H&M | ROUND(H&M Premium Net of Upfront Performance Bonus × Tax Rate %, 2) |
 | 5 | IV Premium | ROUND(IV Total × IV Rate %, 0) |
@@ -86,7 +80,7 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 | 7 | Total Net Premium (H&M+IV) | H&M Premium Net of Upfront Performance Bonus + IV Premium |
 | 8 | Total Gross Premium Incl. Tax (H&M+IV) | Total Net Premium (H&M+IV) + Tax H&M + Tax IV |
 
-*(Note: Total Sum Insured (TSI) is the common field shared with Coverage Values, not a field inside this group — see section 8 for when it's shown here vs. there.)*
+*(Note: Total Sum Insured (TSI) and Sum Insured are both the common fields shared with Coverage Values, not fields inside this group — see section 7 for when TSI is shown calculated vs. manual.)*
 
 **Loss of Hire**
 
@@ -108,7 +102,7 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 | 17 | Tax (FD&D) | ROUND(Premium FD&D × Tax Rate %, 2) |
 | 18 | Total (FD&D) – Total Gross Premium Incl. Tax | Premium FD&D + Tax (FD&D) |
 
-*(C/L P&I and C/L FD&D have no formulas — the source workbook has none for them either; both stay manual, see section 4.)*
+*(C/L P&I and C/L FD&D have no formulas — the source workbook has none for them either; both stay manual, see section 3.)*
 
 **Strike and Delay**
 
@@ -120,23 +114,23 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 | 22 | Tax (Strike and Delay) | ROUND(Premium Net of NCB × Tax Rate %, 2) |
 | 23 | Premium Incl. Tax (Strike and Delay) | Premium Net of NCB + Tax (Strike and Delay) |
 
-**War Risks** and **Extended Covers (ECL/CCC/ECC)** have their own formulas too, covered separately in sections 6 and 7 since they work differently (a live mirror, and a fixed-rate uplift, rather than a Tax Rate (%)-driven chain).
+**War Risks** and **Extended Covers (ECL/CCC/ECC)** have their own formulas too, covered separately in sections 5 and 6 since they work differently (a live mirror, and a fixed-rate uplift, rather than a Tax Rate (%)-driven chain).
 
-### 6. War Risks: mirrored fields, not independent entry
+### 5. War Risks: mirrored fields, not independent entry
 
-* **War H&M (sum)** and **War IV (sum)** are read-only fields that automatically copy **H&M Sum Insured** and **IV Total** respectively, live, as the user types in the Hull & Machinery + Increased Value group — this is a 1:1 mirror in the source workbook, not a separate figure the user re-enters.
+* **War H&M (sum)** and **War IV (sum)** are read-only fields that automatically copy **Sum Insured** and **IV Total** respectively, live — Sum Insured from Coverage Values, IV Total from the Hull & Machinery + Increased Value fields — this is a 1:1 mirror in the source workbook, not a separate figure the user re-enters.
 * **War TSI (sum)** = War H&M (sum) + War IV (sum), calculated.
 * **War LoH Daily**, **War LoH Basis**, and **War LoH TSI** remain manual entry — confirmed there is no formula for these in the source workbook.
-* War Risks has no Tax or Total field of its own (see section 8 for how tax/total are still captured for this cover type).
-* **Because the mirror needs a real, editable source:** selecting **War Risk** or **Extra War Risk insurance (EWRI)** as Type of Cover shows **both** the War Risks fields **and** the Hull & Machinery + Increased Value fields together (see section 11) — the user enters H&M Sum Insured / IV Total there as the insured-value basis war risk is priced against, and War H&M/IV/TSI mirror it live. A plain italic caption ("Hull & Machinery / Increased Value fields below are the insured-value basis the War Risk premium is calculated from") appears above the H&M+IV fields whenever they're shown for this reason rather than because H&M/IV was the actual selected cover — this is a one-line note, not a section heading, since the redesign in section 11 has no headings at all. The rest of those H&M+IV fields (Premium, Rate, Tax H&M/IV, Totals) are still fully usable in this state — those figures describe the vessel's H&M+IV cover, not the War Risk policy's own premium, so they don't feed anything on the War Risks side and the common Tax Amount / Total Premium Incl. Tax fields (section 8) still fall back to manual entry for a War Risk record rather than assuming the H&M+IV fields' totals belong to it.
+* War Risks has no Tax or Total field of its own (see section 7 for how tax/total are still captured for this cover type).
+* Selecting **War Risk** or **Extra War Risk insurance (EWRI)** as Type of Cover also shows the Hull & Machinery + Increased Value fields (see section 10) — since War H&M/IV/TSI mirror IV Total from there, the user needs IV Total to be editable; Sum Insured itself is already always available in Coverage Values (section 1). A plain italic caption ("War Risk premium is calculated from Sum Insured / IV Total above. Hull & Machinery / Increased Value fields below are that cover's own details.") appears above the Hull & Machinery + Increased Value fields whenever they're shown for this reason rather than because H&M/IV was the actual selected cover — this is a one-line note, not a section heading, since the redesign in section 10 has no headings at all. The rest of those fields (Premium, Rate, Tax H&M/IV, Totals) are still fully usable in this state — those figures describe the vessel's H&M+IV cover, not the War Risk policy's own premium, so they don't feed anything on the War Risks side and the common Tax Amount / Total Premium Incl. Tax fields (section 7) still fall back to manual entry for a War Risk record rather than assuming the H&M+IV fields' totals belong to it.
 
-### 7. Cost of Extended Covers
+### 6. Cost of Extended Covers
 
 * **Cost of Extended Covers (ECL/CCC), Excl. Tax** remains manual entry — the source formula references a separate, external workbook not available to this system.
 * **Cost of Extended Covers (ECL/CCC), Incl. Tax** is calculated: `Cost of Extended Covers (ECL/CCC), Excl. Tax × 1.19` (a fixed 19% uplift baked into the source formula, independent of the Tax Rate (%) field).
-* These two fields sit in their own field-set, **Extended Covers (ECL/CCC/ECC)** (see section 10) — they are not part of the "Total insurance costs (rollup)" fields any more (see section 9).
+* These two fields sit in their own field-set, **Extended Covers (ECL/CCC/ECC)** (see section 9) — they are not part of the "Total insurance costs (rollup)" fields any more (see section 8).
 
-### 8. Total Sum Insured (TSI) / Tax Amount / Total Premium Incl. Tax: always shown, calculated vs. manual
+### 7. Total Sum Insured (TSI) / Tax Amount / Total Premium Incl. Tax: always shown, calculated vs. manual
 
 These three fields are **always visible** in the Financials section (Coverage Values / Premium Details) regardless of Type of Cover — they used to be hidden in an earlier round, but a client follow-up made every common field constant (section 1). What still varies by Type of Cover is whether each one displays as **read-only calculated** or plain **manual entry**:
 
@@ -146,30 +140,30 @@ These three fields are **always visible** in the Financials section (Coverage Va
 | Tax Amount | Hull & Machinery + Increased Value, Loss of Hire, P&I family, Strike and Delay, Extended Covers | War Risks, or no Type of Cover selected yet |
 | Total Premium Incl. Tax | Hull & Machinery + Increased Value, Loss of Hire, P&I family, Strike and Delay, Extended Covers | War Risks, or no Type of Cover selected yet |
 
-* This exists so that War Risks (which has no Tax/Total field of its own) and the three Type of Cover values with no matching field-set at all (section 11) still have somewhere to record a premium and tax figure — since nothing calculates it for them, the field just becomes a plain input, exactly as if it were always manual (which is also what it does before any Type of Cover is picked).
+* This exists so that War Risks (which has no Tax/Total field of its own) and the three Type of Cover values with no matching field-set at all (section 10) still have somewhere to record a premium and tax figure — since nothing calculates it for them, the field just becomes a plain input, exactly as if it were always manual (which is also what it does before any Type of Cover is picked).
 * When calculated, the value is derived from whichever single field-set is showing (only one field-set's numbers are ever real per record, since one record = one Type of Cover).
-* **Deductible is not part of this table** — see section 1. It's a plain, always-shown, always-manual common field regardless of Type of Cover, same as Currency, Tax Rate (%), Premium Rate (%), or Annual Premium — it has no formula anywhere, so there's no calculated state for it to switch into.
+* **Deductible, Sum Insured, Premium Rate (%), and Annual Premium are not part of this table** — see section 1. They're plain, always-shown, always-manual common fields regardless of Type of Cover, same as Currency or Tax Rate (%). Sum Insured is *used by* the calculations in this table (it's an input to TSI, H&M Premium, and the War mirror), but it never itself switches into a calculated display — only Deductible, Premium Rate, and Annual Premium have literally no formula anywhere.
 
-### 9. "Total insurance costs (rollup)" group removed
+### 8. "Total insurance costs (rollup)" group removed
 
 * The original COEMS-21212 group **"Total insurance costs (rollup)"** and its 4 sum fields — **Total Annual Premium, Excl. Tax**, **Total Daily Premium, Excl. Tax**, **Total Annual Premium, Incl. Tax**, **Total Daily Premium, Incl. Tax** — are **removed entirely**.
 * Reason: in the source workbook, one sheet tracks a vessel's *entire* insurance program (H&M, LoH, War, P&I, S&D all at once), so summing across those column blocks produces a real "total insurance cost for this vessel." In this system, one Insurance record represents **one** Type of Cover, so at most one group is ever populated — summing across all 6 groups on a single record just reproduces that one group's number plus a run of zeros. It is not a meaningful total and is dropped rather than kept as a always-zero-padded figure.
 * **Total Cost Incl. Extended Covers, Excl. Tax** and **Total Cost Incl. Extended Covers, Incl. Tax** are also removed — they were defined as "the rollup above + Cost of Extended Covers," so once the rollup is gone they'd be identical to the Cost of Extended Covers fields themselves.
 * Rate per GT Incl. R/I remains manual entry — its source formula divides by vessel Gross Tonnage (GT), which is not currently captured anywhere on the Insurance record. *(Flagged as a follow-up: add a GT field if this calculation is wanted.)*
 
-### 10. Extended Covers (ECL/CCC/ECC) field-set
+### 9. Extended Covers (ECL/CCC/ECC) field-set
 
 * A field-set named **Extended Covers (ECL/CCC/ECC)** replaces the deleted rollup fields in the same position (still under Financials → Premium Details, after the other cover-type fields).
-* Contains 2 fields: **Cost of Extended Covers (ECL/CCC), Excl. Tax** (manual) and **Cost of Extended Covers (ECL/CCC), Incl. Tax** (calculated, section 7).
-* Shown when Type of Cover is **Comprehensive Carrier's Liability Cover (CCC)** or **Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)** (section 11).
+* Contains 2 fields: **Cost of Extended Covers (ECL/CCC), Excl. Tax** (manual) and **Cost of Extended Covers (ECL/CCC), Incl. Tax** (calculated, section 6).
+* Shown when Type of Cover is **Comprehensive Carrier's Liability Cover (CCC)** or **Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC)** (section 10).
 
-### 11. Type of Cover determines which fields are shown — no grouping/collapsible UI
+### 10. Type of Cover determines which fields are shown — no grouping/collapsible UI
 
 This has gone through two rounds of client feedback. First (COEMS-21212 demo follow-up): *when a Type of Cover is selected, only the matching group should be enabled — the rest disabled/greyed out.* Then, a further client follow-up removed the grouping UI altogether: **no collapsible/expandable sections, no group headers, no greyed-out "not applicable" groups on screen at all — just the relevant fields, appearing directly.**
 
-* Under Financials → Premium Details, right after the common Tax Rate (%) / Tax Amount / Total Premium Incl. Tax fields (section 8), the fields belonging to the selected Type of Cover render directly — flat, in the same field grid, with no border box, no heading, and nothing to click to reveal them.
+* Under Financials → Premium Details, right after the common Tax Rate (%) / Tax Amount / Total Premium Incl. Tax fields (section 7), the fields belonging to the selected Type of Cover render directly — flat, in the same field grid, with no border box, no heading, and nothing to click to reveal them.
 * If no Type of Cover has been selected yet, no cover-specific fields render at all (only the common fields from Coverage Values / Premium Details are visible).
-* The Type of Cover → field-set mapping carried over unchanged from the group-based design (section 10 of the prior round): every Type of Cover shows exactly one field-set, **except War Risk and EWRI, which show two** — the War Risks fields plus the Hull & Machinery + Increased Value fields, since the War mirror needs the latter's Sum Insured fields to be editable (section 6). Selecting Hull and Machinery (H&M) or Increased Value (IV) directly does **not** also show the War Risks fields — the relationship is one-directional.
+* Every Type of Cover shows exactly one field-set, **except War Risk and EWRI, which show two** — the War Risks fields plus the Hull & Machinery + Increased Value fields, since the War mirror needs IV Total to be editable there (section 5). Selecting Hull and Machinery (H&M) or Increased Value (IV) directly does **not** also show the War Risks fields — the relationship is one-directional.
 * Mapping of each of the 16 Type of Cover values to the field-set(s) it shows:
 
 | Type of Cover | Field-set(s) shown |
@@ -191,29 +185,29 @@ This has gone through two rounds of client feedback. First (COEMS-21212 demo fol
 | Transport insurance | *(none — see below)* |
 | Professional indemnity | *(none — see below)* |
 
-* **Comprehensive General Liability (CGL)**, **Transport insurance**, and **Professional indemnity** have no fields or formulas anywhere in the source workbook, so nothing extra renders for them. Per section 8, these types still get Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax as manual fields so a premium can still be recorded.
+* **Comprehensive General Liability (CGL)**, **Transport insurance**, and **Professional indemnity** have no fields or formulas anywhere in the source workbook, so nothing extra renders for them. Per section 7, these types still get Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax as manual fields so a premium can still be recorded.
 
-### 12. Values clear when Type of Cover changes
+### 11. Values clear when Type of Cover changes
 
-* Whenever the user changes **Type of Cover** while adding or editing a record, every field belonging to any of the 6 Type of Cover field-sets — plus the common Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax fallback fields (section 8) — resets to blank/zero. This prevents a previous selection's numbers from lingering, unseen, behind the newly-shown fields (e.g. entering H&M figures, switching to Loss of Hire, then switching back to Hull and Machinery would otherwise silently restore the old H&M numbers).
-* Only Type of Cover–specific fields are cleared. Currency, Deductible, Daily Indemnity (LoH), Basis/Terms, and Tax Rate (%) are unaffected, since they aren't tied to a specific cover type.
+* Whenever the user changes **Type of Cover** while adding or editing a record, every field belonging to any of the 6 Type of Cover field-sets — plus the common Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax fallback fields (section 7) — resets to blank/zero. This prevents a previous selection's numbers from lingering, unseen, behind the newly-shown fields (e.g. entering LoH figures, switching to Strike and Delay, then switching back to Loss of Hire would otherwise silently restore the old LoH numbers).
+* Only Type of Cover–specific fields are cleared. Currency, **Sum Insured**, Deductible, Daily Indemnity (LoH), Basis/Terms, Tax Rate (%), Premium Rate (%), and Annual Premium are unaffected, since they're constant common fields, not tied to a specific cover type — Sum Insured in particular stays put across a switch to/from War Risk precisely because it's what the War mirror reads from (section 5).
 * This only fires on an actual user change to the dropdown — opening an existing record for editing does not clear anything; its saved cover-specific data loads and displays normally.
 
-### 13. Data correction: existing seed records
+### 12. Data correction: existing seed records
 
 * 3 pre-existing Insurance records carried Type of Cover values from before this rebuild (e.g. "Hull & Machinery", "Charterers' P&I", "Crew Liability") that no longer match the current 16-value list, which meant their Type of Cover dropdown showed blank and no cover-specific fields rendered regardless of the record's actual cover type. These are corrected to their closest current equivalents: "Hull and Machinery (H&M)", "Charterer's Liability (CL)", and "Extended Crew Cover (P&I extension)".
 
-### 14. Cover Details: Intended Vessel hidden when Related to = Vessel
+### 13. Cover Details: Intended Vessel hidden when Related to = Vessel
 
 * In the Cover Details section (outside Financials), the **Intended Vessel** field (COEMS-21188) is only shown when **Related to** is **Fixture** or not yet selected. When **Related to = Vessel**, Intended Vessel is hidden — **Select Vessel** (shown directly under Related to) already captures the vessel, so asking for it a second time via Intended Vessel was redundant.
 * If a user had already picked an Intended Vessel and then switches Related to back to **Vessel**, the stored Intended Vessel value is cleared (reset to unselected) rather than left saved-but-hidden.
 
-### 15. Out of scope / known gaps (unchanged from investigation, carried forward for visibility)
+### 14. Out of scope / known gaps (unchanged from investigation, carried forward for visibility)
 
 * **Rate per GT Incl. R/I** stays manual — no vessel Gross Tonnage (GT) field exists on the Insurance record to calculate it from.
 * **Cost of Extended Covers (ECL/CCC), Excl. Tax** stays manual — its source formula references a separate external workbook not available to this system.
 * **C/L P&I**, **Premium TCL P&I**, **C/L FD&D**, **Premium TCL FD&D** stay manual — the source workbook has no formula for these either.
-* This story applies to **Version 2.0 only**. Version 1.0's Financials section (Sum Insured, Deductible, Premium Rate, Annual Premium, Leading Underwriter, no dynamic fields at all) is unchanged.
+* This story applies to **Version 2.0 only**. Version 1.0's Financials section (Sum Insured, Deductible, Premium Rate, Annual Premium — all always mandatory-per-original-validation where applicable, Leading Underwriter, no dynamic fields at all) is unchanged.
 
 ---
 
