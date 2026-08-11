@@ -133,7 +133,7 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 | --- | --- | --- |
 | 13 | Net Premium P&I | ROUND(Gross Premium P&I Incl. R/I × 0.9, 0) |
 | 14 | 10% OGD (Gard) / 10% PB (London) | Gross Premium P&I Incl. R/I − Net Premium P&I |
-| 15 | Tax (P&I) | ROUND(Net Premium P&I × Tax Rate %, 2) |
+| 15 | Tax (P&I) | ROUND(Net Premium P&I × Tax Rate %, 2) *(Gard-vessel variant — the source workbook also has a London-vessel variant, tax on gross premium rather than net, which is not modeled — section 15)* |
 | 16 | Total Premium Incl. Tax (P&I) | Net Premium P&I + Tax (P&I) |
 | 17 | Tax (FD&D) | ROUND(Premium FD&D × Tax Rate %, 2) |
 | 18 | Total (FD&D) – Total Gross Premium Incl. Tax | Premium FD&D + Tax (FD&D) |
@@ -255,6 +255,9 @@ Because only one field-set is ever populated per record, a group whose Tax/Total
 * **Rate per GT Incl. R/I** stays manual — no vessel Gross Tonnage (GT) field exists on the Insurance record.
 * **Cost of Extended Covers (ECL/CCC), Excl. Tax** stays manual — its source formula references a separate external workbook.
 * **C/L P&I**, **Premium TCL P&I**, **C/L FD&D**, **Premium TCL FD&D** stay manual — no formula exists for these in the source.
+* **Tax (P&I) only models the Gard-vessel variant** (tax on net premium). The source workbook also has a London-vessel variant (tax on gross premium, a manual figure there) which is not modeled — every P&I record is currently taxed the Gard way regardless of which club/market it's actually with.
+* Vessel identity fields in the source workbook (Vessel name, GT, DWT, IMO No., Built, Call Sign, Flag, Class, Owner, Technical/Commercial/Crewing Manager, Mortgagee) are vessel master data, not Insurance Financials fields — out of scope for this record, they belong wherever vessel data is otherwise maintained.
+* The source workbook tracks **two renewal time periods** side by side for every cover type, plus a separate "2-year deal" P&I renewal variant. Since one Insurance record already represents one period via Policy Start/End Date, only one set of fields is modeled — not a missing feature, a deliberate simplification.
 * This story applies to **Version 2.0 only**. Version 1.0's Financials section (Sum Insured, Deductible, Premium Rate, Annual Premium, Leading Underwriter, no dynamic fields) is unchanged.
 
 ---
