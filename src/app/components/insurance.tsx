@@ -472,9 +472,9 @@ function PercentInput({
 // Financials redesign). Visually distinct from CurrencyInput so users can tell at a
 // glance which fields are derived vs. manually entered.
 function CalculatedField({
-  label, value, currency, suffix,
+  label, value, currency, suffix, formula,
 }: {
-  label: string; value: number; currency?: string; suffix?: string;
+  label: string; value: number; currency?: string; suffix?: string; formula?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -493,6 +493,7 @@ function CalculatedField({
           {Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "0"}{suffix}
         </div>
       </div>
+      {formula && <p className="text-[10px] text-gray-400">{formula}</p>}
     </div>
   );
 }
@@ -1311,7 +1312,7 @@ export function Insurance() {
                       Cover's fields already model Sum Insured (H&M+IV, War, LoH); manual entry otherwise
                       (P&I, Strike & Delay, Extended Covers, or no Type of Cover selected). */}
                   {isV2 && groupHasOwnSumInsured ? (
-                    <CalculatedField label="Total Sum Insured (TSI)" value={calcTsi} currency={formData.currency} />
+                    <CalculatedField label="Total Sum Insured (TSI)" value={calcTsi} currency={formData.currency} formula="= Sum Insured + IV Total" />
                   ) : (
                     <CurrencyInput label="Total Sum Insured (TSI)" value={formData.totalSumInsured} onChange={(v) => updateField("totalSumInsured", v)} currency={formData.currency} />
                   )}
@@ -1364,13 +1365,13 @@ export function Insurance() {
                       fields already have their own Tax breakdown (H&M+IV, LoH, P&I, Strike & Delay, Extended Covers);
                       manual entry for War Risk (no Tax/Total in the source workbook) or no Type of Cover selected. */}
                   {isV2 && groupHasOwnTaxAndTotal ? (
-                    <CalculatedField label="Tax Amount" value={calcTaxAmount} currency={formData.currency} />
+                    <CalculatedField label="Tax Amount" value={calcTaxAmount} currency={formData.currency} formula="= sum of the active Type of Cover's Tax field(s)" />
                   ) : (
                     <CurrencyInput label="Tax Amount" value={formData.taxAmount} onChange={(v) => updateField("taxAmount", v)} currency={formData.currency} />
                   )}
                   <div className="col-span-2">
                     {isV2 && groupHasOwnTaxAndTotal ? (
-                      <CalculatedField label="Total Premium Incl. Tax" value={calcTotalPremiumInclTax} currency={formData.currency} />
+                      <CalculatedField label="Total Premium Incl. Tax" value={calcTotalPremiumInclTax} currency={formData.currency} formula="= sum of the active Type of Cover's Total field(s)" />
                     ) : (
                       <CurrencyInput label="Total Premium Incl. Tax" value={formData.totalPremiumInclTax} onChange={(v) => updateField("totalPremiumInclTax", v)} currency={formData.currency} />
                     )}
@@ -1403,25 +1404,25 @@ export function Insurance() {
                     </div>
                     <PercentInput label="H&M Rate (%)" value={formData.hmRate ?? 0} onChange={(v) => updateField("hmRate", v)} />
                     <PercentInput label="IV Rate (%)" value={formData.hmIvRate ?? 0} onChange={(v) => updateField("hmIvRate", v)} />
-                    <CalculatedField label="H&M Premium" value={calcHmPremium} currency={formData.currency} />
+                    <CalculatedField label="H&M Premium" value={calcHmPremium} currency={formData.currency} formula="= ROUND(Sum Insured × H&M Rate %, 0)" />
                     <CurrencyInput label="Upfront Performance Bonus (PB/CC)" value={formData.hmUpfrontPerformanceBonus ?? 0} onChange={(v) => updateField("hmUpfrontPerformanceBonus", v)} currency={formData.currency} />
-                    <CalculatedField label="H&M Premium Net of Upfront Performance Bonus" value={calcHmPremiumNetOfUpb} currency={formData.currency} />
-                    <CalculatedField label="IV Premium" value={calcIvPremium} currency={formData.currency} />
-                    <CalculatedField label="Tax H&M" value={calcHmTax} currency={formData.currency} />
-                    <CalculatedField label="Tax IV" value={calcIvTax} currency={formData.currency} />
-                    <CalculatedField label="Total Net Premium (H&M+IV)" value={calcHmTotalNetPremium} currency={formData.currency} />
+                    <CalculatedField label="H&M Premium Net of Upfront Performance Bonus" value={calcHmPremiumNetOfUpb} currency={formData.currency} formula="= H&M Premium − Upfront Performance Bonus (PB/CC)" />
+                    <CalculatedField label="IV Premium" value={calcIvPremium} currency={formData.currency} formula="= ROUND(IV Total × IV Rate %, 0)" />
+                    <CalculatedField label="Tax H&M" value={calcHmTax} currency={formData.currency} formula="= ROUND(H&M Premium Net of Upfront Performance Bonus × Tax Rate %, 2)" />
+                    <CalculatedField label="Tax IV" value={calcIvTax} currency={formData.currency} formula="= ROUND(IV Premium × Tax Rate %, 2)" />
+                    <CalculatedField label="Total Net Premium (H&M+IV)" value={calcHmTotalNetPremium} currency={formData.currency} formula="= H&M Premium Net of Upfront Performance Bonus + IV Premium" />
                     {/* Total Gross Premium Incl. Tax (H&M+IV) is not shown separately — it's identical to
                         the common Total Premium Incl. Tax field whenever H&M/IV is the only active cover. */}
                   </>)}
 
                   {isV2 && activeFinancialsGroups.includes("loh") && (<>
-                    <CalculatedField label="LoH Sum Insured" value={calcLohSumInsured} currency={formData.currency} />
+                    <CalculatedField label="LoH Sum Insured" value={calcLohSumInsured} currency={formData.currency} formula="= 180 × Daily Indemnity (LoH)" />
                     <div className="space-y-2">
                       <Label>LoH Leading Underwriter</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.lohLeadingUnderwriter ?? ""} onChange={(e) => updateField("lohLeadingUnderwriter", e.target.value)} placeholder="e.g. Gard M&E" />
                     </div>
                     <PercentInput label="LoH Rate (%)" value={formData.lohRateNew ?? 0} onChange={(v) => updateField("lohRateNew", v)} />
-                    <CalculatedField label="LoH Premium" value={calcLohPremium} currency={formData.currency} />
+                    <CalculatedField label="LoH Premium" value={calcLohPremium} currency={formData.currency} formula="= ROUND(LoH Sum Insured × LoH Rate %, 0)" />
                     {/* Tax (LoH) and Total Gross Premium Incl. Tax (LoH) are not shown separately — Loss of
                         Hire is the only contributor when it's the active cover, so they're identical to the
                         common Tax Amount / Total Premium Incl. Tax fields. */}
@@ -1431,8 +1432,8 @@ export function Insurance() {
                     {/* War H&M / War IV mirror Sum Insured / IV Total 1:1 in the source workbook. War TSI
                         (their sum) is not shown separately — it's identical to the common Total Sum
                         Insured (TSI) field whenever War Risk is the active cover. */}
-                    <CalculatedField label="War H&M (sum)" value={calcWarHm} currency={formData.currency} />
-                    <CalculatedField label="War IV (sum)" value={calcWarIv} currency={formData.currency} />
+                    <CalculatedField label="War H&M (sum)" value={calcWarHm} currency={formData.currency} formula="= Sum Insured (mirror)" />
+                    <CalculatedField label="War IV (sum)" value={calcWarIv} currency={formData.currency} formula="= IV Total (mirror)" />
                     <div className="space-y-2">
                       <Label>War-Leading Underwriter</Label>
                       <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value={formData.warLeadingUnderwriter ?? ""} onChange={(e) => updateField("warLeadingUnderwriter", e.target.value)} placeholder="e.g. NHC" />
@@ -1455,14 +1456,14 @@ export function Insurance() {
                     {/* No Gross Tonnage (GT) field exists on the Insurance record yet, so this stays manual — flagged for follow-up */}
                     <CurrencyInput label="Rate per GT Incl. R/I" value={formData.piRatePerGtInclRi ?? 0} onChange={(v) => updateField("piRatePerGtInclRi", v)} currency={formData.currency} />
                     <CurrencyInput label="R/I (Reinsurance) Alone" value={formData.piRiAlone ?? 0} onChange={(v) => updateField("piRiAlone", v)} currency={formData.currency} />
-                    <CalculatedField label="10% OGD (Gard) / 10% PB (London)" value={calcPiOgdPb} currency={formData.currency} />
-                    <CalculatedField label="Net Premium P&I" value={calcPiNetPremium} currency={formData.currency} />
-                    <CalculatedField label="Tax (P&I)" value={calcPiTax} currency={formData.currency} />
-                    <CalculatedField label="Total Premium Incl. Tax (P&I)" value={calcPiTotalPremiumInclTax} currency={formData.currency} />
+                    <CalculatedField label="10% OGD (Gard) / 10% PB (London)" value={calcPiOgdPb} currency={formData.currency} formula="= Gross Premium P&I Incl. R/I − Net Premium P&I" />
+                    <CalculatedField label="Net Premium P&I" value={calcPiNetPremium} currency={formData.currency} formula="= ROUND(Gross Premium P&I Incl. R/I × 0.9, 0)" />
+                    <CalculatedField label="Tax (P&I)" value={calcPiTax} currency={formData.currency} formula="= ROUND(Net Premium P&I × Tax Rate %, 2)" />
+                    <CalculatedField label="Total Premium Incl. Tax (P&I)" value={calcPiTotalPremiumInclTax} currency={formData.currency} formula="= Net Premium P&I + Tax (P&I)" />
                     <CurrencyInput label="FD&D" value={formData.fdd ?? 0} onChange={(v) => updateField("fdd", v)} currency={formData.currency} />
                     <CurrencyInput label="Premium FD&D" value={formData.fddPremium ?? 0} onChange={(v) => updateField("fddPremium", v)} currency={formData.currency} />
-                    <CalculatedField label="Tax (FD&D)" value={calcFddTax} currency={formData.currency} />
-                    <CalculatedField label="Total (FD&D) - Total Gross Premium Incl. Tax" value={calcFddTotalGrossPremiumInclTax} currency={formData.currency} />
+                    <CalculatedField label="Tax (FD&D)" value={calcFddTax} currency={formData.currency} formula="= ROUND(Premium FD&D × Tax Rate %, 2)" />
+                    <CalculatedField label="Total (FD&D) - Total Gross Premium Incl. Tax" value={calcFddTotalGrossPremiumInclTax} currency={formData.currency} formula="= Premium FD&D + Tax (FD&D)" />
                     <CurrencyInput label="C/L P&I" value={formData.clPi ?? 0} onChange={(v) => updateField("clPi", v)} currency={formData.currency} />
                     <CurrencyInput label="Premium TCL P&I" value={formData.clPiPremium ?? 0} onChange={(v) => updateField("clPiPremium", v)} currency={formData.currency} />
                     <CurrencyInput label="C/L FD&D" value={formData.clFdd ?? 0} onChange={(v) => updateField("clFdd", v)} currency={formData.currency} />
@@ -1476,9 +1477,9 @@ export function Insurance() {
                     </div>
                     <CurrencyInput label="Daily Entered Sum" value={formData.sdDailyEnteredSum ?? 0} onChange={(v) => updateField("sdDailyEnteredSum", v)} currency={formData.currency} />
                     <CurrencyInput label="Rate (Strike and Delay)" value={formData.sdRate ?? 0} onChange={(v) => updateField("sdRate", v)} currency={formData.currency} />
-                    <CalculatedField label="Premium (Strike and Delay)" value={calcSdPremium} currency={formData.currency} />
-                    <CalculatedField label="Upfront NCB 10%" value={calcSdUpfrontNcb} currency={formData.currency} />
-                    <CalculatedField label="Premium Net of NCB" value={calcSdPremiumNetOfNcb} currency={formData.currency} />
+                    <CalculatedField label="Premium (Strike and Delay)" value={calcSdPremium} currency={formData.currency} formula="= ROUND(Daily Entered Sum × Rate (Strike and Delay), 2)" />
+                    <CalculatedField label="Upfront NCB 10%" value={calcSdUpfrontNcb} currency={formData.currency} formula="= ROUND(Premium (Strike and Delay) × 10%, 2)" />
+                    <CalculatedField label="Premium Net of NCB" value={calcSdPremiumNetOfNcb} currency={formData.currency} formula="= Premium (Strike and Delay) − Upfront NCB 10%" />
                     {/* Tax (Strike and Delay) and Premium Incl. Tax (Strike and Delay) are not shown
                         separately — Strike and Delay is the only contributor when it's the active cover, so
                         they're identical to the common Tax Amount / Total Premium Incl. Tax fields. */}
