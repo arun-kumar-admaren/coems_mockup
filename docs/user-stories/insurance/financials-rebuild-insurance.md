@@ -19,21 +19,96 @@ The following fields in **Coverage Values** / **Premium Details** are always vis
 * **Deductible** is the only deductible field in the form. There is no per-cover-type deductible field.
 * **Leading Underwriter is not a common field** — each cover type that has an underwriter concept (H&M, IV, LoH, War) has its own Leading Underwriter field instead, since they can genuinely differ from each other on the same policy.
 
-### 2. New fields: per-type Tax and Total fields
+### 2. Field inventory, by Type of Cover
 
-The following fields are added, one Tax + one Total pair per cover type that the source workbook calculates a tax/total for. All are **read-only, calculated** (formulas in section 4).
+One row per field. **Type(s) of Cover** lists every cover that field appears for — where several covers share the exact same fields, they're listed together in that one cell rather than repeating the field in a separate table per cover. The common fields from section 1 aren't repeated here since they apply to all 16 types equally.
 
-| Group | Tax field | Total field |
+**Hull & Machinery + Increased Value fields** — shown for Hull and Machinery (H&M), Increased Value (IV), War Risk, and Extra War Risk insurance (EWRI) (War Risk/EWRI show these as the insured-value basis for the war premium, section 5):
+
+| Field | Field Type | Manual / Calculated |
 | --- | --- | --- |
-| Hull & Machinery + Increased Value | Tax H&M | Total Net Premium (H&M+IV) |
-| Hull & Machinery + Increased Value | Tax IV | Total Gross Premium Incl. Tax (H&M+IV) *(calculated, not displayed — section 14)* |
-| Loss of Hire | Tax (LoH) *(calculated, not displayed — section 14)* | Total Gross Premium Incl. Tax (LoH) *(calculated, not displayed — section 14)* |
-| P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D | Tax (P&I) | Total Premium Incl. Tax (P&I) |
-| P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D | Tax (FD&D) | Total (FD&D) – Total Gross Premium Incl. Tax |
-| Strike and Delay | Tax (Strike and Delay) *(calculated, not displayed — section 14)* | Premium Incl. Tax (Strike and Delay) *(calculated, not displayed — section 14)* |
+| Disbursements | Currency | Manual |
+| Freight Total Loss | Currency | Manual |
+| Equipment (H&M) | Currency | Manual |
+| Freight All Risks | Currency | Manual |
+| IV Total | Currency | Manual |
+| AMD | Currency | Manual |
+| Leading H&M Underwriter | Free Text | Manual |
+| Leading IV Underwriter | Free Text | Manual |
+| H&M Rate (%) | Percentage | Manual |
+| IV Rate (%) | Percentage | Manual |
+| H&M Premium | Currency | Calculated |
+| Upfront Performance Bonus (PB/CC) | Currency | Manual |
+| H&M Premium Net of Upfront Performance Bonus | Currency | Calculated |
+| IV Premium | Currency | Calculated |
+| Tax H&M | Currency | Calculated |
+| Tax IV | Currency | Calculated |
+| Total Net Premium (H&M+IV) | Currency | Calculated |
+
+**Loss of Hire fields** — shown for Loss of Hire (LOH) only:
+
+| Field | Field Type | Manual / Calculated |
+| --- | --- | --- |
+| LoH Sum Insured | Currency | Calculated |
+| LoH Leading Underwriter | Free Text | Manual |
+| LoH Rate (%) | Percentage | Manual |
+| LoH Premium | Currency | Calculated |
+
+**War Risks fields** — shown for War Risk and Extra War Risk insurance (EWRI) only:
+
+| Field | Field Type | Manual / Calculated |
+| --- | --- | --- |
+| War H&M (sum) | Currency | Calculated (mirror) |
+| War IV (sum) | Currency | Calculated (mirror) |
+| War-Leading Underwriter | Free Text | Manual |
+| War Rate (%) | Percentage | Manual |
+| War LoH Daily | Currency | Manual |
+| War LoH Basis | Numeric | Manual |
+| War LoH TSI | Currency | Manual |
+
+**P&I, FD&D, Charterer's Liability (C/L), and C/L FD&D fields** — shown for Protection & Indemnity (P&I), Charterer's Liability (CL), FD&D (UHL as charterer), FD&D (UHL as owner), and Extended Crew Cover (P&I extension):
+
+| Field | Field Type | Manual / Calculated |
+| --- | --- | --- |
+| P&I Club | Free Text | Manual |
+| Gross Premium P&I Incl. R/I | Currency | Manual |
+| Rate per GT Incl. R/I | Currency | Manual *(no GT field to calculate from — section 15)* |
+| R/I (Reinsurance) Alone | Currency | Manual |
+| 10% OGD (Gard) / 10% PB (London) | Currency | Calculated |
+| Net Premium P&I | Currency | Calculated |
+| Tax (P&I) | Currency | Calculated |
+| Total Premium Incl. Tax (P&I) | Currency | Calculated |
+| FD&D | Currency | Manual |
+| Premium FD&D | Currency | Manual |
+| Tax (FD&D) | Currency | Calculated |
+| Total (FD&D) – Total Gross Premium Incl. Tax | Currency | Calculated |
+| C/L P&I | Currency | Manual |
+| Premium TCL P&I | Currency | Manual |
+| C/L FD&D | Currency | Manual |
+| Premium TCL FD&D | Currency | Manual |
+
+**Strike and Delay fields** — shown for Strike and Delay only:
+
+| Field | Field Type | Manual / Calculated |
+| --- | --- | --- |
+| Insurer (Strike and Delay) | Free Text | Manual |
+| Daily Entered Sum | Currency | Manual |
+| Rate (Strike and Delay) | Currency | Manual |
+| Premium (Strike and Delay) | Currency | Calculated |
+| Upfront NCB 10% | Currency | Calculated |
+| Premium Net of NCB | Currency | Calculated |
+
+**Extended Covers (ECL/CCC/ECC) fields** — shown for Comprehensive Carrier's Liability Cover (CCC) and Extended Contractual Liability (ECL) / Extended Cargo Cover (ECC):
+
+| Field | Field Type | Manual / Calculated |
+| --- | --- | --- |
+| Cost of Extended Covers (ECL/CCC), Excl. Tax | Currency | Manual |
+
+**No fields** — Comprehensive General Liability (CGL), Transport insurance, and Professional indemnity have nothing in this section; only the common fields from section 1 apply.
 
 * War Risks has no Tax/Total fields — the source workbook has none for this group (section 5).
-* C/L P&I and C/L FD&D (inside the P&I group) also have no Tax/Total fields — no formula exists for them in the source.
+* C/L P&I and C/L FD&D (inside the P&I family) also have no Tax/Total fields — no formula exists for them in the source.
+* Several calculated fields are computed but not shown separately because they'd duplicate a common field — section 14 lists exactly which ones and why.
 
 ### 3. Fields calculated from a formula, not manual entry
 
