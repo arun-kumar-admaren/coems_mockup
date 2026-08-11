@@ -40,6 +40,7 @@ The following 12 fields are added, one Tax + one Total pair per group that the s
 
 * War Risks has no Tax/Total fields — the source workbook has none for this group either (see section 5).
 * C/L P&I and C/L FD&D (inside the P&I group) also have no Tax/Total fields — same reason, no formula exists for them in the source.
+* **Tax (LoH), Total Gross Premium Incl. Tax (LoH), Tax (Strike and Delay), Premium Incl. Tax (Strike and Delay), and Total Gross Premium Incl. Tax (H&M+IV) are calculated but not displayed as separate fields** — see section 14 for why (they're identical to the common Tax Amount / Total Premium Incl. Tax fields whenever their group is the active one).
 
 ### 3. Existing fields converted from manual entry to read-only, calculated
 
@@ -119,7 +120,7 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 ### 5. War Risks: mirrored fields, not independent entry
 
 * **War H&M (sum)** and **War IV (sum)** are read-only fields that automatically copy **Sum Insured** and **IV Total** respectively, live — Sum Insured from Coverage Values, IV Total from the Hull & Machinery + Increased Value fields — this is a 1:1 mirror in the source workbook, not a separate figure the user re-enters.
-* **War TSI (sum)** = War H&M (sum) + War IV (sum), calculated.
+* **War TSI (sum)** = War H&M (sum) + War IV (sum) is calculated internally but **not displayed** as its own field — see section 14, it's identical to the common Total Sum Insured (TSI) field whenever War Risk is the active cover.
 * **War LoH Daily**, **War LoH Basis**, and **War LoH TSI** remain manual entry — confirmed there is no formula for these in the source workbook.
 * War Risks has no Tax or Total field of its own (see section 7 for how tax/total are still captured for this cover type).
 * Selecting **War Risk** or **Extra War Risk insurance (EWRI)** as Type of Cover also shows the Hull & Machinery + Increased Value fields (see section 10) — since War H&M/IV/TSI mirror IV Total from there, the user needs IV Total to be editable; Sum Insured itself is already always available in Coverage Values (section 1). A plain italic caption ("War Risk premium is calculated from Sum Insured / IV Total above. Hull & Machinery / Increased Value fields below are that cover's own details.") appears above the Hull & Machinery + Increased Value fields whenever they're shown for this reason rather than because H&M/IV was the actual selected cover — this is a one-line note, not a section heading, since the redesign in section 10 has no headings at all. The rest of those fields (Premium, Rate, Tax H&M/IV, Totals) are still fully usable in this state — those figures describe the vessel's H&M+IV cover, not the War Risk policy's own premium, so they don't feed anything on the War Risks side and the common Tax Amount / Total Premium Incl. Tax fields (section 7) still fall back to manual entry for a War Risk record rather than assuming the H&M+IV fields' totals belong to it.
@@ -127,8 +128,9 @@ All formulas are taken directly from the source "Vessel Insurance Overview" work
 ### 6. Cost of Extended Covers
 
 * **Cost of Extended Covers (ECL/CCC), Excl. Tax** remains manual entry — the source formula references a separate, external workbook not available to this system.
-* **Cost of Extended Covers (ECL/CCC), Incl. Tax** is calculated: `Cost of Extended Covers (ECL/CCC), Excl. Tax × 1.19` (a fixed 19% uplift baked into the source formula, independent of the Tax Rate (%) field).
-* These two fields sit in their own field-set, **Extended Covers (ECL/CCC/ECC)** (see section 9) — they are not part of the "Total insurance costs (rollup)" fields any more (see section 8).
+* **Cost of Extended Covers (ECL/CCC), Incl. Tax** is calculated: `Cost of Extended Covers (ECL/CCC), Excl. Tax × 1.19` (a fixed 19% uplift baked into the source formula, independent of the Tax Rate (%) field). It's calculated internally but **not displayed** as its own field — see section 14, it's identical to the common Total Premium Incl. Tax field whenever CCC/ECL/ECC is the active cover.
+* The 19% uplift amount (Incl. Tax minus Excl. Tax) also feeds the common Tax Amount field — see section 14 for a gap this closed.
+* This field-set, **Extended Covers (ECL/CCC/ECC)** (see section 9), is not part of the "Total insurance costs (rollup)" fields any more (see section 8).
 
 ### 7. Total Sum Insured (TSI) / Tax Amount / Total Premium Incl. Tax: always shown, calculated vs. manual
 
@@ -202,7 +204,27 @@ This has gone through two rounds of client feedback. First (COEMS-21212 demo fol
 * In the Cover Details section (outside Financials), the **Intended Vessel** field (COEMS-21188) is only shown when **Related to** is **Fixture** or not yet selected. When **Related to = Vessel**, Intended Vessel is hidden — **Select Vessel** (shown directly under Related to) already captures the vessel, so asking for it a second time via Intended Vessel was redundant.
 * If a user had already picked an Intended Vessel and then switches Related to back to **Vessel**, the stored Intended Vessel value is cleared (reset to unselected) rather than left saved-but-hidden.
 
-### 14. Out of scope / known gaps (unchanged from investigation, carried forward for visibility)
+### 14. Dynamic-field duplicates of the constant fields: audited and removed
+
+Since the constant fields in section 1 include Total Sum Insured (TSI), Tax Amount, and Total Premium Incl. Tax, and each of those is calculated from whichever cover-type field-set is active (section 7), a follow-up audit checked every dynamic field for the same literal-duplicate problem Sum Insured/H&M Sum Insured and Deductible/PA Deductible had. Because only one field-set is ever populated per record, **any group whose Tax Amount / Total Premium Incl. Tax equivalent comes from a single field is an exact duplicate of the common field** — the "sum" of one thing is just that thing:
+
+| Common field | Duplicated by | Cover type |
+| --- | --- | --- |
+| Total Sum Insured (TSI) | War TSI (sum) | War Risk / EWRI |
+| Tax Amount | Tax (LoH) | Loss of Hire |
+| Tax Amount | Tax (Strike and Delay) | Strike and Delay |
+| Total Premium Incl. Tax | Total Gross Premium Incl. Tax (H&M+IV) | Hull and Machinery (H&M) / Increased Value (IV) |
+| Total Premium Incl. Tax | Total Gross Premium Incl. Tax (LoH) | Loss of Hire |
+| Total Premium Incl. Tax | Premium Incl. Tax (Strike and Delay) | Strike and Delay |
+| Total Premium Incl. Tax | Cost of Extended Covers (ECL/CCC), Incl. Tax | CCC / ECL/ECC |
+
+All 7 are **removed from display** the same way as the earlier duplicates — the underlying calculation still runs and still feeds the common field, nothing is lost, it just isn't shown twice.
+
+**Not removed, by the same logic in reverse**: Hull & Machinery + Increased Value's Tax H&M / Tax IV and Total Net Premium (H&M+IV), and the P&I family's Tax (P&I) / Tax (FD&D) / Total Premium Incl. Tax (P&I) / Total (FD&D), all stay visible. Both of those groups have **two** contributing sub-covers, so the common field is their *sum* — not identical to either sub-field individually, so there's no single field to point to as "the duplicate."
+
+**A real gap found and fixed while auditing, not a duplicate**: Extended Covers (CCC/ECL/ECC) was already listed (section 7) as a cover type whose Tax Amount / Total Premium Incl. Tax should display calculated — but the calculation never actually included its number. Those two common fields were silently showing **0** for every CCC/ECL/ECC record instead of the real Cost of Extended Covers figure. Fixed by feeding the 19% uplift amount (Incl. Tax − Excl. Tax) into Tax Amount, and the full Incl. Tax figure into Total Premium Incl. Tax.
+
+### 15. Out of scope / known gaps (unchanged from investigation, carried forward for visibility)
 
 * **Rate per GT Incl. R/I** stays manual — no vessel Gross Tonnage (GT) field exists on the Insurance record to calculate it from.
 * **Cost of Extended Covers (ECL/CCC), Excl. Tax** stays manual — its source formula references a separate external workbook not available to this system.
