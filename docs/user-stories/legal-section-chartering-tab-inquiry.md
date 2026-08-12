@@ -4,7 +4,7 @@
 **I want to** enter Charter Party issuance details, category, and red flag directly on the Inquiry's existing Chartering tab, in a new "Legal" section at the bottom
 **So that** this information isn't duplicated or ambiguous when a review links to multiple Inquiries, or an Inquiry has multiple reviews — without needing a whole new tab.
 
-> Mirrors **COEMS-21105** ("Legal Review – Add a New section named 'Legal' in the Fixture Chartering Tab"), applied to the Inquiry module's Chartering tab instead of the Fixture's. **Every field in this story is new** — unlike the Fixture version, where "Type Of CP" and "Booking Date" were reused from fields that already existed on that tab, Inquiry's Chartering tab currently has no equivalent fields at all, so there is nothing to reuse. All 8 fields below are added fresh, specifically for this section.
+> Mirrors **COEMS-21105** ("Legal Review – Add a New section named 'Legal' in the Fixture Chartering Tab"), applied to the Inquiry module's Chartering tab instead of the Fixture's. **Every field in this story is new** — unlike the Fixture version, where "Type Of CP" and "Booking Date" were reused from fields that already existed on that tab, Inquiry's Chartering tab currently has no equivalent fields at all, so there is nothing to reuse. All fields below — the 8 in the "Legal" section, plus the 4 in "Additional Insurance Details" — are added fresh, specifically for Inquiry.
 
 ---
 
@@ -23,9 +23,20 @@ The Inquiry Chartering tab currently has these sections, top to bottom:
 
 Unlike the Fixture Chartering tab, there is **no Client Details section, no Charter Party Status section, no Additional Insurance Details section, no "Type Of CP" field, and no "Booking Date" field** anywhere on this tab today.
 
-### 2. New "Legal" section
+### 2. New "Additional Insurance Details" section
 
-A new **"Legal"** section must be added at the bottom of the Inquiry Chartering tab, after Demurrage, containing:
+Inquiry's Chartering tab has no Additional Insurance Details section today (section 1), so this is built fresh, directly in the target end-state that COEMS-21105 defined for Fixture — there's no pre-existing dropdown to migrate away from here, since nothing existed before. Placed after Demurrage, before the new "Legal" section (section 3), matching the Fixture tab's section order (Additional Insurance Details, then Legal, at the bottom).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| Additional insurance required | Checkbox | New field. Ticked by Chartering |
+| Insurance details | Free text | New field. **Legal-only editable** — Chartering cannot fill this in; only Legal can, once "Additional insurance required" is ticked |
+| Special NDA Terms | Free text | New field |
+| Due Diligence Completed | Checkbox | New field. Ticked by Chartering, per the KYC requirement |
+
+### 3. New "Legal" section
+
+A new **"Legal"** section must be added at the bottom of the Inquiry Chartering tab, after the new Additional Insurance Details section (section 2), containing:
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -34,11 +45,11 @@ A new **"Legal"** section must be added at the bottom of the Inquiry Chartering 
 | Charter Party Issuance Date | Date picker | New field. Used to track the duration internally from the Inquiry date until the contract is issued |
 | Draft Charter Party Issuance Date | Date picker | New field |
 | Final Charter Party Issuance Date | Date picker | New field |
-| Legal Review Status | Live, editable dropdown | New field. Same 8 values and role-based selection rules as on the linked review itself (section 3) — a genuine second entry point for Chartering to set the status, not a read-only mirror |
+| Legal Review Status | Live, editable dropdown | New field. Same 8 values and role-based selection rules as on the linked review itself (section 4) — a genuine second entry point for Chartering to set the status, not a read-only mirror |
 | Category | Dropdown — Standard / Project / Special | New field |
 | Red Flag | Free text | New field. Optional; filled by Legal when a red flag applies (e.g. "BOD"). Not applicable at the point a review is first raised — only becomes relevant once Legal is actively reviewing the charter party |
 
-### 3. Legal Review Status: live and editable, not a read-only mirror
+### 4. Legal Review Status: live and editable, not a read-only mirror
 
 Same 8 values, same role-based selection rules as the field on the linked review itself:
 
@@ -55,17 +66,17 @@ Same 8 values, same role-based selection rules as the field on the linked review
 
 Changing it here updates the linked review's status directly (and vice versa — the two are the same underlying value, shown in two places, not separately tracked copies).
 
-### 4. Not editable from the Review overlay
+### 5. Not editable from the Review overlay
 
-None of this section's fields are editable from the Review overlay — a user must open the Inquiry directly, on the Chartering tab, to enter or change them.
+None of the "Legal" section's fields are editable from the Review overlay — a user must open the Inquiry directly, on the Chartering tab, to enter or change them.
 
-### 5. Multiple Inquiries per review, multiple reviews per Inquiry
+### 6. Multiple Inquiries per review, multiple reviews per Inquiry
 
-Since a review can be related to more than one Inquiry, and a single Inquiry can have more than one linked review, this section's fields are scoped to **this specific Inquiry only** — never shared or aggregated across multiple linked records.
+Since a review can be related to more than one Inquiry, and a single Inquiry can have more than one linked review, the "Legal" section's fields (section 3) are scoped to **this specific Inquiry only** — never shared or aggregated across multiple linked records.
 
-### 6. Out of scope
+### 7. Out of scope
 
-COEMS-21105's other two acceptance criteria — removing the "Charter Party Status" section, and restructuring "Additional Insurance Details" into a Chartering tick-box / Legal-only detail split — do not apply here, since neither section exists on the Inquiry Chartering tab today (section 1). If the client wants equivalent sections added to Inquiry as new functionality, that would need to be scoped as a separate, explicit ask rather than assumed as part of this port.
+COEMS-21105's "remove the Charter Party Status section" acceptance criterion does not apply here — there is no Charter Party Status section on the Inquiry Chartering tab to remove (section 1).
 
 ---
 
