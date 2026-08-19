@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Search, Plus, MoreVertical, ChevronLeft, ChevronRight, MessageSquare, FileText, ChevronDown, Trash2, Archive, ArchiveRestore } from "lucide-react";
+import { Search, Plus, MoreVertical, ChevronLeft, ChevronRight, MessageSquare, FileText, ChevronDown, Trash2, Archive, ArchiveRestore, SlidersHorizontal } from "lucide-react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { DatePicker } from "./ui/date-picker";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import { cn } from "./ui/utils";
 import {
   Select,
   SelectContent,
@@ -36,7 +38,7 @@ const REVIEW_STATUSES = [
 
 // Version 2.0 — client-provided status dropdown (BRD v2, comment 5)
 const REVIEW_STATUSES_V2 = [
-  "To be reviewed",
+  "Open",
   "Under review",
   "Review completed",
   "Under negotiation",
@@ -77,7 +79,7 @@ const STATUS_STYLES: Record<string, string> = {
   "Not Required": "bg-gray-100 text-gray-700",
   "To be reviewed by Legal": "bg-red-100 text-red-700",
   // v2 statuses
-  "To be reviewed": "bg-red-100 text-red-700",
+  "Open": "bg-red-100 text-red-700",
   "Under review": "bg-yellow-100 text-yellow-700",
   "Review completed": "bg-green-100 text-green-700",
   "Under negotiation": "bg-amber-100 text-amber-700",
@@ -237,6 +239,12 @@ export function Legal() {
   });
   const [activeStatusFilter, setActiveStatusFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState({
+    relatedToType: "none",
+    itemSearch: "",
+    account: "none",
+    reviewCategory: "none",
+  });
 
   // Header controls
   const [activeListTab, setActiveListTab] = useState<"Lists" | "Trash">("Lists");
@@ -350,7 +358,23 @@ export function Legal() {
       r.reviewType.toLowerCase().includes(q) ||
       r.description.toLowerCase().includes(q) ||
       r.legalReviewStatus.toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+    const matchesRelatedToType =
+      filters.relatedToType === "none" ||
+      (r.relatedTo ?? []).some((item) => getItemCategory(item) === filters.relatedToType);
+    const itemQ = filters.itemSearch.toLowerCase();
+    const matchesItemSearch =
+      !itemQ || (r.relatedTo ?? []).some((item) => item.toLowerCase().includes(itemQ));
+    const matchesAccount = filters.account === "none" || r.account === filters.account;
+    const matchesReviewCategory =
+      filters.reviewCategory === "none" || r.reviewCategory === filters.reviewCategory;
+    return (
+      matchesStatus &&
+      matchesSearch &&
+      matchesRelatedToType &&
+      matchesItemSearch &&
+      matchesAccount &&
+      matchesReviewCategory
+    );
   });
 
   // ── Review CRUD ────────────────────────────────────────────────────────────
@@ -586,10 +610,85 @@ export function Legal() {
             />
             <Search className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-gray-500" />
           </div>
-          <button className="flex items-center gap-1.5 bg-[#fde047] hover:bg-[#facc15] text-gray-900 px-3 py-1.5 rounded-md text-sm font-medium transition-colors">
-            <Plus className="size-4" />
-            Add Filter
-          </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-9 gap-2 text-[13px] font-normal border-gray-300 hover:bg-gray-50 bg-white px-3 transition-colors",
+                  Object.values(filters).some((v) => v !== "none" && v !== "") && "bg-blue-50 border-blue-200 text-blue-700"
+                )}
+              >
+                <SlidersHorizontal className="size-4" />
+                Add Filter
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-4" align="start">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium text-sm leading-none">Filter Reviews</h4>
+                {Object.values(filters).some((v) => v !== "none" && v !== "") && (
+                  <button
+                    onClick={() => setFilters({ relatedToType: "none", itemSearch: "", account: "none", reviewCategory: "none" })}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">Related To</Label>
+                  <Select value={filters.relatedToType} onValueChange={(v) => setFilters((f) => ({ ...f, relatedToType: v }))}>
+                    <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="All" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">All</SelectItem>
+                      {Object.keys(ITEMS_BY_CATEGORY).map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-gray-600">Fixture / Scope / Inquiry Number</Label>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Search number"
+                    value={filters.itemSearch}
+                    onChange={(e) => setFilters((f) => ({ ...f, itemSearch: e.target.value }))}
+                  />
+                </div>
+                {isV2 && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-gray-600">Account</Label>
+                      <Select value={filters.account} onValueChange={(v) => setFilters((f) => ({ ...f, account: v }))}>
+                        <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="All" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">All</SelectItem>
+                          {ACCOUNTS.map((a) => (
+                            <SelectItem key={a} value={a}>{a}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-gray-600">Category</Label>
+                      <Select value={filters.reviewCategory} onValueChange={(v) => setFilters((f) => ({ ...f, reviewCategory: v }))}>
+                        <SelectTrigger className="h-8 text-xs w-full"><SelectValue placeholder="All" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">All</SelectItem>
+                          {REVIEW_CATEGORIES.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Right — Lists/Trash + Archived toggle + Add Review + Kebab */}
@@ -877,6 +976,35 @@ export function Legal() {
               />
             </div>
 
+            {isV2 && (
+            <div className="grid grid-cols-2 gap-4">
+              {/* Due Date */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Due Date</Label>
+                <DatePicker
+                  value={form.dueDate}
+                  onChange={(d) => setForm((f) => ({ ...f, dueDate: d ?? "" }))}
+                  placeholder="Select due date"
+                />
+              </div>
+
+              {/* Review Raised By */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Review Raised By</Label>
+                <Select value={form.reviewRaisedBy} onValueChange={(v) => setForm((f) => ({ ...f, reviewRaisedBy: v }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {USERS.map((u) => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            )}
+
             {/* Related To — phone-number-style split field */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Related To</Label>
@@ -1076,14 +1204,12 @@ export function Legal() {
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Draft Charter Party Issuance Date</Label>
-                <DatePicker value={form.draftCpIssuanceDate} onChange={(d) => setForm((f) => ({ ...f, draftCpIssuanceDate: d ?? "", ...(d ? { legalReviewStatus: "Draft issued" } : {}) }))} placeholder="Select date" />
-                <p className="text-xs text-gray-400">Setting this date changes the status to "Draft issued".</p>
+                <DatePicker value={form.draftCpIssuanceDate} onChange={(d) => setForm((f) => ({ ...f, draftCpIssuanceDate: d ?? "" }))} placeholder="Select date" />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Final Charter Party Issuance Date</Label>
-                <DatePicker value={form.finalCpIssuanceDate} onChange={(d) => setForm((f) => ({ ...f, finalCpIssuanceDate: d ?? "", ...(d ? { legalReviewStatus: "Final issued" } : {}) }))} placeholder="Select date" />
-                <p className="text-xs text-gray-400">Setting this date changes the status to "Final issued".</p>
+                <DatePicker value={form.finalCpIssuanceDate} onChange={(d) => setForm((f) => ({ ...f, finalCpIssuanceDate: d ?? "" }))} placeholder="Select date" />
               </div>
 
               <div className="space-y-2">
@@ -1126,6 +1252,8 @@ export function Legal() {
             </>
             )}
 
+            {!isV2 && (
+            <>
             {/* Due Date */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Due Date</Label>
@@ -1150,6 +1278,8 @@ export function Legal() {
                 </SelectContent>
               </Select>
             </div>
+            </>
+            )}
 
             {/* ── Tasks Section ──────────────────────────────────────────────── */}
             {editingId && (

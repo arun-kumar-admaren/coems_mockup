@@ -26,7 +26,7 @@ const REVIEW_STATUSES = [
 
 // Version 2.0 (BRD v2)
 const REVIEW_STATUSES_V2 = [
-  "To be reviewed", "Under review", "Review completed", "Under negotiation",
+  "Open", "Under review", "Review completed", "Under negotiation",
   "Draft issued", "Final issued", "Signed", "Not required",
 ];
 const LABELS_V2 = [
@@ -48,7 +48,7 @@ const STATUS_STYLES: Record<string, string> = {
   "Under Review": "bg-yellow-100 text-yellow-700",
   "Not Required": "bg-gray-100 text-gray-700",
   "To be reviewed by Legal": "bg-red-100 text-red-700",
-  "To be reviewed": "bg-red-100 text-red-700",
+  "Open": "bg-red-100 text-red-700",
   "Under review": "bg-yellow-100 text-yellow-700",
   "Review completed": "bg-green-100 text-green-700",
   "Under negotiation": "bg-amber-100 text-amber-700",
@@ -637,6 +637,33 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                 />
               </div>
 
+              {isV2 && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Due Date */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Due Date</Label>
+                  <DatePicker
+                    value={form.dueDate ? new Date(form.dueDate) : undefined}
+                    onChange={(d) => setForm((f) => ({ ...f, dueDate: d ? d.toISOString().slice(0, 10) : "" }))}
+                    placeholder="Select due date"
+                  />
+                </div>
+
+                {/* Review Raised By */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium text-gray-700">Review Raised By</Label>
+                  <Select value={form.reviewRaisedBy} onValueChange={(v) => setForm((f) => ({ ...f, reviewRaisedBy: v }))}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[600]">
+                      {USERS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              )}
+
               {/* Related To — phone-number-style split field */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Related To</Label>
@@ -846,14 +873,12 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
 
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">Draft Charter Party Issuance Date</Label>
-                  <DatePicker value={form.draftCpIssuanceDate ? new Date(form.draftCpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, draftCpIssuanceDate: d ? d.toISOString().slice(0, 10) : "", ...(d ? { legalReviewStatus: "Draft issued" } : {}) }))} placeholder="Select date" />
-                  <p className="text-xs text-gray-400">Setting this date changes the status to "Draft issued".</p>
+                  <DatePicker value={form.draftCpIssuanceDate ? new Date(form.draftCpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, draftCpIssuanceDate: d ? d.toISOString().slice(0, 10) : "" }))} placeholder="Select date" />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium text-gray-700">Final Charter Party Issuance Date</Label>
-                  <DatePicker value={form.finalCpIssuanceDate ? new Date(form.finalCpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, finalCpIssuanceDate: d ? d.toISOString().slice(0, 10) : "", ...(d ? { legalReviewStatus: "Final issued" } : {}) }))} placeholder="Select date" />
-                  <p className="text-xs text-gray-400">Setting this date changes the status to "Final issued".</p>
+                  <DatePicker value={form.finalCpIssuanceDate ? new Date(form.finalCpIssuanceDate) : undefined} onChange={(d) => setForm((f) => ({ ...f, finalCpIssuanceDate: d ? d.toISOString().slice(0, 10) : "" }))} placeholder="Select date" />
                 </div>
 
                 <div className="space-y-1.5">
@@ -895,6 +920,8 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
               </>
               )}
 
+              {!isV2 && (
+              <>
               {/* Due Date */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-gray-700">Due Date</Label>
@@ -917,6 +944,8 @@ export function LegalReviewEmbedded({ moduleType, moduleId }: LegalReviewEmbedde
                   </SelectContent>
                 </Select>
               </div>
+              </>
+              )}
 
               {/* Created Date (edit mode only) */}
               {editingId && editingReview && (
