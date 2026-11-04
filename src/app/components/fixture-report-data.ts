@@ -1,6 +1,8 @@
 // Data and helpers for the New Fixture Report mockup (COEMS Version 2.0).
 // The sample rows come from the Fixture List "Export All" on bctesting (fixtures booked 2021-2022).
 // Exchange rates below are sample values, not system rates.
+// Popup fields (PO, 2026-11-04 round 2 + columns): Report Name, Based on, Date Range, Convert to, Select required columns. All offices and all fixture
+// statuses are always included; every fixture is converted at its own conversion date.
 
 export type ColType = "text" | "num" | "date" | "datetime";
 export interface Col { name: string; type: ColType; added?: boolean }
@@ -14,10 +16,8 @@ export interface ReportParams {
   basis: Basis;
   from: string; // yyyy-mm-dd
   to: string;   // yyyy-mm-dd
-  offices: string[] | null; // null = all offices
   currency: string;
-  convDate: string;
-  inclCP: boolean; // include Cancelled and Postponed fixtures
+  columns: string[] | null; // "Select required columns": the table columns the user wants; null = all (default)
 }
 
 export interface ChartSpec {
@@ -56,29 +56,83 @@ export interface ReportRecord {
 
 export const BASIS_LABEL: Record<Basis, string> = { booking: "Booking Date", created: "Created Date", laycan: "Laycan Start" };
 export const CURRENCIES = ["US Dollar", "Euro"];
-const RATES_TO_USD: Record<string, number> = { "US Dollar": 1, Euro: 1.17 };
+
+// Sample EUR to USD rates by month (not system rates). The real report uses each fixture's own conversion rate and date.
+const EUR_USD_BY_MONTH: Record<string, number> = {
+  "2021-01": 1.2171, "2021-02": 1.2098, "2021-03": 1.1899, "2021-04": 1.1964, "2021-05": 1.2147, "2021-06": 1.2053,
+  "2021-07": 1.1822, "2021-08": 1.1771, "2021-09": 1.1774, "2021-10": 1.1601, "2021-11": 1.1414, "2021-12": 1.1304,
+  "2022-01": 1.1314, "2022-02": 1.1342, "2022-03": 1.1019, "2022-04": 1.0819, "2022-05": 1.0572, "2022-06": 1.0564,
+  "2022-07": 1.0179, "2022-08": 1.0128, "2022-09": 0.9904, "2022-10": 0.98, "2022-11": 1.0201, "2022-12": 1.0577,
+  "2023-01": 1.077, "2023-02": 1.0715, "2023-03": 1.0706, "2023-04": 1.0968, "2023-05": 1.0868, "2023-06": 1.084,
+  "2023-07": 1.106, "2023-08": 1.0909, "2023-09": 1.0684, "2023-10": 1.0563, "2023-11": 1.0813, "2023-12": 1.09,
+};
+function eurUsdOn(dateIso: string): number {
+  const months = Object.keys(EUR_USD_BY_MONTH);
+  const m = dateIso.slice(0, 7);
+  return EUR_USD_BY_MONTH[m] ?? EUR_USD_BY_MONTH[m < months[0] ? months[0] : months[months.length - 1]];
+}
+/** The conversion date a fixture carries. The export has no such column, so the mockup uses the booking date (else the created date). */
+function conversionDate(r: Row): string | null {
+  return (r["BOOKING DATE"] as string | null) || (((r["CREATED ON"] as string | null) || "").slice(0, 10) || null);
+}
+function convertAmount(amount: number, from: string, to: string, onDate: string | null): number | null {
+  if (typeof amount !== "number") return null;
+  if (from === to) return Math.round(amount * 100) / 100;
+  if (!onDate) return null;
+  const rate = eurUsdOn(onDate);
+  if (from === "Euro" && to === "US Dollar") return Math.round(amount * rate * 100) / 100;
+  if (from === "US Dollar" && to === "Euro") return Math.round((amount / rate) * 100) / 100;
+  return null;
+}
 
 export const ADDED_COLS: Col[] = [
   { name: "CONVERTED GROSS FREIGHT", type: "num", added: true },
   { name: "CONVERTED MANAGEMENT FEE", type: "num", added: true },
-  { name: "REPORT MONTH", type: "text", added: true },
-  { name: "REPORT YEAR", type: "text", added: true },
 ];
 
-export interface Loaded { cols: Col[]; rows: Row[]; offices: string[] }
+/** Left out of the table for now: they hold several comma separated values in one cell, which charts and pivots cannot use. */
+export const LEFT_OUT_COLS = ["PORT OF LOADING", "PORT OF DISCHARGE", "COMMISSIONS"];
+
+/* ---------- dates: month and year come from the date column itself (like Excel's date grouping), not from extra columns ---------- */
+export type DatePart = "Month" | "Year";
+export const DATE_PARTS: DatePart[] = ["Month", "Year"];
+export const isDateType = (t: ColType | undefined) => t === "date" || t === "datetime";
+export const partName = (col: string, part: DatePart) => `${col} (${part})`;
+/** "BOOKING DATE (Month)" gives ["BOOKING DATE", "Month"]; a plain column gives [column, null]. `types` must hold the table columns. */
+export function splitField(field: string, types: Record<string, ColType>): [string, DatePart | null] {
+  for (const part of DATE_PARTS) {
+    const suffix = ` (${part})`;
+    if (field.endsWith(suffix) && isDateType(types[field.slice(0, -suffix.length)])) return [field.slice(0, -suffix.length), part];
+  }
+  return [field, null];
+}
+/** Hidden helper fields (one Month and one Year per date column) that charts and pivots group by. They are never table columns. */
+export function dateFieldCols(cols: Col[]): Col[] {
+  const out: Col[] = [];
+  cols.forEach((c) => { if (isDateType(c.type)) DATE_PARTS.forEach((p) => out.push({ name: partName(c.name, p), type: "text" })); });
+  return out;
+}
+
+export interface Loaded { cols: Col[]; rows: Row[] }
 let cache: Promise<Loaded> | null = null;
 export function loadFixtureData(): Promise<Loaded> {
   if (!cache) {
     cache = import("../data/fixture-export-sample.json").then((m: any) => {
       const d = m.default ?? m;
-      const base: Col[] = d.cols.map((c: [string, ColType]) => ({ name: c[0], type: c[1], added: c[0] === "LAYCAN START" || c[0] === "LAYCAN END" }));
+      const all: Col[] = d.cols.map((c: [string, ColType]) => ({ name: c[0], type: c[1], added: c[0] === "LAYCAN START" || c[0] === "LAYCAN END" }));
       const rows: Row[] = d.rows.map((r: Cell[]) => {
         const o: Row = {};
-        base.forEach((c, i) => { o[c.name] = r[i]; });
+        all.forEach((c, i) => { o[c.name] = r[i]; });
         return o;
       });
-      const offices = Array.from(new Set(rows.map((r) => (r["FIXED BY"] as string) || "(Blank)"))).sort();
-      return { cols: [...base, ...ADDED_COLS], rows, offices };
+      const base = all.filter((c) => !LEFT_OUT_COLS.includes(c.name));
+      const parts = base.filter((c) => isDateType(c.type));
+      rows.forEach((o) => parts.forEach((c) => {
+        const v = o[c.name] as string | null;
+        o[partName(c.name, "Month")] = v ? v.slice(0, 7) : null;
+        o[partName(c.name, "Year")] = v ? v.slice(0, 4) : null;
+      }));
+      return { cols: [...base, ...ADDED_COLS], rows };
     });
   }
   return cache;
@@ -103,13 +157,7 @@ export function todayDmy(): string {
 export function buildTable(rows: Row[], p: ReportParams): { rows: Row[]; missing: number } {
   const out: Row[] = [];
   let missing = 0;
-  const target = RATES_TO_USD[p.currency] ?? 1;
-  const officeSet = p.offices ? new Set(p.offices) : null;
   for (const r of rows) {
-    const office = (r["FIXED BY"] as string) || "(Blank)";
-    if (officeSet && !officeSet.has(office)) continue;
-    const st = r["FIXTURE STATUS"];
-    if (!p.inclCP && (st === "Cancelled" || st === "Postponed")) continue;
     const d = p.basis === "booking" ? (r["BOOKING DATE"] as string | null)
       : p.basis === "created" ? (((r["CREATED ON"] as string | null) || "").slice(0, 10) || null)
       : (r["LAYCAN START"] as string | null);
@@ -117,12 +165,10 @@ export function buildTable(rows: Row[], p: ReportParams): { rows: Row[]; missing
     if (p.from && d < p.from) continue;
     if (p.to && d > p.to) continue;
     const o: Row = { ...r };
-    const rate = RATES_TO_USD[r["CURRENCY"] as string];
-    const f = rate ? rate / target : null;
-    o["CONVERTED GROSS FREIGHT"] = f == null ? null : Math.round((r["GROSS FREIGHT"] as number) * f * 100) / 100;
-    o["CONVERTED MANAGEMENT FEE"] = f == null ? null : Math.round((r["MANAGEMENT FEE"] as number) * f * 100) / 100;
-    o["REPORT MONTH"] = d.slice(0, 7);
-    o["REPORT YEAR"] = d.slice(0, 4);
+    // Each fixture is converted at its own conversion date, into the currency chosen in the popup
+    const on = conversionDate(r);
+    o["CONVERTED GROSS FREIGHT"] = convertAmount(r["GROSS FREIGHT"] as number, r["CURRENCY"] as string, p.currency, on);
+    o["CONVERTED MANAGEMENT FEE"] = convertAmount(r["MANAGEMENT FEE"] as number, r["CURRENCY"] as string, p.currency, on);
     out.push(o);
   }
   return { rows: out, missing };
@@ -285,19 +331,17 @@ export const EXAMPLE_PARAMS: ReportParams = {
   basis: "booking",
   from: "2022-01-01",
   to: "2022-12-31",
-  offices: null,
   currency: "US Dollar",
-  convDate: "2026-11-04",
-  inclCP: false,
+  columns: null,
 };
 export const EXAMPLE_CHARTS: ChartSpec[] = [
-  { id: 1, type: "bar", name: "Fixtures per month", x: "REPORT MONTH", y: "NUMBER", agg: "Count" },
-  { id: 2, type: "stacked", name: "Converted Gross Freight per month, by currency", x: "REPORT MONTH", y: "CONVERTED GROSS FREIGHT", agg: "Sum", stack: "CURRENCY", pct: false },
+  { id: 1, type: "bar", name: "Fixtures per month", x: "BOOKING DATE (Month)", y: "NUMBER", agg: "Count" },
+  { id: 2, type: "stacked", name: "Converted Gross Freight per month, by currency", x: "BOOKING DATE (Month)", y: "CONVERTED GROSS FREIGHT", agg: "Sum", stack: "CURRENCY", pct: false },
   { id: 3, type: "pie", name: "Fixtures by cargo type", cat: "CARGO TYPE", val: "NUMBER", agg: "Count" },
   { id: 4, type: "pie", name: "Fixtures by fixture status", cat: "FIXTURE STATUS", val: "NUMBER", agg: "Count" },
 ];
 export const EXAMPLE_PIVOTS: PivotSpec[] = [
   { id: 1, name: "Gross Freight against Converted Gross Freight, by currency", rows: "CURRENCY", cols: "", fcol: "", fval: "", values: [["NUMBER", "Count"], ["GROSS FREIGHT", "Sum"], ["CONVERTED GROSS FREIGHT", "Sum"]] },
-  { id: 2, name: "Monthly overview", rows: "REPORT MONTH", cols: "", fcol: "", fval: "", values: [["NUMBER", "Count"], ["CONVERTED GROSS FREIGHT", "Sum"], ["CONVERTED MANAGEMENT FEE", "Sum"]] },
+  { id: 2, name: "Monthly overview", rows: "BOOKING DATE (Month)", cols: "", fcol: "", fval: "", values: [["NUMBER", "Count"], ["CONVERTED GROSS FREIGHT", "Sum"], ["CONVERTED MANAGEMENT FEE", "Sum"]] },
   { id: 3, name: "Fixture status by invoice status", rows: "FIXTURE STATUS", cols: "INVOICE STATUS", fcol: "", fval: "", values: [["NUMBER", "Count"]] },
 ];

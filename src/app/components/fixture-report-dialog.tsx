@@ -5,38 +5,40 @@ import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Field, NativeSelect, inputCls } from "./fixture-report-ui";
-import { Basis, BASIS_LABEL, CURRENCIES, ReportParams, loadFixtureData, todayIso } from "./fixture-report-data";
+import { Basis, BASIS_LABEL, CURRENCIES, Col, ReportParams, loadFixtureData } from "./fixture-report-data";
 
-const EMPTY = (): ReportParams => ({
-  name: "", basis: "booking", from: "", to: "", offices: null, currency: "US Dollar", convDate: todayIso(), inclCP: false,
-});
+const EMPTY = (): ReportParams => ({ name: "", basis: "booking", from: "", to: "", currency: "US Dollar", columns: null });
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode: "create" | "edit";
   initial?: ReportParams;
+  /** Table columns that existing charts or pivot tables use: they cannot be deselected while those exist. */
+  lockedCols?: string[];
   onSubmit: (p: ReportParams) => void;
 }
 
-/** Add New / Edit Fixture Report popup (fields agreed with the PO, 2026-11-04). */
-export function FixtureReportDialog({ open, onOpenChange, mode, initial, onSubmit }: Props) {
+/** Add New / Edit Fixture Report popup (fields agreed with the PO, 2026-11-04: no Offices, Conversion Date or status checkbox; plus Select required columns). */
+export function FixtureReportDialog({ open, onOpenChange, mode, initial, lockedCols, onSubmit }: Props) {
   const [p, setP] = useState<ReportParams>(initial ?? EMPTY());
-  const [offices, setOffices] = useState<string[]>([]);
+  const [all, setAll] = useState<Col[]>([]);
+  const [q, setQ] = useState("");
 
-  useEffect(() => { loadFixtureData().then((d) => setOffices(d.offices)); }, []);
-  useEffect(() => { if (open) setP(initial ?? EMPTY()); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadFixtureData().then((d) => setAll(d.cols)); }, []);
+  useEffect(() => { if (open) { setP(initial ?? EMPTY()); setQ(""); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = <K extends keyof ReportParams>(k: K, v: ReportParams[K]) => setP((s) => ({ ...s, [k]: v }));
-  const selected = p.offices ?? offices;
-  const toggleOffice = (o: string) => {
-    const cur = new Set(selected);
-    if (cur.has(o)) cur.delete(o); else cur.add(o);
-    set("offices", cur.size === offices.length ? null : Array.from(cur));
-  };
+  const names = all.map((c) => c.name);
+  const selected = p.columns ?? names;
+  const setSelected = (list: string[]) => set("columns", list.length === names.length ? null : list); // everything selected = default (null)
+  const toggle = (n: string) => setSelected(selected.includes(n) ? selected.filter((x) => x !== n) : names.filter((x) => x === n || selected.includes(x)));
+  const locked = lockedCols ?? [];
+  const blocked = locked.filter((c) => !selected.includes(c));
+  const columnText = names.length === 0 ? "Loading…" : p.columns === null ? `All ${names.length} columns` : `${selected.length} of ${names.length} columns`;
+
   const rangeOk = !!p.from && !!p.to && p.from <= p.to;
-  const valid = p.name.trim().length > 0 && rangeOk && !!p.convDate && selected.length > 0;
-  const officeText = p.offices === null ? `All ${offices.length} offices` : `${p.offices.length} of ${offices.length} offices`;
+  const valid = p.name.trim().length > 0 && rangeOk && selected.length > 0 && blocked.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -44,7 +46,7 @@ export function FixtureReportDialog({ open, onOpenChange, mode, initial, onSubmi
         <DialogHeader>
           <DialogTitle>{mode === "create" ? "Add New Fixture Report" : "Edit Fixture Report"}</DialogTitle>
           <DialogDescription>
-            A table is generated with every column of the Fixture List Export All for the date range you choose. You then build your own charts and pivot tables from it.
+            A table is generated with the Fixture List columns you select (all by default) for every office and fixture status in the date range you choose. You then build your own charts and pivot tables from it.
           </DialogDescription>
         </DialogHeader>
 
@@ -65,44 +67,44 @@ export function FixtureReportDialog({ open, onOpenChange, mode, initial, onSubmi
             </div>
           </Field>
 
-          <Field label="Offices" hint="Filters on FIXED BY">
+          <Field label="Convert to (currency)" required hint="The two converted amount columns show this currency, each fixture at its own conversion date">
+            <NativeSelect ariaLabel="Convert to" value={p.currency} onChange={(v) => set("currency", v)} options={CURRENCIES} />
+          </Field>
+
+          <Field label="Select required columns" required hint="The columns the table will have. Charts and pivot tables can only use these." className="sm:col-span-2">
             <Popover>
               <PopoverTrigger asChild>
-                <button type="button" className={`${inputCls} flex items-center justify-between text-left`}>
-                  <span>{officeText}</span>
+                <button type="button" aria-label="Select required columns" className={`${inputCls} flex items-center justify-between text-left`}>
+                  <span>{columnText}</span>
                   <ChevronDown className="size-4 text-gray-400" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="start" className="z-[300] max-h-72 w-72 overflow-auto p-2">
-                <label className="flex items-center gap-2 border-b border-gray-100 px-1 py-1.5 text-sm">
-                  <Checkbox checked={p.offices === null} onCheckedChange={(c) => set("offices", c ? null : [])} />
-                  Select all
-                </label>
-                {offices.map((o) => (
-                  <label key={o} className="flex items-center gap-2 px-1 py-1.5 text-sm">
-                    <Checkbox checked={selected.includes(o)} onCheckedChange={() => toggleOffice(o)} />
-                    {o}
+              <PopoverContent align="start" className="z-[300] max-h-80 w-[420px] max-w-[90vw] overflow-auto p-2">
+                <div className="mb-2 flex gap-2">
+                  <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => set("columns", null)}>Select all</Button>
+                  <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => set("columns", [])}>Clear all</Button>
+                </div>
+                <input className={`${inputCls} mb-2`} placeholder="Search columns" value={q} onChange={(e) => setQ(e.target.value)} />
+                {all.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).map((c) => (
+                  <label key={c.name} className="flex items-center gap-2 px-1 py-1.5 text-sm text-gray-800">
+                    <Checkbox checked={selected.includes(c.name)} onCheckedChange={() => toggle(c.name)} />
+                    {c.name}
+                    {c.added && <span className="rounded bg-amber-100 px-1 text-[10px]">new</span>}
+                    {locked.includes(c.name) && <span className="ml-auto text-[10px] text-gray-400">used by a chart or pivot</span>}
                   </label>
                 ))}
               </PopoverContent>
             </Popover>
           </Field>
-
-          <Field label="Convert to (currency)" required hint="Used for the two converted amount columns">
-            <NativeSelect ariaLabel="Convert to" value={p.currency} onChange={(v) => set("currency", v)} options={CURRENCIES} />
-          </Field>
-
-          <Field label="Conversion Date" required hint="Date of the exchange rate. Sample rate in this mockup: 1 Euro = 1.17 US Dollar">
-            <input type="date" className={inputCls} value={p.convDate} onChange={(e) => set("convDate", e.target.value)} />
-          </Field>
-
-          <label className="flex items-center gap-2 self-end pb-1 text-sm text-gray-800">
-            <Checkbox checked={p.inclCP} onCheckedChange={(c) => set("inclCP", !!c)} />
-            Include Cancelled and Postponed fixtures
-          </label>
         </div>
 
         {p.from && p.to && !rangeOk && <p className="text-xs text-red-600">The start date must not be after the end date.</p>}
+        {names.length > 0 && selected.length === 0 && <p className="text-xs text-red-600">Select at least one column.</p>}
+        {blocked.length > 0 && (
+          <p className="text-xs text-red-600">
+            Charts or pivot tables of this report use {blocked.join(", ")}. Keep {blocked.length > 1 ? "these columns" : "this column"} selected, or delete those charts and pivot tables first.
+          </p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

@@ -9,8 +9,8 @@ import { Field, NativeSelect, inputCls } from "./fixture-report-ui";
 import { FixtureReportDialog } from "./fixture-report-dialog";
 import { BarView, PieView, StackView } from "./fixture-report-charts";
 import {
-  AggOp, BASIS_LABEL, ChartSpec, Col, Loaded, PivotSpec, ReportRecord, Row,
-  aggLabel, barData, buildTable, colTypes, comp, fmtCell, fmtNum, groupBy, keyLabel, loadFixtureData, pieData, pivotModel, sortedKeys, stackData,
+  AggOp, BASIS_LABEL, ChartSpec, Col, DatePart, LEFT_OUT_COLS, Loaded, PivotSpec, ReportRecord, Row,
+  aggLabel, barData, buildTable, colTypes, comp, dateFieldCols, fmtCell, fmtNum, groupBy, isDateType, keyLabel, loadFixtureData, partName, pieData, pivotModel, sortedKeys, splitField, stackData,
 } from "./fixture-report-data";
 
 type Tab = "reports" | "charts" | "pivot";
@@ -26,11 +26,23 @@ export function FixtureReport({ report, onPatch }: Props) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => { loadFixtureData().then(setData); }, []);
-  const types = useMemo(() => (data ? colTypes(data.cols) : {}), [data]);
+  // Charts and pivots also get a Month and a Year field for every date column (never shown as table columns)
+  const types = useMemo(() => (data ? colTypes([...data.cols, ...dateFieldCols(data.cols)]) : {}), [data]);
   const table = useMemo(() => (data ? buildTable(data.rows, params) : null), [data, params, tick]);
+  // "Select required columns": only these columns are in the table and can be used by charts and pivots
+  const cols = useMemo(() => (data ? (params.columns ? data.cols.filter((c) => params.columns!.includes(c.name)) : data.cols) : []), [data, params.columns]);
+  // Table columns the existing charts and pivots use (a date's Month/Year field counts as its date column)
+  const used = useMemo(() => {
+    const s = new Set<string>();
+    const add = (f?: string) => { if (f) s.add(splitField(f, types)[0]); };
+    report.charts.forEach((c) => { add(c.x); add(c.y); add(c.stack); add(c.cat); add(c.val); });
+    report.pivots.forEach((p) => { add(p.rows); add(p.cols); add(p.fcol); p.values.forEach((v) => add(v[0])); });
+    return Array.from(s);
+  }, [report.charts, report.pivots, types]);
 
   if (!data || !table) return <div className="p-8 text-sm text-gray-500">Generating the table…</div>;
 
+  const has = (name: string) => cols.some((c) => c.name === name);
   const cg = table.rows.reduce((a, r) => a + ((r["CONVERTED GROSS FREIGHT"] as number) || 0), 0);
   const cm = table.rows.reduce((a, r) => a + ((r["CONVERTED MANAGEMENT FEE"] as number) || 0), 0);
   const cur = params.currency === "Euro" ? "EUR" : "USD";
@@ -41,8 +53,7 @@ export function FixtureReport({ report, onPatch }: Props) {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{report.name}</h2>
           <p className="text-xs text-gray-500">
-            {BASIS_LABEL[params.basis]}: {fmtCell("date", params.from)} to {fmtCell("date", params.to)} · converted to {params.currency}
-            {params.inclCP ? " · Cancelled and Postponed included" : ""}
+            {BASIS_LABEL[params.basis]}: {fmtCell("date", params.from)} to {fmtCell("date", params.to)} · converted to {params.currency} at each fixture's own conversion date
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -58,8 +69,8 @@ export function FixtureReport({ report, onPatch }: Props) {
 
       <div className="flex flex-wrap gap-3 px-6 py-3">
         <Stat label="Fixtures in this report" value={fmtNum(table.rows.length)} />
-        <Stat label="Converted Gross Freight" value={`${cur} ${comp(cg)}`} />
-        <Stat label="Converted Management Fee" value={`${cur} ${comp(cm)}`} />
+        {has("CONVERTED GROSS FREIGHT") && <Stat label="Converted Gross Freight" value={`${cur} ${comp(cg)}`} />}
+        {has("CONVERTED MANAGEMENT FEE") && <Stat label="Converted Management Fee" value={`${cur} ${comp(cm)}`} />}
       </div>
 
       <div className="border-b border-gray-200 px-6">
@@ -73,9 +84,9 @@ export function FixtureReport({ report, onPatch }: Props) {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {tab === "reports" && <ReportsTab cols={data.cols} rows={table.rows} hidden={report.hidden} onHidden={(h) => onPatch({ hidden: h })} basisMissing={params.basis === "laycan" ? table.missing : 0} />}
-        {tab === "charts" && <ChartsTab types={types} cols={data.cols} allRows={data.rows} rows={table.rows} charts={report.charts} onCharts={(c) => onPatch({ charts: c })} />}
-        {tab === "pivot" && <PivotTab types={types} cols={data.cols} rows={table.rows} pivots={report.pivots} sel={report.pivotSel} onChange={(pivots, sel) => onPatch({ pivots, pivotSel: sel })} />}
+        {tab === "reports" && <ReportsTab cols={cols} exportTotal={data.cols.filter((c) => !c.added).length + LEFT_OUT_COLS.length} rows={table.rows} hidden={report.hidden} onHidden={(h) => onPatch({ hidden: h })} basisMissing={params.basis === "laycan" ? table.missing : 0} />}
+        {tab === "charts" && <ChartsTab types={types} cols={cols} allRows={data.rows} rows={table.rows} charts={report.charts} onCharts={(c) => onPatch({ charts: c })} />}
+        {tab === "pivot" && <PivotTab types={types} cols={cols} rows={table.rows} pivots={report.pivots} sel={report.pivotSel} onChange={(pivots, sel) => onPatch({ pivots, pivotSel: sel })} />}
       </div>
 
       <FixtureReportDialog
@@ -83,6 +94,7 @@ export function FixtureReport({ report, onPatch }: Props) {
         onOpenChange={setEditOpen}
         mode="edit"
         initial={params}
+        lockedCols={used}
         onSubmit={(p) => onPatch({ params: p, name: p.name })}
       />
     </div>
@@ -112,7 +124,7 @@ function loadWidths(): Record<string, number> {
   } catch { return {}; }
 }
 
-function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[]; rows: Row[]; hidden: string[]; onHidden: (h: string[]) => void; basisMissing: number }) {
+function ReportsTab({ cols, exportTotal, rows, hidden, onHidden, basisMissing }: { cols: Col[]; exportTotal: number; rows: Row[]; hidden: string[]; onHidden: (h: string[]) => void; basisMissing: number }) {
   const [page, setPage] = useState(0);
   const [q, setQ] = useState("");
   const [widths, setWidths] = useState<Record<string, number>>(loadWidths);
@@ -124,6 +136,9 @@ function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[
   const visible = cols.filter((c) => !hidden.includes(c.name));
   const slice = rows.slice(p * per, p * per + per);
   const toggle = (name: string) => onHidden(hidden.includes(name) ? hidden.filter((h) => h !== name) : [...hidden, name]);
+  const leftOut = LEFT_OUT_COLS.map((n) => n.toLowerCase());
+  const leftOutSentence = `${leftOut.slice(0, -1).join(", ")} and ${leftOut[leftOut.length - 1]}`;
+  const leftOutText = leftOutSentence.charAt(0).toUpperCase() + leftOutSentence.slice(1);
 
   // Default width = what the header and the longest of the first rows need (capped, so long text is cut off with "…" until widened)
   const defaults = useMemo(() => {
@@ -165,7 +180,7 @@ function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-gray-500">
-          One row per fixture: all {cols.filter((c) => !c.added).length} Fixture List Export All columns, plus the ones marked <span className="rounded bg-amber-100 px-1 text-[10px] text-gray-800">new</span>. Charts and pivots can only use these columns.
+          One row per fixture: {cols.filter((c) => !c.added).length} of the {exportTotal} Fixture List Export All columns{cols.some((c) => c.added) && <>, plus the ones marked <span className="rounded bg-amber-100 px-1 text-[10px] text-gray-800">new</span></>}. {leftOutText} are left out for now: they hold several comma separated values in one cell. Charts and pivots can only use the columns selected for this report (the gear above changes them); a date column can be grouped by month or year.
           {basisMissing > 0 && ` ${basisMissing} fixtures have no laycan and are left out.`}
         </p>
         <Popover>
@@ -351,14 +366,41 @@ function aggOptions(types: Record<string, Col["type"]>, col: string): AggOp[] {
   return types[col] === "num" ? ["Count", "Sum", "Average"] : ["Count"];
 }
 
+/** Column picker for fields charts and pivots group by. A date column is detected automatically and gets a second
+ *  select to group it by month or year (like Excel), so no month/year columns are needed in the table. */
+function FieldPicker({ value, onChange, cols, types, allowNone, noneLabel, ariaLabel }: {
+  value: string; onChange: (v: string) => void; cols: Col[]; types: Record<string, Col["type"]>;
+  allowNone?: boolean; noneLabel?: string; ariaLabel?: string;
+}) {
+  const [base, part] = splitField(value, types);
+  const isDate = isDateType(types[base]);
+  const names = cols.map((c) => c.name);
+  const options = allowNone ? [{ value: "", label: noneLabel ?? "(none)" }, ...names] : names;
+  return (
+    <div className={isDate ? "grid grid-cols-[1fr_120px] gap-2" : ""}>
+      <NativeSelect ariaLabel={ariaLabel} value={base} onChange={(b) => onChange(isDateType(types[b]) ? partName(b, part ?? "Month") : b)} options={options} />
+      {isDate && (
+        <NativeSelect
+          ariaLabel={`${ariaLabel ?? "Field"} date grouping`}
+          value={part ?? "Day"}
+          onChange={(g) => onChange(g === "Day" ? base : partName(base, g as DatePart))}
+          options={[{ value: "Month", label: "By month" }, { value: "Year", label: "By year" }, { value: "Day", label: "By day" }]}
+        />
+      )}
+    </div>
+  );
+}
+
 function ChartDialog({ type, cols, types, onClose, onCreate }: { type: ChartSpec["type"]; cols: Col[]; types: Record<string, Col["type"]>; onClose: () => void; onCreate: (s: ChartSpec) => void }) {
   const names = cols.map((c) => c.name);
+  // Preferred starting choices, falling back to the first selected column when the report does not have them
+  const dflt = (pref: string) => (names.includes(splitField(pref, types)[0]) ? pref : names[0]);
   const [name, setName] = useState("");
-  const [x, setX] = useState("REPORT MONTH");
-  const [y, setY] = useState("NUMBER");
-  const [stack, setStack] = useState("CURRENCY");
-  const [cat, setCat] = useState("CARGO TYPE");
-  const [val, setVal] = useState("NUMBER");
+  const [x, setX] = useState(dflt("BOOKING DATE (Month)"));
+  const [y, setY] = useState(dflt("NUMBER"));
+  const [stack, setStack] = useState(dflt("CURRENCY"));
+  const [cat, setCat] = useState(dflt("CARGO TYPE"));
+  const [val, setVal] = useState(dflt("NUMBER"));
   const [agg, setAgg] = useState<AggOp>("Count");
   const [pct, setPct] = useState(false);
   const [err, setErr] = useState("");
@@ -382,19 +424,19 @@ function ChartDialog({ type, cols, types, onClose, onCreate }: { type: ChartSpec
           <Field label="Chart Name" required><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
           {type === "pie" ? (
             <>
-              <Field label="Category (Slice By)" required><NativeSelect value={cat} onChange={setCat} options={names} /></Field>
+              <Field label="Category (Slice By)" required><FieldPicker ariaLabel="Category" value={cat} onChange={setCat} cols={cols} types={types} /></Field>
               <Field label="Value" required><NativeSelect value={val} onChange={setVal} options={names} /></Field>
             </>
           ) : (
             <>
-              <Field label="X Axis" required><NativeSelect value={x} onChange={setX} options={names} /></Field>
+              <Field label="X Axis" required><FieldPicker ariaLabel="X Axis" value={x} onChange={setX} cols={cols} types={types} /></Field>
               <Field label="Y Axis" required><NativeSelect value={y} onChange={setY} options={names} /></Field>
             </>
           )}
           <Field label="Aggregation" required><NativeSelect value={curAgg} onChange={(v) => setAgg(v as AggOp)} options={opts} /></Field>
           {type === "stacked" && (
             <>
-              <Field label="Stack By" required><NativeSelect value={stack} onChange={setStack} options={names} /></Field>
+              <Field label="Stack By" required><FieldPicker ariaLabel="Stack By" value={stack} onChange={setStack} cols={cols} types={types} /></Field>
               <Field label="Display In">
                 <div className="flex gap-4 text-sm text-gray-800">
                   <label className="flex items-center gap-1.5"><input type="radio" checked={!pct} onChange={() => setPct(false)} /> Values</label>
@@ -478,12 +520,13 @@ function PivotTab({ types, cols, rows, pivots, sel, onChange }: { types: Record<
 
 function PivotDialog({ cols, types, rows, onClose, onCreate }: { cols: Col[]; types: Record<string, Col["type"]>; rows: Row[]; onClose: () => void; onCreate: (s: PivotSpec) => void }) {
   const names = cols.map((c) => c.name);
+  const dflt = (pref: string) => (names.includes(splitField(pref, types)[0]) ? pref : names[0]);
   const [name, setName] = useState("");
-  const [rowsCol, setRowsCol] = useState("REPORT MONTH");
+  const [rowsCol, setRowsCol] = useState(dflt("BOOKING DATE (Month)"));
   const [colsCol, setColsCol] = useState("");
   const [fcol, setFcol] = useState("");
   const [fval, setFval] = useState("");
-  const [vals, setVals] = useState<[string, AggOp][]>([["NUMBER", "Count"], ["", "Count"], ["", "Count"]]);
+  const [vals, setVals] = useState<[string, AggOp][]>([[dflt("NUMBER"), "Count"], ["", "Count"], ["", "Count"]]);
   const [err, setErr] = useState("");
 
   const fOptions = useMemo(() => {
@@ -512,10 +555,10 @@ function PivotDialog({ cols, types, rows, onClose, onCreate }: { cols: Col[]; ty
         <DialogHeader><DialogTitle>Add New Pivot Table</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <Field label="Pivot Table Name" required><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
-          <Field label="Rows" required><NativeSelect value={rowsCol} onChange={setRowsCol} options={names} /></Field>
-          <Field label="Columns"><NativeSelect value={colsCol} onChange={setColsCol} options={[{ value: "", label: "(none)" }, ...names]} /></Field>
+          <Field label="Rows" required><FieldPicker ariaLabel="Rows" value={rowsCol} onChange={setRowsCol} cols={cols} types={types} /></Field>
+          <Field label="Columns"><FieldPicker ariaLabel="Columns" value={colsCol} onChange={setColsCol} cols={cols} types={types} allowNone /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Filter field"><NativeSelect value={fcol} onChange={(v) => { setFcol(v); setFval(""); }} options={[{ value: "", label: "(none)" }, ...names]} /></Field>
+            <Field label="Filter field"><FieldPicker ariaLabel="Filter field" value={fcol} onChange={(v) => { setFcol(v); setFval(""); }} cols={cols} types={types} allowNone /></Field>
             <Field label="Filter value"><NativeSelect value={fval} onChange={setFval} options={[{ value: "", label: "(all values)" }, ...fOptions]} /></Field>
           </div>
           <div className="flex flex-col gap-1 text-xs text-gray-600">
