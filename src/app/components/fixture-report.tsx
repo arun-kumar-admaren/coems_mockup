@@ -1,0 +1,470 @@
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ChevronDown, Plus, RefreshCw, Settings as SettingsIcon, Trash2 } from "lucide-react";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Field, NativeSelect, inputCls } from "./fixture-report-ui";
+import { FixtureReportDialog } from "./fixture-report-dialog";
+import { BarView, PieView, StackView } from "./fixture-report-charts";
+import {
+  AggOp, BASIS_LABEL, ChartSpec, Col, Loaded, PivotSpec, ReportRecord, Row,
+  aggLabel, barData, buildTable, colTypes, comp, fmtCell, fmtNum, groupBy, keyLabel, loadFixtureData, pieData, pivotModel, sortedKeys, stackData,
+} from "./fixture-report-data";
+
+type Tab = "reports" | "charts" | "pivot";
+const KEY_COLUMNS = ["NUMBER", "FIXTURE STATUS", "BOOKING DATE", "ACCOUNT", "CURRENCY", "GROSS FREIGHT", "CONVERTED GROSS FREIGHT"];
+
+interface Props { report: ReportRecord; onPatch: (patch: Partial<ReportRecord>) => void }
+
+export function FixtureReport({ report, onPatch }: Props) {
+  const params = report.params!;
+  const [data, setData] = useState<Loaded | null>(null);
+  const [tab, setTab] = useState<Tab>("reports");
+  const [editOpen, setEditOpen] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => { loadFixtureData().then(setData); }, []);
+  const types = useMemo(() => (data ? colTypes(data.cols) : {}), [data]);
+  const table = useMemo(() => (data ? buildTable(data.rows, params) : null), [data, params, tick]);
+
+  if (!data || !table) return <div className="p-8 text-sm text-gray-500">Generating the table…</div>;
+
+  const cg = table.rows.reduce((a, r) => a + ((r["CONVERTED GROSS FREIGHT"] as number) || 0), 0);
+  const cm = table.rows.reduce((a, r) => a + ((r["CONVERTED MANAGEMENT FEE"] as number) || 0), 0);
+  const cur = params.currency === "Euro" ? "EUR" : "USD";
+
+  return (
+    <div className="flex h-full flex-col bg-[#f8f9fa]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">{report.name}</h2>
+          <p className="text-xs text-gray-500">
+            {BASIS_LABEL[params.basis]}: {fmtCell("date", params.from)} to {fmtCell("date", params.to)} · converted to {params.currency}
+            {params.inclCP ? " · Cancelled and Postponed included" : ""}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 bg-white" onClick={() => setTick((t) => t + 1)} title="Refresh">
+            <RefreshCw className="size-4" /> Refresh
+          </Button>
+          <Button variant="outline" size="sm" className="h-9 bg-white" onClick={() => setEditOpen(true)} title="Edit the report fields">
+            <SettingsIcon className="size-4" />
+          </Button>
+          <Button size="sm" className="h-9 bg-[#111827] text-white hover:bg-[#1f2937]" disabled title="Not part of the mockup">Share</Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3 px-6 py-3">
+        <Stat label="Fixtures in this report" value={fmtNum(table.rows.length)} />
+        <Stat label="Converted Gross Freight" value={`${cur} ${comp(cg)}`} />
+        <Stat label="Converted Management Fee" value={`${cur} ${comp(cm)}`} />
+      </div>
+
+      <div className="border-b border-gray-200 px-6">
+        <div className="flex items-center gap-6">
+          {([["reports", "Reports"], ["charts", "Charts"], ["pivot", "Pivot Table"]] as [Tab, string][]).map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)} className={`border-b-2 py-3 text-sm font-medium ${tab === id ? "border-[#ffd700] text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-6">
+        {tab === "reports" && <ReportsTab cols={data.cols} rows={table.rows} hidden={report.hidden} onHidden={(h) => onPatch({ hidden: h })} basisMissing={params.basis === "laycan" ? table.missing : 0} />}
+        {tab === "charts" && <ChartsTab types={types} cols={data.cols} allRows={data.rows} rows={table.rows} charts={report.charts} onCharts={(c) => onPatch({ charts: c })} />}
+        {tab === "pivot" && <PivotTab types={types} cols={data.cols} rows={table.rows} pivots={report.pivots} sel={report.pivotSel} onChange={(pivots, sel) => onPatch({ pivots, pivotSel: sel })} />}
+      </div>
+
+      <FixtureReportDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        mode="edit"
+        initial={params}
+        onSubmit={(p) => onPatch({ params: p, name: p.name })}
+      />
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-[190px] rounded-lg border border-gray-200 bg-white px-4 py-2.5">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-xl font-semibold text-gray-900">{value}</div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- Reports tab */
+function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[]; rows: Row[]; hidden: string[]; onHidden: (h: string[]) => void; basisMissing: number }) {
+  const [page, setPage] = useState(0);
+  const [q, setQ] = useState("");
+  const per = 25;
+  const pages = Math.max(1, Math.ceil(rows.length / per));
+  const p = Math.min(page, pages - 1);
+  const visible = cols.filter((c) => !hidden.includes(c.name));
+  const slice = rows.slice(p * per, p * per + per);
+  const toggle = (name: string) => onHidden(hidden.includes(name) ? hidden.filter((h) => h !== name) : [...hidden, name]);
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-gray-500">
+          One row per fixture: all {cols.filter((c) => !c.added).length} Fixture List Export All columns, plus the ones marked <span className="rounded bg-amber-100 px-1 text-[10px] text-gray-800">new</span>. Charts and pivots can only use these columns.
+          {basisMissing > 0 && ` ${basisMissing} fixtures have no laycan and are left out.`}
+        </p>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5 bg-white">
+              Columns ({visible.length} of {cols.length}) <ChevronDown className="size-4 text-gray-400" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="max-h-96 w-80 overflow-auto p-3">
+            <div className="mb-2 flex gap-2">
+              <Button variant="outline" size="sm" className="h-8" onClick={() => onHidden([])}>Show all</Button>
+              <Button variant="outline" size="sm" className="h-8" onClick={() => onHidden(cols.map((c) => c.name).filter((n) => !KEY_COLUMNS.includes(n)))}>Key columns only</Button>
+            </div>
+            <input className={`${inputCls} mb-2`} placeholder="Search columns" value={q} onChange={(e) => setQ(e.target.value)} />
+            {cols.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).map((c) => (
+              <label key={c.name} className="flex items-center gap-2 py-1 text-xs text-gray-800">
+                <Checkbox checked={!hidden.includes(c.name)} onCheckedChange={() => toggle(c.name)} />
+                {c.name}
+                {c.added && <span className="rounded bg-amber-100 px-1 text-[10px]">new</span>}
+              </label>
+            ))}
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-sm text-gray-400">No fixtures match these fields.</div>
+      ) : (
+        <>
+          <div className="max-h-[560px] overflow-auto rounded-lg border border-gray-200 bg-white">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="text-[11px] font-medium uppercase tracking-wider text-gray-500">
+                  {visible.map((c) => (
+                    <th key={c.name} className={`sticky top-0 z-[1] whitespace-nowrap border-b border-gray-200 px-3 py-3 ${c.added ? "bg-amber-50 text-gray-800" : "bg-[#f8f9fa]"} ${c.type === "num" ? "text-right" : ""}`} title={c.added ? "New column (not in the export)" : undefined}>
+                      {c.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
+                {slice.map((r, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    {visible.map((c) => (
+                      <td key={c.name} className={`whitespace-nowrap px-3 py-2.5 ${c.type === "num" ? "text-right tabular-nums" : ""}`}>{fmtCell(c.type, r[c.name])}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-3 text-sm text-gray-600">
+            <span>{p * per + 1} – {p * per + slice.length} of {rows.length}</span>
+            <Button variant="outline" size="sm" className="h-8 bg-white" disabled={p === 0} onClick={() => setPage(p - 1)}>Previous</Button>
+            <Button variant="outline" size="sm" className="h-8 bg-white" disabled={p >= pages - 1} onClick={() => setPage(p + 1)}>Next</Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- Charts tab */
+const nextId = (items: { id: number }[]) => Math.max(0, ...items.map((i) => i.id)) + 1;
+const TYPE_LABEL = { bar: "Bar Chart", stacked: "Stacked Bar Chart", pie: "Pie Chart" } as const;
+
+function ChartsTab({ types, cols, allRows, rows, charts, onCharts }: { types: Record<string, Col["type"]>; cols: Col[]; allRows: Row[]; rows: Row[]; charts: ChartSpec[]; onCharts: (c: ChartSpec[]) => void }) {
+  const [creating, setCreating] = useState<ChartSpec["type"] | null>(null);
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-end gap-3">
+        <span className="text-xs text-gray-500">Charts are built from the table columns, as in the Port Call Evaluation Report.</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" className="h-9 gap-1.5 bg-[#111827] text-white hover:bg-[#1f2937]"><Plus className="size-4" /> Create New</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(Object.keys(TYPE_LABEL) as ChartSpec["type"][]).map((t) => (
+              <DropdownMenuItem key={t} onSelect={() => setCreating(t)}>{TYPE_LABEL[t]}</DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {charts.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-sm text-gray-400">No charts created yet. Click "Create New" to generate your first chart.</div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-sm text-gray-400">No fixtures match these fields.</div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {charts.map((c) => (
+            <ChartCard key={c.id} c={c} types={types} allRows={allRows} rows={rows} onDelete={() => onCharts(charts.filter((x) => x.id !== c.id))} />
+          ))}
+        </div>
+      )}
+
+      {creating && (
+        <ChartDialog type={creating} cols={cols} types={types} onClose={() => setCreating(null)} onCreate={(spec) => { onCharts([{ ...spec, id: nextId(charts) }, ...charts]); setCreating(null); }} />
+      )}
+    </div>
+  );
+}
+
+function ChartCard({ c, types, allRows, rows, onDelete }: { c: ChartSpec; types: Record<string, Col["type"]>; allRows: Row[]; rows: Row[]; onDelete: () => void }) {
+  const [asTable, setAsTable] = useState(false);
+  let settings = "";
+  let warn = "";
+  let chart: ReactNode = null;
+  let table: ReactNode = null;
+
+  if (c.type === "bar") {
+    const d = barData(types, rows, c);
+    settings = `X Axis: ${c.x}  |  Y Axis: ${c.y}  |  Aggregation: ${c.agg}`;
+    chart = <BarView data={d} seriesName={aggLabel(c.y!, c.agg)} />;
+    table = <SimpleTable head={[c.x!, aggLabel(c.y!, c.agg)]} body={d.map((x) => [x.name, fmtNum(x.value)])} />;
+  } else if (c.type === "stacked") {
+    const s = stackData(types, allRows, rows, c);
+    settings = `X Axis: ${c.x}  |  Y Axis: ${c.y}  |  Aggregation: ${c.agg}  |  Stack By: ${c.stack}  |  Display In: ${c.pct ? "Percentage" : "Values"}`;
+    if (s.folded) warn = `Stack By has more than 6 values; the smallest ${s.folded} are shown together as Others (mockup behaviour).`;
+    chart = <StackView data={s.data} series={s.series} percent={!!c.pct} />;
+    table = <SimpleTable head={[c.x!, ...s.series.map((x) => x.name)]} body={s.data.map((r) => [String(r.name), ...s.series.map((x) => fmtNum(Number(r[x.name]) || 0))])} />;
+  } else {
+    const p = pieData(types, allRows, rows, c);
+    const total = p.slices.reduce((a, x) => a + x.value, 0);
+    settings = `Category (Slice By): ${c.cat}  |  Value: ${c.val}  |  Aggregation: ${c.agg}`;
+    if (p.folded) warn = `This pie has ${p.groups} categories. Pies read best with 6 or fewer, so everything after the 5th is shown as Others (mockup behaviour).`;
+    chart = <PieView slices={p.slices} measure={aggLabel(c.val!, c.agg)} />;
+    table = <SimpleTable head={[c.cat!, aggLabel(c.val!, c.agg), "Share"]} body={p.slices.map((x) => [x.name, fmtNum(x.value), `${((x.value / total) * 100).toFixed(1)}%`])} />;
+  }
+
+  return (
+    <section className={`min-w-0 rounded-lg border border-gray-200 bg-white p-4 ${c.type !== "pie" ? "xl:col-span-2" : ""}`}>
+      <header className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-gray-900">{TYPE_LABEL[c.type]}: {c.name}</h3>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="h-8" onClick={() => setAsTable((v) => !v)}>{asTable ? "Chart" : "Table"}</Button>
+          <Button variant="outline" size="sm" className="h-8" onClick={onDelete} title="Delete this chart"><Trash2 className="size-4" /></Button>
+        </div>
+      </header>
+      <p className="mb-2 mt-1 text-xs text-gray-400">{settings}</p>
+      {warn && <p className="mb-2 text-xs text-orange-600">{warn}</p>}
+      {asTable ? table : chart}
+    </section>
+  );
+}
+
+function SimpleTable({ head, body }: { head: string[]; body: string[][] }) {
+  return (
+    <div className="max-h-80 overflow-auto rounded-md border border-gray-200">
+      <table className="w-full border-collapse text-left text-[13px]">
+        <thead>
+          <tr className="text-[11px] uppercase tracking-wider text-gray-500">
+            {head.map((h, i) => <th key={i} className={`sticky top-0 whitespace-nowrap border-b border-gray-200 bg-[#f8f9fa] px-3 py-2 ${i ? "text-right" : ""}`}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {body.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className={`whitespace-nowrap px-3 py-1.5 ${j ? "text-right tabular-nums" : ""}`}>{c}</td>)}</tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function aggOptions(types: Record<string, Col["type"]>, col: string): AggOp[] {
+  return types[col] === "num" ? ["Count", "Sum", "Average"] : ["Count"];
+}
+
+function ChartDialog({ type, cols, types, onClose, onCreate }: { type: ChartSpec["type"]; cols: Col[]; types: Record<string, Col["type"]>; onClose: () => void; onCreate: (s: ChartSpec) => void }) {
+  const names = cols.map((c) => c.name);
+  const [name, setName] = useState("");
+  const [x, setX] = useState("REPORT MONTH");
+  const [y, setY] = useState("NUMBER");
+  const [stack, setStack] = useState("CURRENCY");
+  const [cat, setCat] = useState("CARGO TYPE");
+  const [val, setVal] = useState("NUMBER");
+  const [agg, setAgg] = useState<AggOp>("Count");
+  const [pct, setPct] = useState(false);
+  const [err, setErr] = useState("");
+
+  const measure = type === "pie" ? val : y;
+  const opts = aggOptions(types, measure);
+  const curAgg = opts.includes(agg) ? agg : "Count";
+
+  const submit = () => {
+    if (!name.trim()) { setErr("Chart Name is required."); return; }
+    const base = { id: 0, type, name: name.trim(), agg: curAgg } as ChartSpec;
+    if (type === "pie") onCreate({ ...base, cat, val });
+    else onCreate({ ...base, x, y, ...(type === "stacked" ? { stack, pct } : {}) });
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader><DialogTitle>Add {TYPE_LABEL[type]}</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <Field label="Chart Name" required><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
+          {type === "pie" ? (
+            <>
+              <Field label="Category (Slice By)" required><NativeSelect value={cat} onChange={setCat} options={names} /></Field>
+              <Field label="Value" required><NativeSelect value={val} onChange={setVal} options={names} /></Field>
+            </>
+          ) : (
+            <>
+              <Field label="X Axis" required><NativeSelect value={x} onChange={setX} options={names} /></Field>
+              <Field label="Y Axis" required><NativeSelect value={y} onChange={setY} options={names} /></Field>
+            </>
+          )}
+          <Field label="Aggregation" required><NativeSelect value={curAgg} onChange={(v) => setAgg(v as AggOp)} options={opts} /></Field>
+          {type === "stacked" && (
+            <>
+              <Field label="Stack By" required><NativeSelect value={stack} onChange={setStack} options={names} /></Field>
+              <Field label="Display In">
+                <div className="flex gap-4 text-sm text-gray-800">
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={!pct} onChange={() => setPct(false)} /> Values</label>
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={pct} onChange={() => setPct(true)} /> Percentage</label>
+                </div>
+              </Field>
+            </>
+          )}
+          {err && <p className="text-xs text-red-600">{err}</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button className="bg-[#111827] text-white hover:bg-[#1f2937]" onClick={submit}>Create Chart</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------------------------------------------------------------- Pivot tab */
+function PivotTab({ types, cols, rows, pivots, sel, onChange }: { types: Record<string, Col["type"]>; cols: Col[]; rows: Row[]; pivots: PivotSpec[]; sel: number; onChange: (p: PivotSpec[], sel: number) => void }) {
+  const [adding, setAdding] = useState(false);
+  const cur = pivots.find((p) => p.id === sel) ?? pivots[0];
+  const model = cur && rows.length ? pivotModel(types, rows, cur) : null;
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
+      <div>
+        <Button size="sm" className="mb-2 h-9 w-full gap-1.5 bg-[#111827] text-white hover:bg-[#1f2937]" onClick={() => setAdding(true)}><Plus className="size-4" /> Add New</Button>
+        <div className="flex flex-col gap-0.5 rounded-lg border border-gray-200 bg-white p-1.5">
+          {pivots.length === 0 && <div className="px-2 py-3 text-xs text-gray-400">No pivot tables yet</div>}
+          {pivots.map((p) => (
+            <button key={p.id} onClick={() => onChange(pivots, p.id)} className={`rounded-md px-2 py-2 text-left text-[13px] ${cur?.id === p.id ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700 hover:bg-gray-50"}`}>{p.name}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="min-w-0 rounded-lg border border-gray-200 bg-white p-4">
+        {!cur ? (
+          <div className="py-10 text-center text-sm text-gray-400">No pivot data found. Click "Add New" to create a pivot table.</div>
+        ) : !model ? (
+          <div className="py-10 text-center text-sm text-gray-400">No fixtures match these fields.</div>
+        ) : (
+          <>
+            <header className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-gray-900">{cur.name}</h3>
+              <Button variant="outline" size="sm" className="h-8" onClick={() => { const rest = pivots.filter((p) => p.id !== cur.id); onChange(rest, rest[0]?.id ?? 0); }} title="Delete this pivot table"><Trash2 className="size-4" /></Button>
+            </header>
+            <p className="mb-2 mt-1 text-xs text-gray-400">
+              Rows: {cur.rows}  |  Columns: {cur.cols || "(none)"}  |  Filters: {cur.fcol ? `${cur.fcol}${cur.fval ? ` = ${cur.fval}` : ""}` : "(none)"}  |  Values: {cur.values.map((v) => aggLabel(v[0], v[1])).join(", ")}
+            </p>
+            <div className="max-h-[520px] overflow-auto rounded-md border border-gray-200">
+              <table className="w-full border-collapse text-left text-[13px]">
+                <thead>
+                  {model.colHead && (
+                    <tr><th className="sticky top-0 border-b border-gray-200 bg-[#f8f9fa] px-3 py-2" />
+                      <th colSpan={model.head.length} className="sticky top-0 border-b border-gray-200 bg-[#f8f9fa] px-3 py-2 text-left text-xs font-medium text-gray-600">{model.colHead}</th></tr>
+                  )}
+                  <tr className="text-[11px] uppercase tracking-wider text-gray-500">
+                    <th className="sticky top-0 whitespace-nowrap border-b border-gray-200 bg-[#f8f9fa] px-3 py-2">{cur.rows}</th>
+                    {model.head.map((h, i) => <th key={i} className="sticky top-0 whitespace-nowrap border-b border-gray-200 bg-[#f8f9fa] px-3 py-2 text-right">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {model.body.map((r, i) => (
+                    <tr key={i}><td className="whitespace-nowrap px-3 py-1.5">{r.label}</td>{r.cells.map((c, j) => <td key={j} className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">{c}</td>)}</tr>
+                  ))}
+                  <tr className="bg-gray-50 font-semibold"><td className="px-3 py-1.5">Grand Total</td>{model.total.map((c, j) => <td key={j} className="px-3 py-1.5 text-right tabular-nums">{c}</td>)}</tr>
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {adding && (
+        <PivotDialog cols={cols} types={types} rows={rows} onClose={() => setAdding(false)} onCreate={(spec) => { const id = nextId(pivots); onChange([...pivots, { ...spec, id }], id); setAdding(false); }} />
+      )}
+    </div>
+  );
+}
+
+function PivotDialog({ cols, types, rows, onClose, onCreate }: { cols: Col[]; types: Record<string, Col["type"]>; rows: Row[]; onClose: () => void; onCreate: (s: PivotSpec) => void }) {
+  const names = cols.map((c) => c.name);
+  const [name, setName] = useState("");
+  const [rowsCol, setRowsCol] = useState("REPORT MONTH");
+  const [colsCol, setColsCol] = useState("");
+  const [fcol, setFcol] = useState("");
+  const [fval, setFval] = useState("");
+  const [vals, setVals] = useState<[string, AggOp][]>([["NUMBER", "Count"], ["", "Count"], ["", "Count"]]);
+  const [err, setErr] = useState("");
+
+  const fOptions = useMemo(() => {
+    if (!fcol) return [] as { value: string; label: string }[];
+    const m = groupBy(types, rows, fcol);
+    return sortedKeys(types, m, fcol).slice(0, 300).map((k) => ({ value: String(k), label: keyLabel(types, fcol, k) }));
+  }, [fcol, rows, types]);
+
+  const setVal = (i: number, col: string, agg?: AggOp) => setVals((vs) => vs.map((v, j) => {
+    if (j !== i) return v;
+    const opts = aggOptions(types, col);
+    const a = agg ?? v[1];
+    return [col, opts.includes(a) ? a : "Count"] as [string, AggOp];
+  }));
+
+  const submit = () => {
+    if (!name.trim()) { setErr("Pivot Table Name is required."); return; }
+    const values = vals.filter((v) => v[0]);
+    if (!values.length) { setErr("Choose at least one Value field."); return; }
+    onCreate({ id: 0, name: name.trim(), rows: rowsCol, cols: colsCol, fcol, fval, values });
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle>Add New Pivot Table</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <Field label="Pivot Table Name" required><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoFocus /></Field>
+          <Field label="Rows" required><NativeSelect value={rowsCol} onChange={setRowsCol} options={names} /></Field>
+          <Field label="Columns"><NativeSelect value={colsCol} onChange={setColsCol} options={[{ value: "", label: "(none)" }, ...names]} /></Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Filter field"><NativeSelect value={fcol} onChange={(v) => { setFcol(v); setFval(""); }} options={[{ value: "", label: "(none)" }, ...names]} /></Field>
+            <Field label="Filter value"><NativeSelect value={fval} onChange={setFval} options={[{ value: "", label: "(all values)" }, ...fOptions]} /></Field>
+          </div>
+          <div className="flex flex-col gap-1 text-xs text-gray-600">
+            <span>Values (up to 3)<span className="text-red-500"> *</span></span>
+            {vals.map((v, i) => (
+              <div key={i} className="grid grid-cols-[1fr_120px] gap-2">
+                <NativeSelect ariaLabel={`Value ${i + 1}`} value={v[0]} onChange={(c) => setVal(i, c)} options={i === 0 ? names : [{ value: "", label: "(none)" }, ...names]} />
+                <NativeSelect ariaLabel={`Aggregation ${i + 1}`} value={v[1]} onChange={(a) => setVal(i, v[0], a as AggOp)} options={aggOptions(types, v[0])} />
+              </div>
+            ))}
+            <span className="text-[11px] text-gray-400">With a Columns field, only the first value is used.</span>
+          </div>
+          {err && <p className="text-xs text-red-600">{err}</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button className="bg-[#111827] text-white hover:bg-[#1f2937]" onClick={submit}>Add</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

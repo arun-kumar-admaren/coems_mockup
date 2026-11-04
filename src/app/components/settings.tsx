@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { SettingsVessels } from "./settings-vessels";
+import { SettingsIntegrations, EmailAccountEntry } from "./settings-integrations";
+import { useVersion } from "../version-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SettingsView = "home" | "vessels";
+type SettingsView = "home" | "vessels" | "integrations";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -52,18 +54,44 @@ const SECTIONS = [
 
 interface SettingsProps {
   onBack: () => void;
+  emailAccounts: EmailAccountEntry[];
+  onEmailAccountsChange: (accounts: EmailAccountEntry[]) => void;
 }
 
-export function Settings({ onBack }: SettingsProps) {
+export function Settings({ onBack, emailAccounts, onEmailAccountsChange }: SettingsProps) {
   const [view, setView] = useState<SettingsView>("home");
+  const isV2 = useVersion() === "2.0";
+
+  const sections = SECTIONS.map((section) =>
+    section.title === "Administration" && isV2
+      ? {
+          ...section,
+          items: [
+            ...section.items,
+            { id: "integrations", label: "Integrations", desc: "Manage third-party service connections" },
+          ],
+        }
+      : section
+  );
 
   const handleCardClick = (id: string) => {
     if (id === "own-vessels") setView("vessels");
+    if (id === "integrations") setView("integrations");
     // other cards: placeholder — no-op for now
   };
 
   if (view === "vessels") {
     return <SettingsVessels onBack={() => setView("home")} />;
+  }
+
+  if (view === "integrations") {
+    return (
+      <SettingsIntegrations
+        onBack={() => setView("home")}
+        emailAccounts={emailAccounts}
+        onEmailAccountsChange={onEmailAccountsChange}
+      />
+    );
   }
 
   return (
@@ -82,7 +110,7 @@ export function Settings({ onBack }: SettingsProps) {
 
       {/* Card grid */}
       <div className="flex-1 overflow-y-auto p-8 space-y-10">
-        {SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title}>
             <h2 className="text-[18px] font-semibold text-gray-800 mb-4">{section.title}</h2>
             <div className="grid grid-cols-4 gap-4">

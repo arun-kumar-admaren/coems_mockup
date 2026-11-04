@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote, Check, ChevronDown } from "lucide-react";
+import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote, Check, ChevronDown, Mail } from "lucide-react";
 import { NavigationItem } from "../App";
 import { AppVersion } from "../version-context";
 import { cn } from "./ui/utils";
@@ -20,6 +20,7 @@ const managementItems = [
   { id: "company" as NavigationItem, label: "Company", icon: Building2 },
   { id: "port-canals" as NavigationItem, label: "Port Agency", icon: Anchor },
   { id: "offices" as NavigationItem, label: "Offices", icon: Building },
+  { id: "smart-inbox" as NavigationItem, label: "Smart Inbox", icon: Mail, badge: "AI" },
 ];
 
 const operationsItems = [
@@ -39,6 +40,12 @@ const operationsItems = [
 
 export function Sidebar({ activeSection, onNavigate, version, onVersionChange }: SidebarProps) {
   const [versionOpen, setVersionOpen] = useState(false);
+  // v2.0: the "Fixture Reports" menu is replaced by "Reports", where users create their own Fixture Report
+  const opsItems = operationsItems.map((i) =>
+    version === "2.0" && i.id === "fixture-reports"
+      ? { id: "reports" as NavigationItem, label: "Reports", icon: BarChart3, badge: "NEW" }
+      : i
+  );
   return (
     <aside className="w-64 bg-[#1a1d29] flex flex-col h-screen text-white">
       {/* Header */}
@@ -110,7 +117,12 @@ export function Sidebar({ activeSection, onNavigate, version, onVersionChange }:
                       <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500"></div>
                     )}
                     <Icon className="size-[18px] flex-shrink-0" />
-                    <span className={isActive ? "font-medium" : "font-normal"}>{item.label}</span>
+                    <div className="flex items-start">
+                      <span className={isActive ? "font-medium" : "font-normal"}>{item.label}</span>
+                      {"badge" in item && item.badge && (
+                        <span className="text-[8px] font-bold text-blue-500 ml-1 mt-0 tracking-wider leading-none uppercase">{item.badge}</span>
+                      )}
+                    </div>
                   </button>
                 </li>
               );
@@ -121,7 +133,7 @@ export function Sidebar({ activeSection, onNavigate, version, onVersionChange }:
         {/* Operations Section */}
         <div>
           <ul className="space-y-0.5">
-            {operationsItems.map((item) => {
+            {opsItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
               

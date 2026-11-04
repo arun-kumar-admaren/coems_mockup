@@ -8,7 +8,10 @@ import { Voyage } from "./components/voyage";
 import { Inquiry } from "./components/inquiry";
 import { Legal } from "./components/legal";
 import { Fixtures } from "./components/fixtures";
+import { Reports } from "./components/reports";
+import { SmartInbox } from "./components/smart-inbox";
 import { Settings } from "./components/settings";
+import { EmailAccountEntry, DEFAULT_EMAIL_ACCOUNTS } from "./components/settings-integrations";
 import { INITIAL_DATA, Incident } from "./components/hseq-types";
 import { AppVersion, VersionProvider } from "./version-context";
 import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign } from "lucide-react";
@@ -23,10 +26,12 @@ export type NavigationItem =
   | "voyage"
   | "voyage-v2"
   | "inquiry"
+  | "smart-inbox"
   | "legal"
   | "hseq-kpi"
   | "fixtures"
   | "fixture-reports"
+  | "reports"
   | "invoice-listing"
   | "income-expense-list"
   | "settings";
@@ -34,6 +39,7 @@ export type NavigationItem =
 export default function App() {
   const [activeSection, setActiveSection] = useState<NavigationItem>("hseq");
   const [incidents, setIncidents] = useState<Incident[]>(INITIAL_DATA);
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccountEntry[]>(DEFAULT_EMAIL_ACCOUNTS);
   const [version, setVersion] = useState<AppVersion>(
     () => (localStorage.getItem("coems-version") === "2.0" ? "2.0" : "1.0")
   );
@@ -41,6 +47,8 @@ export default function App() {
   const handleVersionChange = (v: AppVersion) => {
     setVersion(v);
     localStorage.setItem("coems-version", v);
+    // v1.0 "Fixture Reports" is replaced by "Reports" (with New Fixture Report) in v2.0
+    setActiveSection((s) => (v === "2.0" && s === "fixture-reports" ? "reports" : v === "1.0" && s === "reports" ? "fixture-reports" : s));
   };
 
   // Cross-module bridge: a linked claim clicked inside an Incident's Claims tab
@@ -66,14 +74,24 @@ export default function App() {
         return <Voyage version="v2" />;
       case "inquiry":
         return <Inquiry />;
+      case "smart-inbox":
+        return <SmartInbox emailAccounts={emailAccounts} />;
       case "legal":
         return <Legal />;
       case "hseq-kpi":
         return <HSEQKPI incidents={incidents} />;
       case "fixtures":
         return <Fixtures />;
+      case "reports":
+        return <Reports />;
       case "settings":
-        return <Settings onBack={() => setActiveSection("hseq")} />;
+        return (
+          <Settings
+            onBack={() => setActiveSection("hseq")}
+            emailAccounts={emailAccounts}
+            onEmailAccountsChange={setEmailAccounts}
+          />
+        );
       default:
         return (
           <div className="flex items-center justify-center h-full">

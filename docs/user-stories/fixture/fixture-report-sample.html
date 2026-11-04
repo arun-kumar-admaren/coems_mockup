@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture Report sample</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --wash: rgba(11,11,11,0.05);
+  --th: #f0efec; --other: #b9b8b0;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.06);
+    --th: #232321; --other: #55554f;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 24px 16px 72px; }
+h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
+h3 { font-size: 14px; margin: 0; font-weight: 600; }
+.sub { color: var(--ink2); margin: 0 0 14px; max-width: 900px; }
+.note { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 10px 12px; color: var(--ink2); font-size: 13px; margin: 0 0 4px; }
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 16px; margin: 16px 0; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px 18px; align-items: start; }
+.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink2); }
+.f > span.req::after { content: " *"; }
+input, select, button { font: inherit; color: var(--ink); }
+input, select { background: var(--surface); border: 1px solid var(--axis); border-radius: 6px; padding: 6px 8px; min-height: 32px; }
+input[disabled] { background: var(--th); color: var(--ink2); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--axis); background: transparent; border-radius: 999px; padding: 4px 12px; cursor: pointer; min-height: 30px; }
+.chip[aria-pressed="true"] { background: var(--s1); border-color: var(--s1); color: #fff; }
+.range { display: flex; gap: 6px; align-items: center; }
+.range input { width: 100%; min-width: 0; }
+details.ms { position: relative; }
+details.ms > summary { list-style: none; cursor: pointer; border: 1px solid var(--axis); border-radius: 6px; padding: 6px 8px; min-height: 32px; background: var(--surface); }
+details.ms > summary::-webkit-details-marker { display: none; }
+details.ms .menu { position: absolute; z-index: 5; left: 0; right: 0; margin-top: 4px; max-height: 260px; overflow: auto; background: var(--surface); border: 1px solid var(--axis); border-radius: 8px; padding: 6px 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.14); }
+details.ms label { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 13px; color: var(--ink); }
+.check { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13px; padding-top: 18px; }
+.hint { color: var(--muted); font-size: 12px; }
+.stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 14px; }
+.stat { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 10px 14px; min-width: 170px; display: flex; flex-direction: column; gap: 2px; }
+.stat-label { color: var(--ink2); font-size: 12px; }
+.stat-value { font-size: 24px; font-weight: 600; }
+.rhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.rhead h2 { margin: 0; font-size: 17px; }
+.rbtns { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--axis); background: transparent; border-radius: 6px; padding: 5px 12px; cursor: pointer; min-height: 30px; }
+.btn[disabled] { opacity: 0.5; cursor: default; }
+.btn.primary { background: var(--s1); border-color: var(--s1); color: #fff; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--ring); margin-bottom: 14px; }
+.tab { border: 0; background: transparent; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--ink2); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--s1); font-weight: 600; }
+.scroll { overflow: auto; border: 1px solid var(--ring); border-radius: 8px; max-height: 560px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; text-align: left; }
+th { background: var(--th); position: sticky; top: 0; z-index: 1; font-weight: 600; font-size: 12px; color: var(--ink2); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.total td { font-weight: 600; border-top: 1px solid var(--axis); background: var(--wash); }
+.pager { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-top: 8px; color: var(--ink2); font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px; min-width: 0; }
+.card.wide { grid-column: 1 / -1; }
+.card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.settings { color: var(--muted); font-size: 12px; margin: 4px 0 10px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 6px; font-size: 12px; color: var(--ink2); }
+.legend .item { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; flex: none; }
+.seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 3px 10px; cursor: pointer; font-size: 12px; }
+.seg button[aria-pressed="true"] { background: var(--wash); font-weight: 600; }
+.chart { width: 100%; height: auto; display: block; }
+.grid { stroke: var(--grid); stroke-width: 1; }
+.axis { stroke: var(--axis); stroke-width: 1; }
+.tick { fill: var(--muted); font-size: 11px; }
+.xt { fill: var(--muted); font-size: 10.5px; }
+.vlab { fill: var(--ink2); font-size: 11px; }
+.hit { fill: transparent; }
+.cat:hover .hit, .cat:focus .hit { fill: var(--wash); }
+.cat { outline: none; }
+.slice { cursor: default; transform-origin: 85px 85px; transition: transform 80ms; }
+.slice:hover { transform: scale(1.04); }
+.pie-wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pie-wrap svg { width: 170px; height: 170px; flex: none; }
+.pl { list-style: none; margin: 0; padding: 0; font-size: 12px; min-width: 190px; flex: 1; }
+.pl li { display: grid; grid-template-columns: 12px 1fr auto auto; gap: 8px; align-items: center; padding: 2px 0; color: var(--ink2); }
+.pl .nm { color: var(--ink); overflow-wrap: break-word; min-width: 0; }
+.pies .pie-wrap { flex-direction: column; align-items: flex-start; gap: 8px; }
+.pies .pl { width: 100%; min-width: 0; }
+.pl .vv { font-variant-numeric: tabular-nums; color: var(--ink); }
+.pl .pc { font-variant-numeric: tabular-nums; color: var(--muted); width: 38px; text-align: right; }
+.pies { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 16px 22px; }
+.pie-title { font-size: 12px; font-weight: 600; margin: 0 0 6px; color: var(--ink2); }
+.cols { display: grid; grid-template-columns: 230px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 800px) { .cols { grid-template-columns: 1fr; } }
+.plist { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 6px; }
+.plist button { text-align: left; border: 0; background: transparent; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.plist button[aria-selected="true"] { background: var(--wash); font-weight: 600; }
+.pbody .toolbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: end; margin-bottom: 10px; }
+.tip { position: fixed; z-index: 20; display: none; background: var(--surface); color: var(--ink); border: 1px solid var(--axis); border-radius: 8px; padding: 8px 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.16); font-size: 12px; pointer-events: none; min-width: 150px; max-width: 320px; }
+.tip-title { font-weight: 600; margin-bottom: 4px; }
+.tip-row { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; color: var(--ink2); }
+.tip-row strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.key { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+.map td:first-child { font-weight: 600; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+ul.plain { margin: 6px 0 0; padding-left: 18px; color: var(--ink2); }
+ul.plain li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fixture Report (sample)</h1>
+  <p class="sub">A mock-up of the proposed <b>New Fixture Report</b>, built from real fixtures read from the Fixture List on bctesting. It follows the Port Call Evaluation Report pattern: a create dialog, a generated table, then Charts and Pivot Tables built from that table. Change the fields below and everything re-runs.</p>
+  <p class="note" id="datanote"></p>
+
+  <section class="panel" aria-labelledby="dlg">
+    <h2 id="dlg">1. Add New Fixture Report (popup fields)</h2>
+    <div class="fields" id="params"></div>
+  </section>
+
+  <div id="report"></div>
+
+  <section class="panel">
+    <h2>Where the 10 existing reports are in this sample</h2>
+    <div class="scroll"><table class="map" id="maptable"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Notes on this sample</h2>
+    <ul class="plain" id="notes"></ul>
+  </section>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+window.__DATA__ = {"dict":{"status":["Discharged","Cancelled","Loaded","Delayed","Postponed","Not Loaded"],"inv":["Invoiced","To be Issued","Over Due","Paid"],"acct":["DSV Air & Sea A/S","Carmel International Shipping Services (1992) Ltd.","Sapura Energy","EMS Chartering GmbH un co. KG","Nawinia (RUS) Ltd.","Haduco","Enercon Gmbh","AAK Germany GmbH","MARGUISA SHIPPING LINE S.L.U","Blue Water Shipping DK","Technip FMC","Martin Bencher (Scandinavia) Oy","Van Oord Dredging and Marine Contractors BV","Steampower – Soluções Energéticas, S.A,– NIPC","Damen SHIPYARDS GORINCHEM","Kerry Project Logistics Middle East LLC","Nordex","Kühne + Nagel Sdn. Bhd.","Ceva Freight Management France","VOLTAIRE MARINE CO.","Denzai Vietnam Corporation","DSV","Fracht AG","FESCO Ocean Management Ltd.","ArcelorMittal Project Europe B.V","Trafigura","Hyupjin Global co., Ltd.","Pinnacle Oil & Gas FZE","deugro India","Kuehne Nagel Asia Pacific Management Pte. Ltd","Safesea Transport Europe APS","Kuehne + Nagel (AG & Co.) KG","Blue Water Shipping UK","TSL Shipping","Karl Gross Internationale Spedition GmbH","Bolloré (Singapore)","Acubens Shipping & Trading Pte. Ltd","Deugro (Deutschland) Projekt GmbH (deugro)","Solvay","Transport Desgagnés","A C Oerssleff Chartering","Pentagon Freight Services AS","Wisetech HGK","DSV & Sea Co., Ltd., shanghai","Rio Tinto Shipping","SBM Offshore","Taewoong Logistics Co. Ltd","Siemens Gamesa Renewable Energy","CS Wind","Kamigumi Co Ltd.","UTC Overseas Oy","NOV Rig Technologies","Intermarine US","LS International Cargo GmbH","Karadeniz","Wagenborg","pogl international group pte. ltd","MHI Vestas Offshore Wind A/S","deugro GmbH (Bremen Office)","GE","FLOGIS International Corp","Acteon","Diler Steels","Acacia Steel","Tankerska Plovidba d. d","I Barbon S.r.l","HMC","Martin Bencher","Geodis China Limited","Nippon Express (Italia) Spa","DSV Air & Sea Inc.","Agrichemicals U.K.","Doe Run","Lotus Lines","SMA CI","DC Global Freight Management Ltd. UK","Vestas","Transamine Trading S.A","SIS MARINE SERVIS VE GEMI ISLETMECILIGI TIC LTD STI","Solteam SAS","DSV Air & Sea Inc. – San Francisco","CJ ICM Logistics","Duo Shipping & Trading Ltd.","McDermott","NMT Projects","Multi Ship Limited","Youngson Shipping Limited","Worldwide logistics (group) co., ltd","KG Marine. Co LTD","Deugro (Netherlands) B.V.","PTI Infraestructura De Desarollo S.A. de C.V","Minerales y Productos MInerales SA (MINERSA) Bilbao","Orano NPS","Spliethoff Transport BV","MARTIN BENCHER France SAS","FH Bertling Pte Ltd","Hansa Mayer Global Transport","deugro","BAGGIO TRANSPORTES LTDA","Beluga Projects Logistics, JSC","HMM CO.,LTD","Deugro Japan","FREIGHT FORCE AG","Eunsan Shipping & Aircargo Co., Ltd","SPS London","Cross Chartering N.V. Antwerp","Daher","Nortans Turkey","Züst & Bachmeier Project GmbH","Kerry Project Logistics (Italia) S.p.A.","Konecranes GmbH","Far Easter Shipping Company PLC","Oras Shipping","Deugro (Korea) Co Ltd","LIEBHERR CONTAINER CRANES, IRELAND","XP Chartering LLC","Kuehne + Nagel A S","Deugro (United Kingdom) Ltd.","Tata Steel","Ormat Pacific, Inc. New Zealand Branch","Greenroad logistics China","TSL Shipping & Trading","Auxin shipping pvt ltd","BMS Heavy Cranes","Tuxor Spa","PANMARINE SHIPPING SERVICES FZE","FREJA Transport & Logistics (SHANGHAI) CO.,LTD.","NEWCO SPC","ITO Logistics","Blue Water Shipping Singapore","Glencore International AG","HTG Engineering Pvt. Ltd.","FMC Kongsberg Subsea AS","Mammoet Europe BV","F.H. Bertling Projects Logistics Sdn Bhd","Archirodon Group NV","Excelerate Energy","Tenenge","SOGEMD CI SARL","Arsenal JSCo","Liburnus Italy","Scan Global Logistics A/S","Speedline Shipping & Logistics","Heerema Marine Contractors Nederland SE","Nippon Express Co.,LTD. Tokyo","Deugro (Singapore) Pte Ltd","BBC Chartering","Peters & May Ltd","Kuehne + Nagel Inc.","McDermott Marine Construction Limited","FLS Projects","Titania A/S","GEODIS FF","Gydan LNG SNC","deugro Projects (Australia) Pty Ltd","MAXAM GLOBAL LOGISTICS OPERATOR, S.L.","COLI Schiffahrt & Transport GmbH & Co. KG","Arabian Drilling Co","QUBE International Pte Ltd","NOV Global Chartering Group","Noatum Project Cargo","FH Bertling Logistics Aberdeen Limited","Pasquinelli","Mammoet Shipping","deugro (Deutschland) Projekt GmbH","PMD AssetCo Limited","Olam International Ltd","BOLLORÉ LOGISTICS HEADQUARTER","dship Carriers GmbH & Co. KG","Mabisel Trading and Construction, Nigeria","New Fortress Energy","Glonet Tls Busan","PT Fagioli Lifting and Transportation","ST Logistics Singapore c/o Royal Maritimo Pte Ltd.","PT GAP Logistics","Saipem S.p.A.","Mitsui Global Logistics","Central Oceans","Fagioli S.P.A","Aluminium Bahrain B.S.C.","Trading Company P. van Adrighem B.V.","FAGIOLI ASIA PTE LTD","Cape Flattery Silica Mines Pty Ltd","Storaenso AB","SOGECO MAURITANIA","Kühne + Nagel International AG","JGC Corporation","Leybi Denizcilik AS","deugro Brasil Ltda.","ANR Sdn Bhd","Carmeuse Trading & Sevices sa","Newcrest Operations LTD","NATCO AG Zurich","DSV Hava ve Deniz Tasimaciligi A.S","Transtekno Deniz Isletmeciligi ve Ticaret A.S, Ankara","Bloedorn EastTrans GmbH","Marden","Oceanmed Shipping Dmcc","Combi- Lift Projekt GmbH & Co KG","Hitachi Transport System"],"head":["Vestas","Carmel International Shipping Services (1992) Ltd.","","GE","Nawinia (RUS) Ltd.","Haduco","MARGUISA SHIPPING LINE S.L.U","Blue Water Shipping","British Petroleum","Martin Bencher (Scandinavia) Oy","Van Oord Dredging and Marine Contractors BV","Steampower – Soluções Energéticas, S.A,– NIPC","Damen SHIPYARDS GORINCHEM","Kerry Project Logistics Middle East LLC","EMS Chartering GmbH un co. KG","Nordex","Kühne + Nagel Sdn. Bhd.","CEVA Logistics","VOLTAIRE MARINE CO.","Denzai Vietnam Corporation","Fracht AG","FESCO Ocean Management Ltd.","ArcelorMittal Project Europe B.V","Trafigura","deugro (Deutschland) Projekt GmbH","Kuehne + Nagel (AG & Co.) KG","TSL Shipping","Karl Gross Internationale Spedition GmbH","BOLLORÉ LOGISTICS HEADQUARTER","Acubens Shipping & Trading Pte. Ltd","Solvay","Transport Desgagnés","A C Oerssleff Chartering","Menck","DSV","Rio Tinto Shipping","SBM Offshore","Siemens Gamesa Renewable Energy","CS Wind","Sumitomo Corporation","UTC Overseas Oy","NOV Rig Technologies","Intermarine Houston","Wagenborg","pogl international group pte. ltd","MHI Vestas Offshore Wind A/S","FLOGIS International Corp","Acteon","Diler Steels","Acacia Steel","HMC","Perenco","Doe Run","Pentagon Freight Services AS","SMA CI","DC Global Freight Management Ltd. UK","Enercon Gmbh","Transamine Trading S.A","Karadeniz","SIS MARINE SERVIS VE GEMI ISLETMECILIGI TIC LTD STI","Solteam SAS","CJ ICM Tashkent LTD","Duo Shipping & Trading Ltd.","Fortescue Metals Group","Multi Ship Limited","Worldwide logistics (group) co., ltd","PTI Infraestructura De Desarollo S.A. de C.V","Minerales y Productos MInerales SA (MINERSA) Bilbao","Spliethoff Transport BV","MARTIN BENCHER France SAS","FH BERTLING GMBH & CO KG","Safesea Transport Europe APS","Hansa Mayer Global Transport","LS International Cargo GmbH","BAGGIO TRANSPORTES LTDA","FREIGHT FORCE AG","Eunsan Shipping & Aircargo Co., Ltd","COSMI S.p.A S.U.","Cross Chartering N.V. Antwerp","Daher","Nortans Turkey","Züst & Bachmeier Project GmbH","Maire-Tecnimont","Konecranes GmbH","Oras Shipping","LIEBHERR CONTAINER CRANES, IRELAND","XP Chartering LLC","Hyupjin Global co., Ltd.","Tata Steel","Ormat Pacific, Inc. New Zealand Branch","Greenroad logistics China","TSL Shipping & Trading","Auxin shipping pvt ltd","Tuxor Spa","FREJA Transport & Logistics (SHANGHAI) CO.,LTD.","Technip FMC","NEWCO SPC","ITO Logistics","Glencore International AG","HTG Engineering Pvt. Ltd.","FMC Kongsberg Subsea AS","Archirodon Group NV","SOGEMD CI SARL","Arsenal JSCo","Liburnus Italy","Scan Global Logistics A/S","Speedline Shipping & Logistics","Nippon Express Co.,LTD. Tokyo","McDermott","Titania A/S","GEODIS FF","Geodis China Limited","MAXAM GLOBAL LOGISTICS OPERATOR, S.L.","COLI Schiffahrt & Transport GmbH & Co. KG","Mammoet","Noatum Project Cargo","Pasquinelli","Peters & May Ltd","Olam International Ltd","dship Carriers GmbH & Co. KG","Mabisel Trading and Construction, Nigeria","Fagioli S.P.A","ST Logistics Singapore c/o Royal Maritimo Pte Ltd.","PT GAP Logistics","Mitsui Global Logistics","Central Oceans","Orano NPS","FLS Projects","Aluminium Bahrain B.S.C.","UTC Corporate","Trading Company P. van Adrighem B.V.","Cape Flattery Silica Mines Pty Ltd","Storaenso AB","Kuehne Nagel","JGC Corporation","Deugro (Deutschland) Projekt GmbH (deugro)","ANR Sdn Bhd","Carmeuse Trading & Sevices sa","Transtekno Deniz Isletmeciligi ve Ticaret A.S, Ankara","Marden","Oceanmed Shipping Dmcc","Combi- Lift Projekt GmbH & Co KG","Hitachi Transport System"],"shipper":["DSV Air & Sea A/S","Carmel International Shipping Services (1992) Ltd.","","GE","Vestas","Enercon Gmbh","MARGUISA SHIPPING LINE S.L.U","Technip FMC","Van Oord Dredging and Marine Contractors BV","Steampower – Soluções Energéticas, S.A,– NIPC","Damen SHIPYARDS GORINCHEM","Kerry Project Logistics Middle East LLC","LIEBHERR","Nordex","ArcelorMittal Project Europe B.V","Trafigura","Safesea Transport Europe APS","BHGE","Karl Gross Internationale Spedition GmbH","Solvay","Bolloré (Singapore)","Kuehne Nagel Asia Pacific Management Pte. Ltd","A C Oerssleff Chartering","Menck","DSV & Sea Co., Ltd., shanghai","Acubens Shipping & Trading Pte. Ltd","Rio Tinto Shipping","Siemens Gamesa Renewable Energy","CS Wind","Sumitomo Corporation","DSV","EMS Chartering GmbH un co. KG","Karadeniz","pogl international group pte. ltd","Acteon","Diler Steels","Acacia Steel","Perenco","Doe Run","SMA CI","Transamine Trading S.A","Solteam SAS","Duo Shipping & Trading Ltd.","Minerales y Productos MInerales SA (MINERSA) Bilbao","MARTIN BENCHER France SAS","FREIGHT FORCE AG","Saipem S.p.A.","Nortans Turkey","Züst & Bachmeier Project GmbH","Maire-Tecnimont","Konecranes GmbH","Oras Shipping","Deugro (Korea) Co Ltd","LIEBHERR CONTAINER CRANES, IRELAND","Kuehne + Nagel A S","Tata Steel","Ormat Pacific, Inc. New Zealand Branch","FH Bertling Pte Ltd","Greenroad logistics China","TSL Shipping & Trading","Auxin shipping pvt ltd","Tuxor Spa","NEWCO SPC","ITO Logistics","UTC Overseas Oy","Glencore International AG","FMC Kongsberg Subsea AS","MHI Vestas Offshore Wind A/S","Arsenal JSCo","Liburnus Italy","Scan Global Logistics A/S","Speedline Shipping & Logistics","Deugro Japan","GEODIS FF","Spliethoff Transport BV","MAXAM GLOBAL LOGISTICS OPERATOR, S.L.","Mammoet Europe BV","Noatum Project Cargo","Martin Bencher (Scandinavia) Oy","Pasquinelli","Mammoet Shipping","McDermott Marine Construction Limited","CANTIERI NAVALI STRACUZZI","ST Logistics Singapore c/o Royal Maritimo Pte Ltd.","BAGGIO TRANSPORTES LTDA","Central Oceans","Aluminium Bahrain B.S.C.","Wartsila","Storaenso AB","Kühne + Nagel International AG","ANR Sdn Bhd","Carmeuse Trading & Sevices sa","Transtekno Deniz Isletmeciligi ve Ticaret A.S, Ankara","Marden","Oceanmed Shipping Dmcc","SMS Group GmbH","Hitachi Transport System"],"pic":["Christine Schou","Christian Andersen","Anthony Perez","Gleb Faldin","Sebastian Thode","Dennis Eberhardt","Nicolas Walter","Christian Monsted","Adam Sewall","Jenny Beusen","John Kröger","Leif Müller","Philipp Mehringer","Dominik Stehle","Lukas Holm Krag","Christian Johnsen","Lars Bonnesen","Christoffer Larsen","Rune Larsen","Rene Pedersen","Andreas Rolner","Arne Schieb","Rasmus Elgaard","Christoph Puschmann","Jakob Wittmann","Skyler Teh","Adam Sewall, Frederik Nymann","Insa Habedank","Frederik Nymann","Anup Anthony"],"office":["UNITED HEAVY LIFT Danmark ApS","UNITED O7 ASIA SDN BHD","UNITED HEAVY TRANSPORT AMERICAS LLC","UHL HQ Chartering","UNITED HEAVY TRANSPORT GmbH – Headquarters","United Marguisa Lines","UHL HQ Projects","UNITED O7 DUBAI","UNITED O7 CHINA","UNITED O7 NORTH AS","UHL Americas Inc.","UNITED O7 JAPAN","UNITED WIND LOGISTICS  (HQ)","UNITED O7 Americas Inc."],"fp":["UHL FORTUNE","UHL FUSION","HUA YANG LONG","UHL FUTURE","Unassigned","UHL PARTNER","HUA SHENG LONG","UHL PASSION","TASMANIC WINTER","UML VERONICA","UML VALENTINA","OCEAN GLOBE","FESCO PARIS","KOGA REVOLUTION","UHL FALCON","HUA HAI LONG","UHL FAME","KATHRIN","UHL FLASH","UHL FAST","UHL FRONTIER","UHL FOCUS","HUA XING LONG","UHL FORCE","UHL FREEDOM","UHL FAITH","TAAGBORG","UHL FLAIR","YAMATAI","VESTVIND","WIND S","YAMATO","UHL FINESSE","UHL FIGHTER","UHL FELICITY","UHL FIERCE","UHL 900","SAA_BRIGHTON","HUA RUI LONG","BBC ILLINOIS","CARIBBEAN HARMONY","UAL BRAZIL"],"vt":["UHL 900 ECO MG","Semi-sub (GS Pango)","External Vessel Type","UHL 800","UHL 160","UHL 900 ECO MG 4,5m","UHL 900 ECO TTS 6m","UHL 900 ECO TTS","NYK Deckcarrier","VestVind NB Type","Unassigned"],"cargo":["Renewables Onshore","Breakbulk & BulkBreak","Oil & Gas","Petro- Power - LNG - Hydro","Floating Cargo","Port Infrastructure","Time Charter","Renewables Offshore","Rolling","Unassigned"],"rc":["Will book again with UHL","Satisfied","Not Rated"],"re":["Will book again with UHL","Not Rated","Satisfied"],"ro":["Will book again with UHL","Not Rated","Satisfied"],"cur":["US Dollar","Euro"]},"rows":[["UHL-F-2020-215",0,0,20210312,20210316,0,0,0,0,0,0,0,0,0,0,0,0,2035000,81400],["UHL-F-2021-001",0,1,20210104,20210113,1,1,1,1,1,1,0,1,0,0,0,0,702500,28100],["UHT-F-2021-001",0,0,20210118,20210120,2,2,2,2,2,2,1,2,0,0,0,0,1800000,90000],["UHL-F-2021-003",0,1,20210122,20210129,3,3,3,1,1,3,0,0,0,0,0,0,1900000,76000],["UHL-F-2021-004",1,1,20210122,20210420,4,4,2,3,3,4,2,3,0,0,0,0,450000,22500],["UHL-F-2021-005",0,0,20210122,20210128,0,0,4,4,3,5,3,0,0,0,0,0,1625000,81250],["UHT-F-2021-002",0,1,20210115,20210125,5,5,2,5,4,6,1,4,0,0,0,0,1530000,0],["UHL-F-2021-006",0,0,20210120,20210207,6,2,5,6,1,7,3,0,0,0,0,0,445000,22250],["UHL-F-2021-007",0,0,20210122,20210210,7,2,2,7,0,8,3,1,0,0,0,0,354760,17738],["UML-F-2021-009",0,1,20210104,20210125,8,6,6,8,5,9,4,1,0,0,0,1,311150,0],["UML-F-2021-010",0,1,20210122,20210215,8,6,6,8,5,9,4,1,0,0,0,1,549000,0],["UHL-F-2021-011",0,1,20210128,20210208,8,6,6,8,5,10,4,1,0,0,0,0,884000,0],["UML-F-2021-012",0,1,20210121,20210301,8,6,6,8,5,9,4,4,1,0,0,0,172000,0],["UML-F-2021-013",0,1,20210125,20210212,8,6,6,8,5,9,4,3,0,0,0,0,245000,0],["UHL-F-2021-014",0,0,20210129,20210213,9,7,2,9,3,11,3,1,0,0,0,0,170000,0],["UHL-TC-2021-001",0,1,20210325,20210422,10,8,7,10,6,5,3,2,0,0,0,0,0,0],["UHL-F-2021-015",0,0,20210202,20210215,11,9,2,9,3,11,3,3,0,0,0,0,730000,0],["UML-F-2021-016",0,1,20210203,20210205,12,10,8,8,5,12,2,4,0,0,0,0,160000,0],["UML-F-2021-017",0,1,20210202,20210210,13,11,9,8,5,12,2,1,0,0,0,0,234000,0],["UHL-F-2021-018",0,1,20210204,20210220,14,12,10,11,3,13,2,4,0,0,0,0,285000,7125],["UHL-F-2021-019",0,0,20210208,20210303,15,13,11,1,1,7,3,1,0,0,0,0,525000,26250],["UHL-F-2021-020",0,1,20210205,20210308,0,0,4,4,3,14,5,0,0,0,0,0,2180000,87200],["UHT-F-2021-003",1,2,20210208,0,12,10,8,12,4,15,1,4,2,1,1,0,2100000,84000],["UHL-F-2021-021",0,0,20210212,20210426,14,12,10,11,3,16,0,4,0,0,0,0,685000,27400],["UHL-F-2021-022",0,0,20210218,20210404,3,14,12,11,3,3,0,5,0,0,0,1,720000,28800],["UHL-F-2021-023",0,1,20210219,20210410,0,0,4,4,3,1,0,0,0,0,0,0,2400000,96000],["UHL-F-2021-024",0,1,20210218,20210315,16,15,13,4,3,17,2,0,0,0,0,0,235000,0],["UHL-F-2021-025",0,0,20210222,20210307,17,16,2,9,3,11,3,3,0,0,0,0,400000,0],["UHL-F-2021-026",0,0,20210222,20210325,18,17,2,7,0,8,3,5,0,0,0,0,570000,28500],["UHL-F-2021-027",0,0,20210225,20210325,8,6,6,8,0,18,5,2,0,0,0,0,1795000,71800],["UHL-F-2021-028",0,0,20210226,20210307,19,18,2,13,6,8,3,2,0,0,0,0,602000,30100],["UHL-F-2021-029",0,0,20210226,20210222,20,19,2,14,3,11,3,5,0,0,0,1,300000,0],["UHL-F-2021-030",0,1,20210222,20210525,21,0,4,4,3,3,0,0,0,0,0,0,2184000,87360],["UHL-F-2021-031",0,0,20210226,20210308,22,20,2,3,3,8,3,3,0,0,0,1,260000,13000],["UHL-F-2021-032",0,1,20210223,20210415,0,0,4,4,3,19,0,0,0,0,0,0,2394000,95760],["UHL-F-2021-033",0,0,20210302,20210403,14,12,10,11,3,11,3,4,0,0,0,0,150000,0],["UHL-F-2021-034",0,1,20210301,20210420,0,0,4,4,3,20,0,0,0,0,0,0,2035000,81400],["UHL-F-2021-035",0,1,20210308,20210403,23,21,2,3,3,12,2,5,0,0,0,0,532500,0],["UHL-F-2021-036",0,1,20210308,20210323,24,22,14,9,3,3,0,1,0,0,0,0,1269053,50762],["UHL-F-2021-037",0,1,20210308,20210320,25,23,15,9,3,12,2,1,0,0,0,0,470750,0],["UHL-F-2021-038",0,0,20210310,20210412,26,2,2,3,3,21,0,3,0,0,0,0,1185000,47400],["UHL-F-2021-039",0,1,20210305,20210401,27,2,2,7,7,10,4,1,0,0,0,0,1098875,0],["UHL-F-2021-040",0,1,20210311,20210325,28,24,2,15,1,7,3,3,0,0,0,0,1282879,64144],["UHL-F-2021-041",0,0,20210311,20210328,29,25,2,15,1,7,3,1,0,0,0,0,1162500,58125],["UHL-F-2021-042",0,0,20210312,20210401,30,2,16,11,3,21,0,3,0,0,0,0,315000,12600],["UHL-F-2021-043",0,1,20210312,20210530,31,25,2,3,3,21,0,2,0,0,0,0,980000,39200],["UHL-F-2021-044",0,1,20210315,20210420,32,7,17,9,3,12,2,3,0,0,0,0,600000,0],["UHT-F-2021-009",0,0,20210315,20210201,33,26,2,12,4,22,1,2,0,0,0,0,1755000,70200],["UHL-F-2021-045",0,0,20210317,20210406,34,27,18,14,3,21,0,3,0,0,0,0,730682,29227],["UML-F-2021-046",0,1,20210317,20210410,35,28,2,7,7,10,4,1,0,0,0,0,700000,0],["UML-F-2021-047",0,1,20210316,20210405,35,28,2,7,7,10,4,3,0,0,0,0,285000,0],["UHL-F-2021-048",0,1,20210318,20210425,36,29,2,1,8,23,6,0,0,0,0,0,1520000,60800],["UHL-F-2021-049",0,0,20210318,20210421,37,24,7,6,1,11,3,2,0,0,0,0,675000,0],["UML-F-2021-050",0,0,20210319,20210401,38,30,19,8,5,8,3,1,0,0,0,0,881760,44088],["UML-F-2021-051",0,1,20210319,20210405,35,28,20,8,5,10,4,3,0,0,0,0,285000,0],["UML-F-2021-052",0,1,20210318,20210412,35,28,20,8,5,10,4,1,0,0,0,0,700000,0],["UHL-TC-2021-002",0,1,20210317,0,39,31,2,11,3,7,3,6,0,0,0,0,0,0],["UHL-F-2021-053",0,1,20210331,20210420,29,25,21,15,1,24,6,5,0,0,0,0,245175,9807],["UHL-F-2021-054",0,0,20210331,20210408,40,32,22,16,3,21,0,1,0,0,0,0,395000,15800],["UHL-F-2021-055",0,0,20210330,20210410,41,33,23,17,9,21,0,2,0,0,0,0,375000,15000],["UHL-F-2021-056",0,1,20210331,20210415,42,2,2,18,1,25,6,4,1,0,0,0,1145000,45800],["UHL-F-2021-057",0,1,20210325,20210505,43,34,24,1,1,11,3,0,0,0,0,0,2275500,91020],["UHL-F-2021-058",0,1,20210331,20210601,36,29,25,1,8,23,6,0,0,0,0,0,3040000,121600],["UHL-F-2021-059",0,1,20210403,20210501,44,35,26,19,10,25,6,1,0,0,0,0,1598625,63945],["UHL-F-2021-060",0,1,20210402,20210628,45,36,2,20,6,0,0,7,0,0,0,0,975000,39000],["UHL-F-2021-061",0,1,20210402,20211022,45,36,2,20,6,14,5,7,0,0,0,0,1145000,45800],["UHL-F-2021-062",0,1,20210402,20211214,45,36,2,20,6,20,0,7,0,0,0,0,1275000,51000],["UHL-F-2021-063",0,1,20210402,20220401,45,36,2,20,6,14,5,7,0,0,0,0,1595000,63800],["UHL-F-2021-064",0,1,20210407,20210407,46,2,2,3,3,21,0,3,0,0,0,0,345000,13800],["UHL-F-2021-065",0,1,20210409,20210531,47,37,27,0,0,8,3,7,0,0,0,0,1300000,65000],["UHL-F-2021-066",0,1,20210413,20210426,0,0,4,4,3,26,2,0,0,0,0,0,1350000,0],["UHL-F-2021-067",0,0,20210330,20210428,0,0,4,4,3,16,0,0,0,0,0,0,970000,38800],["UHL-F-2021-068",0,1,20210325,20210605,43,34,2,1,8,27,7,0,0,0,0,0,1750000,70000],["UHT-F-2021-010",0,1,20210331,20210508,48,38,28,20,4,28,8,7,0,0,0,0,2915000,0],["UHL-F-2021-069",0,1,20210419,20210610,49,39,29,21,11,19,0,5,0,0,0,0,2000000,80000],["UHL-F-2021-070",0,1,20210401,20210625,50,40,2,17,9,14,5,5,0,0,0,0,1175000,47000],["UHL-F-2021-071",0,1,20210412,20210701,0,34,4,22,0,21,0,0,0,0,0,0,2000000,80000],["UHL-F-2021-072",0,1,20210426,20210525,21,34,30,19,10,1,0,3,0,0,0,0,1199500,47980],["UHL-F-2021-073",0,1,20210426,20210531,51,41,2,17,9,1,0,2,0,0,0,0,555000,22200],["UHL-TC-2021-003",0,1,20210220,0,52,42,2,11,3,11,3,6,0,0,0,0,0,0],["UHL-F-2021-074",0,1,20210504,20210620,53,2,2,6,1,0,0,1,0,0,0,0,740000,29600],["UHL-F-2021-075",0,1,20210420,20210621,3,14,31,1,1,21,0,0,0,0,0,0,2100000,84000],["UHL-F-2021-076",0,1,20210420,20210621,3,14,31,1,1,14,5,0,0,0,0,0,1813000,72520],["UHL-F-2021-077",0,1,20210505,20210719,0,34,0,0,0,1,0,0,0,0,0,0,1920000,76800],["UHL-F-2021-078",0,1,20210505,20210726,0,34,0,0,0,27,7,0,0,0,0,0,1920000,76800],["UHL-F-2021-079",0,1,20210505,20210816,0,34,0,0,0,20,0,0,0,0,0,0,1885000,75400],["UHL-F-2021-080",0,0,20210505,20210605,30,2,16,9,3,8,3,3,0,0,0,0,340000,17000],["UHL-F-2021-081",0,1,20210506,20210726,0,0,4,4,3,19,0,0,0,0,0,0,2040000,81600],["UHL-F-2021-082",0,1,20210506,20210614,0,0,4,4,3,18,5,0,0,0,0,0,2985000,119400],["UHT-F-2021-011",0,0,20210505,20210510,54,2,32,2,2,2,1,3,0,0,0,0,950000,38000],["UHL-F-2021-083",1,1,20210506,20210720,36,29,25,1,8,11,3,0,2,1,1,0,825000,0],["UHL-TC-2021-004",0,1,20210511,0,55,43,2,22,0,26,2,6,0,0,0,0,0,0],["UHL-F-2021-084",0,1,20210525,20210620,56,44,33,1,1,0,0,1,0,0,0,0,821190,32848],["UHL-F-2021-085",0,1,20210528,20210611,44,35,26,19,10,16,0,1,0,0,0,0,657710,26308],["UWL-F-2021-001",0,3,20210111,20210113,57,45,2,23,12,29,9,7,0,0,0,1,236000,0],["UWL-F-2021-002",0,3,20210224,20210205,57,45,2,24,12,29,9,7,0,0,0,1,95000,0],["UWL-F-2021-003",0,3,20210315,20210316,21,0,2,24,12,29,9,7,0,0,0,1,345000,0],["UWL-F-2021-004",0,3,20210324,20210418,58,24,13,24,12,29,9,0,0,0,0,1,272000,0],["UWL-F-2021-005",0,3,20210605,20210517,59,3,2,23,12,29,9,7,0,0,0,1,1090000,0],["UHL-F-2021-086",0,1,20210603,20210620,60,46,2,25,1,0,0,1,0,0,0,0,290000,11600],["UHL-F-2021-088",0,1,20210608,20220501,35,28,2,20,6,25,6,3,0,0,0,0,1295000,51800],["UHL-F-2021-087",0,1,20210531,20210817,61,47,34,25,1,21,0,1,0,0,0,0,2887000,115480],["UHL-F-2021-089",0,1,20210608,20220601,35,28,2,20,6,25,6,3,0,0,0,0,1295000,51800],["UHL-F-2021-090",0,1,20210608,20220901,35,28,2,20,6,25,6,3,0,0,0,0,1295000,51800],["UML-F-2021-091",0,1,20210609,20210620,62,48,35,8,5,30,2,1,0,0,0,0,201250,0],["UML-F-2021-092",0,1,20210609,20210620,63,49,36,8,5,30,2,1,0,0,0,0,269500,0],["UHL-F-2021-093",0,1,20210605,20210709,64,2,2,6,1,0,0,4,0,0,0,0,360000,14400],["UHL-F-2021-094",0,1,20210610,20210705,65,2,2,6,1,14,5,1,0,0,0,0,160000,6400],["UHT-TC-2021-001",2,1,20210614,0,66,50,2,12,4,31,8,7,1,2,2,0,0,0],["UML-F-2021-095",0,1,20210611,20210701,21,34,30,8,5,30,2,5,0,0,0,0,225000,0],["UML-F-2021-096",0,1,20210614,20210621,0,34,4,8,5,30,2,0,0,0,0,1,140000,0],["UML-F-2021-097",0,1,20210615,20210617,67,51,37,8,5,30,2,2,0,0,0,0,590000,0],["UHL-F-2021-098",0,1,20210616,20210815,68,2,2,18,1,3,0,1,0,0,0,0,3140000,125600],["UHL-F-2021-099",0,1,20210618,20210823,69,2,2,1,1,16,0,1,0,0,0,0,945000,37800],["UHL-F-2021-100",0,1,20210621,20210710,70,0,4,4,3,24,6,0,0,0,0,0,4809000,192360],["UHL-F-2021-101",0,1,20210624,20210801,58,24,2,3,3,25,6,3,0,0,0,0,945000,37800],["UHL-F-2021-102",0,1,20210624,20210720,16,15,13,4,3,17,2,0,0,0,0,0,525000,0],["UHL-F-2021-103",0,1,20210625,20211004,31,25,23,11,3,1,0,5,0,0,0,0,800000,32000],["UHL-F-2021-104",0,1,20210623,20210915,68,2,2,18,1,25,6,1,0,0,0,0,3785000,151400],["UHL-TC-2021-005",0,1,20210401,20210716,10,8,2,10,6,9,4,2,0,0,0,0,0,0],["UHL-F-2021-105",0,0,20210628,20210715,58,24,2,3,3,8,3,5,0,0,0,0,560000,28000],["UML-F-2021-106",0,1,20210614,20210705,71,2,2,7,5,10,4,1,0,0,0,0,1057661,0],["UHL-F-2021-107",0,1,20210622,20210815,16,15,13,4,3,19,0,0,0,0,0,0,1584000,63360],["UHL-F-2021-108",0,1,20210702,20210802,72,52,38,19,10,18,5,1,0,0,0,0,897600,35904],["UHL-F-2021-109",0,0,20210702,20210704,41,53,2,17,9,8,3,7,0,0,0,0,385000,19250],["UHL-F-2021-110",0,1,20211207,20210905,73,2,2,18,1,18,5,1,0,0,0,0,3875000,155000],["UWL-F-2021-006",0,3,20210716,20210914,59,3,3,24,12,29,9,7,0,0,0,1,225000,0],["UML-F-2021-111",0,1,20210716,20210722,74,54,39,8,5,30,2,1,0,0,0,1,156800,0],["UHL-F-2021-112",0,0,20210527,20210720,75,55,2,6,1,8,3,1,0,0,0,0,2126450,106323],["UHL-F-2021-113",0,1,20210723,20210825,53,2,2,6,1,16,0,1,0,0,0,0,2000000,80000],["UHL-F-2021-114",0,1,20210729,20210915,70,34,2,15,1,32,7,1,0,0,0,0,4450000,178000],["UWL-F-2021-007",0,3,20210728,20210817,76,0,4,24,12,29,9,0,0,0,0,1,725000,0],["UHL-F-2021-115",0,1,20210804,20210823,36,29,2,25,1,23,6,1,0,0,0,0,695000,27800],["UHL-F-2021-116",0,1,20210805,20210830,6,56,5,4,3,0,0,0,0,0,0,0,2250000,90000],["UML-F-2021-117",0,1,20210810,20210907,77,57,40,26,5,9,4,1,0,0,0,0,1047600,0],["UHT-F-2021-012",0,0,20210306,20210306,54,58,32,27,4,2,1,4,0,0,0,0,1800000,49500],["UHT-F-2021-013",0,0,20210128,20201201,5,2,2,27,4,6,1,4,0,0,0,0,1467000,40343],["UHL-F-2021-118",0,1,20210820,20210913,78,59,2,14,3,5,3,1,0,0,0,0,2028600,101430],["UHL-F-2021-119",0,1,20210827,20210914,25,23,15,28,3,14,5,1,0,0,0,0,1134000,45360],["UML-F-2021-120",3,1,20210831,20210905,79,60,41,8,5,30,2,1,0,0,0,0,445400,0],["UHL-F-2021-121",1,1,20210901,20211011,80,34,2,1,1,5,3,1,0,0,0,0,3695000,184750],["UHL-F-2021-122",0,1,20210819,20210917,72,52,38,19,10,24,6,1,0,0,0,0,1005800,40232],["UHL-F-2021-123",0,1,20210705,20211025,68,2,2,18,1,3,0,1,0,0,0,0,4050000,162000],["UHL-F-2021-124",0,1,20210705,20211120,68,2,2,18,1,24,6,1,0,0,0,0,4050000,162000],["UHL-F-2021-125",0,1,20210705,20211210,68,2,2,18,1,33,6,1,0,0,0,0,4050000,162000],["UHL-F-2021-126",0,1,20210705,20220110,68,2,2,18,1,16,0,1,0,0,0,0,4050000,162000],["UHL-F-2021-127",1,1,20210705,20220201,68,2,2,18,1,4,0,1,0,0,0,0,4050000,162000],["UHL-F-2021-128",0,1,20210917,20210920,81,61,2,1,1,16,0,2,0,0,0,0,1750000,70000],["UML-F-2021-129",0,1,20210920,20211010,82,62,42,8,5,30,2,1,0,0,0,0,1525000,0],["UHL-F-2021-130",0,1,20210921,20211101,83,8,2,13,6,14,5,2,0,0,0,0,2136000,85440],["UHL-F-2021-131",0,1,20210921,20220128,83,8,2,13,6,18,5,2,0,0,0,0,2663280,106531],["UHL-F-2021-132",0,1,20210921,20220419,83,8,2,13,6,14,5,2,0,0,0,0,1356480,54259],["UHL-F-2021-133",0,1,20210921,20220419,83,8,2,13,6,14,5,2,0,0,0,0,3240000,129600],["UHL-F-2021-134",0,1,20210921,20220921,83,8,2,13,6,34,7,2,0,0,0,0,3854340,154174],["UHL-F-2021-135",0,1,20210921,20230331,83,8,2,13,6,14,5,2,0,0,0,0,1250000,62500],["UHL-F-2021-136",1,1,20210921,20230501,83,8,2,13,6,4,10,2,0,0,0,0,1445400,72270],["UWL-F-2021-008",0,3,20210909,20210913,76,0,4,23,12,29,9,0,0,0,0,1,75000,0],["UHL-F-2021-137",0,1,20210923,20210930,36,29,2,1,8,11,3,1,0,0,0,0,3825000,0],["UHL-F-2021-138",0,1,20210924,20211011,23,21,2,3,3,1,0,4,0,0,0,0,950000,38000],["UHL-TC-2021-006",0,1,20210909,0,84,63,2,13,6,35,7,6,0,0,0,0,10494000,419760],["UHL-F-2021-139",0,1,20210930,20211002,85,64,2,28,3,9,4,1,0,0,0,0,425000,0],["UHL-F-2021-140",0,1,20210826,20211010,86,2,2,6,1,14,5,1,0,0,0,0,330000,13200],["UML-F-2021-141",0,1,20210908,20211013,3,14,2,1,1,10,4,0,0,0,0,0,1840000,0],["UHL-F-2021-142",0,1,20210928,20211025,87,65,2,1,8,10,4,1,0,0,0,0,1431000,0],["UHL-F-2021-143",0,1,20210929,20211027,88,2,2,18,1,0,0,2,0,0,0,0,1150000,46000],["UHL-F-2021-144",0,1,20211001,20211108,89,24,2,15,1,0,0,3,0,0,0,0,3200000,128000],["UHL-F-2021-145",0,1,20210810,20211101,90,66,2,6,1,0,0,3,0,0,0,0,3600000,144000],["UHL-F-2021-167",0,1,20211012,20220107,31,25,12,11,3,24,6,5,0,0,0,1,1685000,67400],["UHL-F-2021-146",0,1,20211013,20211018,47,37,27,0,0,1,0,7,0,0,0,0,995000,39800],["UHL-F-2021-147",0,1,20211014,20211024,15,13,2,1,1,0,0,1,0,0,0,0,753525,30141],["UHL-F-2021-148",0,0,20211013,20211026,76,0,4,22,0,7,3,0,0,0,0,1,950000,47500],["UML-F-2021-149",0,1,20211018,20211022,91,67,43,8,5,30,2,1,0,0,0,1,278140,0],["UHL-F-2021-150",0,1,20211013,20211115,92,2,2,18,1,9,4,1,0,0,0,0,2395000,0],["UHL-F-2021-151",0,1,20211021,20211101,93,68,2,3,3,8,3,4,0,0,0,0,1412000,70600],["UWL-F-2021-009",0,3,20210506,20211010,59,3,3,24,12,29,9,7,0,0,0,1,1375000,0],["UHL-F-2021-152",0,1,20211103,20211113,94,69,44,9,3,18,5,2,0,0,0,0,467500,18700],["UHL-F-2021-154",0,1,20211101,20211108,87,2,2,6,1,10,4,5,0,0,0,0,360000,0],["UHL-F-2021-155",0,1,20211108,20211125,95,70,2,9,3,18,5,3,0,0,0,0,1515076,60603],["UHL-F-2021-156",0,1,20211108,20211112,30,71,2,14,3,18,5,5,0,0,0,0,1130000,45200],["UHL-F-2021-157",0,1,20211109,20220101,80,34,2,19,10,4,2,1,0,0,0,0,10395000,519750],["UHL-F-2021-158",0,1,20211110,20211125,88,2,2,18,1,0,0,2,0,0,0,0,600000,24000],["UHL-F-2021-159",0,1,20211104,20220103,96,72,2,25,1,9,4,1,0,0,0,0,2645000,0],["UHL-F-2021-160",0,1,20211112,20211116,97,24,2,6,1,23,6,1,0,0,0,0,1785000,71400],["UHL-F-2021-161",0,1,20211021,20211215,53,73,2,25,1,9,4,1,0,0,0,0,670000,0],["UHL-F-2021-162",0,0,20211110,20211201,98,74,2,15,1,5,3,1,0,0,2,0,4050000,202500],["UHL-F-2021-163",0,1,20211111,20211220,99,2,2,15,1,19,0,3,0,0,0,0,2900000,116000],["UHL-F-2021-164",0,1,20211110,20211215,100,2,2,15,1,32,7,3,0,0,0,0,2465000,98600],["UHL-F-2021-165",0,1,20211118,20211210,101,24,2,1,1,23,6,2,0,0,0,0,5145000,205800],["UML-F-2021-166",0,1,20211116,20211125,102,75,45,8,5,30,2,5,0,0,0,0,954000,0],["UHL-F-2021-168",0,1,20211122,20211201,60,46,2,1,1,32,7,3,0,0,0,0,1653065,66123],["UHL-F-2021-169",0,1,20211118,20211215,103,76,2,1,1,32,7,3,0,0,0,0,977500,39100],["UHL-F-2021-170",0,1,20211117,20220720,104,77,2,27,6,20,0,5,0,0,0,0,1420520,56821],["UHL-F-2021-171",0,1,20211203,20211215,97,24,46,13,6,20,0,3,0,0,0,0,4700000,188000],["UHL-TC-2021-007",0,1,20211208,20220115,84,63,2,13,6,21,0,6,0,0,0,0,10494000,419760],["UHL-F-2021-172",1,1,20211208,20220105,105,78,2,15,1,23,6,4,2,1,1,0,2100000,84000],["UHL-F-2021-181",0,1,20211223,20220115,106,79,2,1,1,18,5,1,0,0,0,0,1435000,57400],["UHL-F-2021-173",4,1,20211111,20220715,36,29,25,1,8,36,0,0,0,0,0,0,11370000,454800],["UML-F-2021-174",0,1,20211208,20211210,107,80,47,8,5,30,2,1,0,0,0,0,640000,0],["UHL-F-2021-175",0,1,20211126,20211225,76,0,4,4,3,19,0,0,0,0,0,0,3552000,142080],["UHL-F-2021-176",0,1,20211213,20220102,108,81,48,28,3,24,6,1,0,0,0,1,500000,20000],["UHL-F-2021-177",0,1,20211124,20220105,76,0,4,22,0,1,0,0,0,0,0,0,5500000,220000],["UHL-F-2021-178",0,1,20211214,20211225,109,82,49,13,6,1,0,1,0,0,0,0,1365000,54600],["UHL-F-2021-179",0,1,20211215,20211215,110,83,50,11,3,7,3,5,0,0,0,1,520000,26000],["UHL-TC-2021-008",0,1,20211215,0,111,2,2,3,3,12,2,6,0,0,0,0,0,0],["UML-TC-2021-009",0,1,20210606,0,112,84,51,8,5,30,2,6,0,0,0,0,0,0],["UML-TC-2021-010",0,1,20210819,0,112,84,51,8,5,30,2,6,0,0,0,0,0,0],["UHL-F-2021-180",0,1,20211215,20220103,76,0,4,4,3,25,6,0,0,0,0,0,2726200,109048],["UHT-F-2021-014",0,0,20211225,20220201,54,2,32,2,2,6,1,3,0,0,0,0,1938000,62016],["UHL-F-2022-001",0,1,20220104,20220125,14,12,10,11,3,18,5,4,0,0,0,0,1299000,51960],["UHL-F-2022-002",0,1,20220107,20220113,76,0,4,4,3,14,5,0,0,0,0,1,1596000,63840],["UHL-F-2022-003",0,1,20220110,20220202,113,24,52,11,3,0,5,3,0,0,0,0,400000,16000],["UHL-F-2022-007",0,1,20220111,20220221,114,85,53,11,3,14,5,5,0,0,0,1,1900000,76000],["UHL-F-2021-182",0,1,20211109,20220214,76,0,4,4,3,32,7,0,0,0,0,0,1638000,65520],["UHL-F-2021-183",0,1,20211222,20220224,16,15,13,4,3,32,7,0,0,0,0,0,2780391,111216],["UHL-F-2022-004",0,1,20220114,20220201,115,86,12,3,3,0,0,1,0,0,0,0,1600000,64000],["UHL-F-2022-005",0,1,20220114,20220305,26,87,2,3,3,0,0,3,0,0,0,0,465000,18600],["UHL-F-2022-006",0,1,20220117,20220220,116,25,54,9,3,0,0,5,0,0,0,0,495000,19800],["UHL-F-2022-008",0,1,20220111,20220425,114,85,53,11,3,32,7,5,0,0,0,1,1900000,76000],["UHL-F-2022-060",0,1,20220414,20220527,3,14,12,11,3,33,6,5,0,0,0,1,1915000,76600],["UHL-F-2022-009",0,0,20220121,20220205,117,24,2,15,1,7,3,2,0,0,0,0,2000000,100000],["UML-F-2022-010",0,1,20220121,20220202,118,88,55,8,5,10,4,1,0,0,0,1,0,0],["UML-F-2022-011",0,1,20220113,20220228,119,89,56,7,5,10,4,3,0,0,0,0,2800000,0],["UHL-F-2022-012",0,1,20220121,20220215,29,25,2,15,1,23,6,3,0,0,0,0,2235000,89400],["UHL-F-2022-013",0,1,20220127,20220224,95,70,57,9,3,0,0,3,0,0,0,0,775000,31000],["UML-F-2022-014",0,1,20220128,20220205,21,34,30,8,5,10,4,1,0,0,0,0,210000,0],["UHL-F-2022-015",0,0,20220201,20220212,41,53,2,1,1,8,3,1,0,0,0,0,2940000,147000],["UHL-F-2022-016",0,1,20220122,20220220,120,90,58,8,7,30,2,1,0,0,0,0,1050000,0],["UHL-F-2022-017",0,1,20220123,20220218,121,91,59,8,7,30,2,1,0,0,0,0,450000,0],["UML-F-2022-018",0,1,20220131,20220215,122,92,60,8,7,30,2,1,0,0,0,0,450000,0],["UHL-F-2022-019",0,1,20220202,20220202,76,0,4,22,0,8,3,0,0,0,0,0,2950000,147500],["UHL-F-2022-020",0,1,20220207,20220316,76,0,4,22,0,24,6,0,0,0,0,0,6150000,246000],["UHL-F-2022-021",0,1,20220202,20220228,123,2,2,22,0,27,7,1,0,0,0,1,105000,4200],["UHL-F-2021-184",0,1,20220116,20220201,76,0,4,4,3,3,0,0,0,0,0,0,2726200,109048],["UHL-F-2022-022",0,1,20220116,20220201,76,0,4,4,3,27,7,0,0,0,0,0,2726200,109048],["UML-F-2022-022",0,1,20220203,20220320,124,93,61,8,5,9,4,5,0,0,0,0,1684160,0],["UHL-F-2022-023",0,0,20220208,20220213,125,2,2,18,1,7,3,4,0,0,0,0,215000,10750],["UHL-F-2022-024",2,0,20220205,20220225,126,94,2,25,1,37,3,3,0,0,0,0,570000,28500],["UHL-F-2022-025",0,0,20220209,20220328,16,15,13,4,3,7,3,0,0,0,0,0,2146091,107305],["UHL-F-2022-026",0,1,20220111,20220817,16,15,13,4,3,23,6,0,0,0,0,0,4368104,174724],["UHT-TC-2022-001",1,1,20220211,20230501,10,95,2,12,4,38,1,3,0,1,1,0,0,0],["UHL-F-2021-185",0,1,20210402,20220717,45,36,2,20,6,27,7,7,0,0,0,0,1595000,63800],["UHL-F-2022-027",1,1,20220127,20220302,127,96,62,1,1,16,0,1,2,1,1,0,12054000,482160],["UML-F-2022-028",0,1,20220218,20220420,128,97,63,8,5,9,4,1,0,0,0,0,1250000,31250],["UHL-F-2022-029",0,1,20220218,20220411,76,0,4,4,3,39,2,0,0,0,0,0,3100000,124000],["UHL-F-2022-030",0,1,20220222,20220306,53,73,2,14,3,0,0,2,0,0,0,0,450000,18000],["UHL-F-2022-031",0,1,20220223,20220528,50,40,64,9,3,24,6,3,0,0,0,0,1295000,51800],["UHL-F-2022-032",0,1,20220303,20220401,129,7,2,14,3,18,5,1,0,0,0,0,1470000,58800],["UML-F-2022-033",0,1,20220303,20220311,130,98,65,8,5,9,4,1,0,0,0,0,357500,0],["UHL-F-2022-034",0,0,20220311,20220318,131,99,2,29,7,7,3,1,0,0,0,0,950000,47500],["UHL-F-2022-036",0,1,20220310,20220410,132,100,66,3,3,20,0,2,0,0,0,0,910000,36400],["UHL-F-2022-037",0,1,20220315,20220515,133,66,2,3,3,0,0,2,0,0,0,0,2145000,85800],["UHL-F-2022-038",0,1,20220315,20220404,76,0,4,4,3,33,7,0,0,0,0,0,3203500,128140],["UHL-F-2022-039",0,1,20220316,20220321,76,0,4,0,0,16,0,0,0,0,0,0,82500,3300],["UHL-F-2022-040",0,1,20220317,20220315,28,24,2,29,7,7,3,1,0,0,0,0,365000,18250],["UHL-F-2022-041",0,1,20220322,20220504,134,70,2,14,3,3,0,2,0,0,0,0,1125000,45000],["UML-F-2022-063",0,1,20220318,20220510,92,2,2,18,1,10,4,1,0,0,0,0,2300000,0],["UML-F-2022-042",0,1,20220318,0,92,2,2,18,1,10,4,1,0,0,0,0,2300000,0],["UHL-F-2022-043",0,1,20220325,20220415,135,101,14,6,1,0,0,5,0,0,0,0,6090000,243600],["UHL-F-2022-044",0,1,20220328,20220501,35,28,2,1,1,25,6,1,0,0,0,0,700000,28000],["UHL-F-2022-045",0,1,20220404,20220418,16,15,13,4,3,19,0,0,0,0,0,0,3418900,136756],["UHL-F-2022-046",0,1,20220404,20220407,134,2,2,29,7,14,5,1,0,0,0,0,550000,22000],["UHL-F-2022-047",0,1,20220406,20220601,76,0,2,22,0,24,6,0,0,0,0,0,2700000,108000],["UHT-F-2022-001",0,0,20220308,20220315,54,2,32,2,2,15,1,3,0,2,0,0,2400000,46800],["UHT-F-2022-002",0,0,20220309,20220415,54,2,32,2,2,15,1,3,0,2,0,0,1800000,35100],["UHL-F-2022-048",0,1,20220408,20220504,57,45,67,0,0,3,0,7,0,0,0,0,1325000,53000],["UHL-F-2022-049",0,1,20220408,20220406,30,71,2,14,3,3,0,3,0,0,0,0,1150000,46000],["UHT-F-2022-003",0,0,20220411,20220523,136,2,2,2,2,22,1,3,1,2,2,0,3300000,49500],["UHT-F-2022-004",0,1,20220415,20220920,137,2,2,2,2,15,1,2,1,2,2,0,13284000,531360],["UML-F-2022-050",0,1,20220404,20220501,138,102,68,8,5,30,2,1,0,0,0,1,365000,0],["UML-F-2022-051",0,1,20220404,20220501,139,103,68,8,5,30,2,1,0,0,0,1,90475,0],["UML-F-2022-052",0,1,20220412,20220506,140,104,69,8,5,30,2,1,0,0,0,0,860000,0],["UML-F-2022-053",0,1,20220419,20220501,141,105,70,8,5,9,4,1,0,0,0,0,550000,0],["UHL-F-2022-054",0,1,20220420,20220504,76,0,4,0,0,3,0,0,0,0,0,0,69500,2780],["UHL-F-2022-055",0,1,20220425,20220510,36,29,2,1,1,18,5,0,0,0,0,0,1626775,65071],["UHL-F-2022-056",0,1,20220325,20220505,135,101,14,6,1,1,0,1,0,0,0,0,4740000,189600],["UHL-F-2022-057",0,1,20220427,20220516,16,15,13,4,3,32,7,0,0,0,0,0,2765500,110620],["UHL-F-2022-058",0,1,20220407,20220615,101,24,2,19,10,19,0,1,0,0,0,0,1173500,46940],["UML-F-2022-059",0,1,20220426,20220515,142,106,71,8,5,30,2,1,0,0,0,0,844174,0],["UHT-F-2022-005",5,1,20220429,0,143,2,2,12,4,31,8,7,0,2,0,0,2250000,112500],["UHL-F-2022-062",0,1,20220502,20220516,76,0,4,4,3,20,0,0,0,0,0,0,2223100,88924],["UHL-F-2022-061",0,1,20220428,20220526,144,107,2,21,11,34,7,3,0,0,0,0,650000,26000],["UHL-F-2022-064",0,1,20220506,20220518,145,24,2,19,10,23,6,3,0,0,0,0,1770000,70800],["UHL-F-2022-065",0,1,20220512,20220520,146,2,2,15,1,34,7,1,0,0,0,0,707663,28307],["UHL-F-2022-066",0,1,20220512,20220601,35,28,2,25,1,25,6,1,0,0,0,0,875000,35000],["UHL-F-2022-067",0,1,20220513,0,147,2,2,19,10,24,6,4,0,0,0,0,550000,22000],["UML-F-2022-068",0,1,20220516,20220608,130,98,65,8,5,9,4,1,0,0,0,0,0,0],["UHL-F-2022-069",0,1,20220519,20220523,36,29,2,1,1,16,0,0,0,0,0,0,1590000,63600],["UHL-F-2022-070",0,1,20220523,20220616,148,25,2,18,1,34,7,1,0,0,0,0,3351600,134064],["UHL-F-2022-071",0,0,20220518,20220526,76,0,4,22,0,7,3,0,0,0,0,0,1600000,80000],["UHL-F-2022-072",0,1,20220523,20220517,149,108,2,13,6,40,2,1,0,0,0,0,6217470,310874],["UHL-F-2022-073",0,1,20220127,20220604,150,2,2,15,1,18,5,3,0,0,0,0,2490000,99600],["UHL-F-2022-074",0,1,20220524,20220614,16,15,13,4,3,16,0,0,0,0,0,0,2915500,116620],["UHL-F-2022-075",0,1,20220517,20220615,105,78,2,15,1,18,5,4,0,0,0,0,1900000,76000],["UHL-F-2022-076",0,1,20220516,20220720,105,78,2,15,1,23,6,4,0,0,0,0,2100000,84000],["UHL-F-2022-077",0,1,20220525,20220711,31,25,12,11,3,32,7,5,0,0,0,1,1425000,57000],["UHL-F-2022-078",0,0,20220526,20220529,151,109,2,3,3,7,3,1,0,0,0,0,900000,45000],["UHL-F-2022-079",0,1,20220605,20220710,101,24,72,1,1,23,6,1,0,0,0,0,3295000,131800],["UHL-F-2022-080",0,1,20220607,20220704,152,110,73,9,3,20,0,5,0,0,0,0,950000,38000],["UHL-F-2022-081",0,1,20220608,20220610,68,111,2,6,1,1,0,4,0,0,0,0,470000,18800],["UHL-F-2022-082",0,1,20220608,20220627,76,0,4,4,3,3,0,0,0,0,0,0,2273100,90924],["UHL-F-2022-083",0,1,20220608,20220620,31,25,2,3,3,19,0,2,0,0,0,0,600000,24000],["UHL-F-2022-084",0,1,20220609,20220625,93,2,74,9,3,19,0,4,0,0,0,0,840000,33600],["UHT-TC-2022-002",5,0,20220613,0,153,95,2,27,4,6,1,3,2,1,1,0,7122272,284891],["UHL-F-2022-085",0,1,20220614,20220718,76,0,4,4,3,16,0,0,0,0,0,0,2325000,93000],["UHL-F-2022-086",0,1,20220614,20220808,76,0,4,4,3,14,0,0,0,0,0,0,2325000,93000],["UHL-F-2022-087",0,1,20220615,20220720,114,85,53,11,3,32,7,5,0,0,0,1,1875000,75000],["UHL-F-2022-088",0,1,20220615,20220625,93,68,74,11,3,27,7,4,0,0,0,0,1900000,76000],["UHL-F-2022-089",0,1,20220616,20220820,45,36,2,20,6,21,0,7,0,0,0,0,1595000,63800],["UHL-F-2022-090",0,1,20220616,20220620,36,29,25,15,1,27,7,1,0,0,0,0,2134750,85390],["UHL-F-2022-091",0,1,20220616,20220805,154,24,2,19,10,18,5,1,0,0,0,0,1395000,55800],["UHL-F-2022-096",0,1,20220621,20220628,155,112,75,11,3,14,5,1,0,0,0,1,590000,23600],["UML-F-2022-092",0,1,20220602,0,142,106,71,8,5,9,4,1,0,0,0,0,877500,0],["UML-F-2022-093",0,1,20220608,20220715,94,51,37,8,5,9,4,1,0,0,0,0,775000,0],["UHL-F-2022-094",0,1,20220622,20220716,113,24,2,14,3,1,0,3,0,0,0,0,2964000,118560],["UHL-F-2022-095",0,1,20220609,20220715,117,24,2,18,1,34,7,1,0,0,0,0,2475000,99000],["UHL-F-2022-097",0,1,20220627,20220721,9,7,2,14,3,0,0,1,0,0,0,0,1595000,63800],["UHL-F-2022-098",0,1,20220623,20220720,36,2,2,15,1,21,0,1,0,0,0,0,1750000,70000],["UML-F-2022-099",0,1,20220627,0,156,113,3,8,5,9,4,3,0,0,0,0,355000,0],["UHL-F-2022-100",0,1,20220630,20220718,110,83,50,14,3,20,0,5,0,0,0,1,730000,29200],["UHL-F-2022-101",0,1,20220630,20220920,110,83,50,14,3,21,0,5,0,0,0,1,795000,31800],["UHT-F-2022-006",0,1,20220701,20220725,157,2,2,2,2,15,1,2,0,2,0,0,4100000,79950],["UHT-F-2022-007",0,1,20220701,20220901,157,2,2,2,2,22,1,2,0,2,0,0,3966000,77337],["UML-F-2022-102",0,1,20220702,20220708,133,114,76,8,5,30,2,5,0,0,0,0,595000,0],["UHL-F-2022-103",0,1,20220702,20220820,105,78,2,15,1,35,7,4,0,0,0,0,1900000,76000],["UHL-F-2022-104",0,1,20220615,20220801,158,2,2,15,1,35,7,1,0,0,0,0,945000,37800],["UHL-F-2022-105",0,1,20220511,20220705,41,2,2,1,1,21,0,1,0,0,0,0,595000,23800],["UHL-F-2022-106",0,1,20220701,20220727,159,2,2,6,1,21,0,2,0,0,0,0,740000,29600],["UHL-F-2022-107",0,1,20220704,20220808,16,15,13,4,3,14,5,0,0,0,0,0,2765500,110620],["UML-F-2022-108",0,1,20220620,0,160,115,77,8,5,9,4,5,0,0,0,1,525000,0],["UHL-F-2022-109",0,1,20220711,20220725,76,0,4,4,3,24,6,0,0,0,0,0,3366900,134676],["UHL-F-2022-110",0,1,20220713,20220801,161,70,2,28,1,21,0,1,0,0,0,0,995000,39800],["UML-F-2022-111",0,1,20220712,20220725,128,97,63,8,5,9,4,1,0,0,0,0,1500000,0],["UHL-F-2022-114",0,1,20220715,20220815,11,2,78,9,3,3,0,1,0,0,0,0,1400000,56000],["UHL-F-2022-115",0,1,20220716,20220729,117,24,2,25,1,34,7,1,0,0,0,0,775000,31000],["UHL-F-2022-116",0,1,20220719,20220725,162,116,79,9,3,0,0,1,0,0,0,0,825000,33000],["UHL-F-2022-117",0,1,20220728,20220910,147,117,2,3,3,16,0,4,0,0,0,0,1625000,65000],["UML-F-2022-118",0,1,20220801,20220807,35,28,20,8,5,30,2,1,0,0,0,0,500000,0],["UML-F-2022-119",0,1,20220801,20220815,163,114,80,8,5,30,2,5,0,0,0,0,500000,0],["UHL-F-2022-120",0,1,20220802,20220815,76,0,4,4,3,33,6,0,0,0,0,0,2273100,90924],["UHL-F-2022-121",0,1,20220808,20220808,16,15,13,4,3,20,0,0,0,0,0,0,2765500,110620],["UHL-F-2022-122",0,1,20220808,20221010,164,24,2,19,13,35,7,1,0,0,0,0,2345000,93800],["UHL-F-2022-123",0,1,20220815,20221001,35,28,2,11,3,33,6,1,0,0,0,0,2215000,88600],["UHL-F-2022-124",0,1,20220111,20220817,16,15,13,4,3,19,0,0,0,0,0,0,2012069,80483],["UHT-F-2022-008",0,1,20220811,20240215,165,2,2,2,2,38,1,4,0,2,0,0,6080000,118560],["UHL-F-2022-125",0,1,20220829,20221001,149,108,81,13,6,9,4,2,0,0,0,0,500000,0],["UHL-F-2022-126",0,1,20220830,20220910,166,118,2,7,0,9,4,1,0,0,0,0,490000,0],["UHL-F-2022-127",0,1,20220830,0,167,28,2,7,0,30,2,5,0,0,0,0,675000,0],["UHL-F-2022-128",0,1,20220902,20221012,93,68,2,3,3,33,6,4,0,0,0,0,897500,35900],["UHL-F-2022-129",0,1,20220906,20220908,168,119,2,1,1,20,0,1,0,0,0,0,630000,25200],["UHL-F-2022-130",0,1,20220906,20220923,114,85,53,11,3,21,0,5,0,0,0,1,1900000,76000],["UHL-F-2022-131",0,1,20220907,20220910,121,91,2,11,3,27,7,1,0,0,0,0,1550000,62000],["UHL-F-2022-132",0,1,20220908,20220919,16,15,13,4,3,32,7,0,0,0,0,0,2826103,113044],["UML-F-2022-133",0,1,20220908,20221025,169,120,82,8,5,9,4,4,0,0,0,0,580000,0],["UHT-F-2022-009",0,1,20220909,20221025,170,2,2,2,2,38,1,2,0,2,2,0,6450000,177375],["UHL-F-2022-134",0,1,20220909,20220921,40,32,2,11,3,34,7,1,0,0,0,0,650000,26000],["UHL-F-2022-135",0,1,20220913,20220926,76,0,4,4,3,18,5,0,0,2,0,0,2223100,88924],["UHL-F-2022-136",0,1,20220915,20221005,171,2,2,6,1,25,6,3,0,0,0,0,1255000,50200],["UHL-F-2022-137",0,1,20220907,20220926,36,29,2,15,1,0,0,3,0,0,0,0,1050000,42000],["UHL-F-2022-138",0,1,20220920,20221003,6,56,5,4,3,32,7,0,0,0,0,0,1000000,40000],["UHL-F-2022-139",0,1,20220921,20221014,114,85,53,11,3,24,6,5,0,0,0,1,1925000,77000],["UHL-F-2022-140",0,1,20220921,20221103,114,85,53,11,3,27,7,5,0,0,0,1,1925000,77000],["UHL-F-2022-141",0,1,20220921,20221123,31,25,12,11,3,18,5,5,0,0,0,1,2190000,87600],["UHL-F-2022-142",0,1,20220921,20221015,172,121,2,15,1,0,0,5,0,0,0,0,2700000,108000],["UHL-F-2022-143",0,1,20220918,20221028,76,0,4,22,0,32,7,0,0,0,0,1,609000,24360],["UML-F-2022-144",0,1,20220901,0,173,122,83,1,1,10,4,8,0,0,0,0,725000,0],["UML-F-2022-145",0,1,20220927,20221015,174,123,2,1,1,10,4,9,0,0,0,0,295000,0],["UHL-F-2022-146",0,1,20220929,20221017,16,15,13,4,3,14,5,0,0,0,0,0,3007385,120295],["UHL-F-2022-147",0,1,20220930,20221017,76,0,4,4,3,19,0,0,0,0,0,0,3662100,146484],["UHL-F-2022-148",0,1,20221003,20221004,59,2,3,22,0,27,7,0,0,0,0,0,495000,19800],["UHT-F-2022-010",0,1,20221005,20230101,175,2,2,2,2,38,1,7,0,0,2,0,8200000,262400],["UHL-F-2022-149",0,1,20220824,20221017,176,124,2,21,11,3,0,1,0,0,0,0,2347500,93900],["UHL-F-2022-150",0,1,20221006,0,98,74,84,19,13,27,7,1,0,0,0,0,475000,19000],["UHL-F-2022-151",0,1,20221007,20221014,98,74,2,15,1,3,0,2,0,0,0,0,1500000,60000],["UHL-F-2022-152",0,1,20221007,20221024,177,125,85,28,1,0,0,1,0,0,0,0,325163,13007],["UHL-F-2022-153",0,1,20221007,20221010,76,0,4,22,0,24,6,0,0,0,0,1,185000,7400],["UHL-F-2022-154",0,1,20221004,20221101,92,126,2,1,1,10,4,1,0,0,0,0,2250000,0],["UHL-F-2022-155",0,1,20221010,20221010,178,121,2,15,1,0,0,5,0,0,0,0,350000,14000],["UHL-F-2022-156",0,1,20221010,20221025,150,127,2,15,1,0,0,5,0,0,0,0,782875,31315],["UHL-F-2022-157",0,1,20221012,20221025,179,128,86,29,7,30,2,1,0,0,0,0,908375,0],["UHL-F-2022-158",0,1,20221017,20221028,50,129,87,11,3,20,0,3,0,0,0,1,980000,39200],["UHL-F-2022-159",0,1,20221011,20221101,25,23,15,19,13,23,6,1,0,0,0,0,1552500,62100],["UHL-F-2022-160",0,1,20221005,20221025,101,24,2,1,1,1,0,2,0,0,0,0,2626000,105040],["UHL-F-2022-161",0,1,20221020,20221117,76,0,4,22,0,34,7,0,0,0,0,1,915000,36600],["UHL-F-2022-162",0,1,20221019,20221028,180,130,2,15,1,0,0,5,0,0,0,0,300000,12000],["UHL-F-2022-163",0,1,20221019,20221020,181,121,2,15,1,0,0,5,0,0,0,0,135000,5400],["UHL-F-2022-164",0,1,20221026,20221114,16,15,13,4,3,24,6,0,0,0,0,0,2766570,110663],["UHL-F-2022-165",0,1,20221026,20221123,15,13,11,6,1,21,0,1,0,0,0,0,775000,31000],["UHL-F-2022-166",0,1,20221027,20221125,182,131,2,14,3,14,5,4,0,0,0,0,1185000,47400],["UHL-F-2022-169",0,1,20221027,20221128,183,132,88,11,3,32,7,1,0,0,0,0,1820000,72800],["UHL-F-2022-167",0,1,20221028,20221103,36,29,25,28,1,3,0,1,0,0,0,0,294140,11766],["UHL-F-2022-168",0,1,20221028,20221114,76,0,4,4,3,16,0,0,0,0,0,0,2876200,115048],["UHL-F-2022-170",0,1,20221028,20221030,184,2,2,13,6,9,4,2,0,0,0,0,72750,3638],["UHL-F-2022-171",0,1,20221101,20221212,185,133,89,9,3,19,0,3,0,0,0,0,1445000,57800],["UHL-F-2022-172",0,1,20221103,20221114,98,74,2,1,1,25,6,1,0,0,0,0,1386000,55440],["UHL-F-2022-173",0,1,20221025,20221225,105,78,2,15,1,21,0,4,0,0,0,0,1500000,60000],["UHL-F-2022-174",0,1,20221017,20221215,113,24,2,15,1,21,0,2,0,0,0,0,1675000,67000],["UHL-F-2022-175",0,1,20221107,20221125,129,7,2,15,1,25,6,4,0,0,0,0,560000,22400],["UHL-F-2022-176",0,1,20221108,20221125,24,22,14,11,3,18,5,1,0,0,0,0,675021,27001],["UHT-TC-2022-003",0,1,20220620,20221201,186,134,2,20,4,2,1,3,0,0,2,0,12300000,0],["UHL-F-2022-177",0,1,20221110,20230105,36,29,25,1,1,23,6,0,0,0,2,0,3170000,126800],["UHL-F-2022-178",0,1,20221110,20221228,9,7,2,11,3,34,7,1,0,0,0,0,595000,29750],["UHL-F-2022-179",0,1,20221109,20221122,187,2,2,7,0,9,4,1,0,0,0,0,408000,0],["UHL-F-2022-180",0,1,20221111,20221201,31,25,12,11,3,32,7,5,0,0,0,1,580000,23200],["UHL-F-2022-181",0,1,20221111,20221120,188,135,2,15,1,3,0,2,0,0,0,0,795000,31800],["UHL-F-2022-182",0,1,20221114,20221114,98,74,46,3,3,20,0,2,0,0,2,0,1393700,55748],["UHL-F-2022-183",0,1,20221115,20230102,76,0,67,0,0,4,0,7,0,0,0,0,1875000,93750],["UHL-F-2022-184",0,1,20221115,20230116,76,0,67,0,0,4,0,7,0,0,0,0,1875000,93750],["UHL-F-2022-185",0,1,20221116,20230109,76,0,4,4,3,33,6,0,0,0,0,0,4240000,169600],["UHL-F-2022-186",0,1,20221112,20230101,21,34,2,19,13,3,0,1,0,0,0,0,1295000,51800],["UHL-F-2022-187",0,1,20221118,20221201,31,25,12,11,3,34,7,5,0,0,0,1,325000,13000],["UHL-F-2022-197",0,1,20221118,20221123,31,25,12,11,3,18,5,5,0,0,0,1,75000,3000],["UHL-F-2022-188",0,1,20221121,20221127,76,0,2,23,3,32,7,7,0,0,0,0,150000,6000],["UHL-F-2022-189",0,1,20221124,20221212,76,0,4,4,3,35,7,0,0,0,2,0,2726200,109048],["UHL-F-2022-190",0,1,20221123,20221219,110,83,50,14,3,34,7,5,0,0,0,1,670000,26800],["UHL-F-2022-191",0,1,20221128,20230101,189,136,90,28,1,25,6,1,0,0,0,0,235000,9400],["UML-F-2022-192",0,1,20221128,20221217,190,137,91,8,5,9,4,1,0,0,0,0,880000,0],["UHL-F-2022-193",0,1,20221123,20221203,44,35,26,19,13,1,0,1,0,0,0,0,1200000,48000],["UHL-F-2022-194",0,1,20221202,20221212,16,15,13,4,3,27,7,0,0,0,0,0,2916570,116663],["UHL-F-2022-195",0,1,20221201,20221218,171,2,2,6,1,10,4,1,0,0,0,0,745000,0],["UHL-F-2022-196",0,1,20221205,20221215,191,2,2,6,1,23,6,1,0,0,0,0,382250,15290],["UHL-F-2022-198",0,1,20221028,20221215,192,2,2,6,1,33,6,1,0,0,0,0,475000,19000],["UHL-F-2022-199",0,1,20221209,20221227,193,34,2,14,3,14,5,8,0,0,0,0,825000,33000],["UML-F-2022-200",0,1,20221209,20221213,194,138,92,8,5,9,4,4,0,0,0,0,220000,0],["UHL-F-2022-201",0,1,20221209,20221222,29,25,2,15,1,33,6,5,0,0,0,0,1435056,57402],["UHL-F-2022-202",0,1,20221212,20221220,26,87,2,1,1,21,0,1,0,0,2,0,1487972,59519],["UHL-F-2022-203",0,1,20221213,20221216,195,2,2,3,3,34,7,5,0,0,0,1,254000,10160],["UML-F-2022-204",0,1,20221215,20230110,196,139,93,8,5,9,4,1,0,0,0,0,500000,0],["UHL-F-2022-205",0,1,20221216,20240610,16,15,13,4,3,41,2,0,0,0,0,0,1590000,0],["UHL-F-2022-206",0,1,20221219,20230102,76,0,4,4,3,25,6,0,0,0,0,0,3170000,126800],["UML-F-2022-207",0,1,20221215,20230110,197,140,94,8,5,0,0,1,0,0,0,0,1800000,72000],["UML-F-2022-208",0,1,20221216,20230120,79,60,41,8,5,9,4,1,0,0,0,0,702900,0],["UHL-F-2022-209",0,1,20221223,20230114,198,141,95,28,1,10,4,1,0,0,0,0,810000,0],["UHL-F-2022-210",0,1,20221228,20230116,16,15,13,4,3,18,5,0,0,0,2,0,2766570,110663],["UHL-F-2022-211",0,1,20221229,20230116,44,35,26,19,13,19,0,1,0,0,0,0,957500,38300],["UHL-F-2022-212",0,1,20221228,20230118,97,24,2,6,1,1,0,1,0,0,0,0,330000,13200],["UHL-F-2022-213",0,1,20221223,20230123,199,142,96,21,11,1,0,3,0,0,0,0,495000,19800]]};
+</script>
+<script>
+(function () {
+'use strict';
+var NS = 'http://www.w3.org/2000/svg';
+
+/* ---------- tiny DOM helpers (all text goes through text nodes) ---------- */
+function h(tag, attrs) {
+  var e = document.createElement(tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) {
+    var v = attrs[k];
+    if (v === false || v == null) return;
+    if (k === 'class') e.className = v;
+    else if (k === 'style') e.style.cssText = v;
+    else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+    else if (k === 'checked' || k === 'selected' || k === 'value' || k === 'disabled') e[k] = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  });
+  for (var i = 2; i < arguments.length; i++) add(e, arguments[i]);
+  return e;
+}
+function add(e, c) {
+  if (c == null || c === false) return;
+  if (Array.isArray(c)) { c.forEach(function (x) { add(e, x); }); return; }
+  e.append(c.nodeType ? c : document.createTextNode(String(c)));
+}
+function s(tag, attrs) {
+  var e = document.createElementNS(NS, tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+  for (var i = 2; i < arguments.length; i++) add(e, arguments[i]);
+  return e;
+}
+
+/* ---------- formatting ---------- */
+var nf = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+function f0(n) { return nf.format(Math.round(n)); }
+function trim1(x) { return String(+x.toFixed(1)); }
+function comp(n) {
+  var a = Math.abs(n);
+  if (a >= 1e9) return trim1(n / 1e9) + 'B';
+  if (a >= 1e6) return trim1(n / 1e6) + 'M';
+  if (a >= 1e3) return trim1(n / 1e3) + 'K';
+  return String(Math.round(n));
+}
+function fmtDate(n) {
+  if (!n) return '';
+  var d = n % 100, m = Math.floor(n / 100) % 100, y = Math.floor(n / 10000);
+  return String(d).padStart(2, '0') + '/' + String(m).padStart(2, '0') + '/' + y;
+}
+function niceTicks(max) {
+  if (!(max > 0)) return { max: 1, ticks: [0, 0.25, 0.5, 0.75, 1] };
+  var raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), norm = raw / mag;
+  var step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+  var top = Math.ceil(max / step - 1e-9) * step, ticks = [];
+  for (var v = 0; v <= top + step * 1e-6; v += step) ticks.push(v);
+  return { max: top, ticks: ticks };
+}
+
+/* ---------- data ---------- */
+var D = window.__DATA__, dict = D.dict;
+function blank(v) { return v === '' || v == null ? '(Unassigned)' : v; }
+var recs = D.rows.map(function (r) {
+  return {
+    num: r[0], status: dict.status[r[1]], inv: dict.inv[r[2]], booking: r[3], laycan: r[4],
+    acct: blank(dict.acct[r[5]]), head: blank(dict.head[r[6]]), shipper: blank(dict.shipper[r[7]]),
+    pic: blank(dict.pic[r[8]]), office: blank(dict.office[r[9]]), fp: blank(dict.fp[r[10]]),
+    vt: blank(dict.vt[r[11]]), cargo: blank(dict.cargo[r[12]]),
+    rc: dict.rc[r[13]], re: dict.re[r[14]], ro: dict.ro[r[15]],
+    cur: dict.cur[r[16]], gross: r[17], mf: r[18]
+  };
+});
+var OFFICES = Array.from(new Set(recs.map(function (r) { return r.office; }))).sort();
+function yearsFor(basis) {
+  var set = new Set();
+  recs.forEach(function (r) { var d = basis === 'booking' ? r.booking : r.laycan; if (d) set.add(Math.floor(d / 10000)); });
+  return Array.from(set).sort();
+}
+var state = {
+  name: 'Fixture report - bctesting sample',
+  basis: 'booking', years: new Set([2021, 2022]), from: '', to: '',
+  offices: new Set(OFFICES), rate: 1.17, inclCP: false,
+  tab: 'reports', page: 0, group: 'cargo', pgroup: 'acct', pivot: 'monthly', topN: '10', stackPct: false
+};
+
+function build() {
+  var out = [];
+  recs.forEach(function (r) {
+    if (!state.offices.has(r.office)) return;
+    if (!state.inclCP && (r.status === 'Cancelled' || r.status === 'Postponed')) return;
+    var date = state.basis === 'booking' ? r.booking : r.laycan;
+    if (!date) return;
+    var y = Math.floor(date / 10000), m = Math.floor(date / 100) % 100;
+    if (state.from || state.to) {
+      var f = state.from ? +state.from.replace(/-/g, '') : 0, t = state.to ? +state.to.replace(/-/g, '') : 99999999;
+      if (date < f || date > t) return;
+    } else if (!state.years.has(y)) return;
+    var eur = r.cur === 'Euro' ? r.gross : 0, usd = r.cur === 'US Dollar' ? r.gross : 0;
+    var o = Object.assign({}, r);
+    o.reportDate = date; o.year = String(y); o.month = y + '-' + String(m).padStart(2, '0');
+    o.eur = eur; o.usd = usd; o.rate = state.rate; o.total = usd + eur * state.rate;
+    o.mfEur = r.cur === 'Euro' ? r.mf : 0; o.mfUsd = r.cur === 'US Dollar' ? r.mf : 0;
+    out.push(o);
+  });
+  return out;
+}
+function groupBy(rows, fn) {
+  var m = new Map();
+  rows.forEach(function (r) { var k = fn(r), g = m.get(k); if (!g) { g = { key: k, rows: [] }; m.set(k, g); } g.rows.push(r); });
+  return Array.from(m.values());
+}
+function sum(rows, f) { var t = 0; rows.forEach(function (r) { t += r[f]; }); return t; }
+
+/* ---------- tooltip ---------- */
+var tip = document.getElementById('tip');
+function showTip(ev, title, items) {
+  tip.replaceChildren(h('div', { class: 'tip-title' }, title));
+  items.forEach(function (it) {
+    tip.append(h('div', { class: 'tip-row' }, h('span', { class: 'key', style: 'background:' + it.color }), h('span', null, it.name), h('strong', null, it.value)));
+  });
+  tip.style.display = 'block';
+  moveTip(ev);
+}
+function moveTip(ev) {
+  var pad = 14, x = ev.clientX + pad, y = ev.clientY + pad, w = tip.offsetWidth, hh = tip.offsetHeight;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - pad;
+  if (y + hh > innerHeight - 8) y = ev.clientY - hh - pad;
+  tip.style.left = Math.max(4, x) + 'px'; tip.style.top = Math.max(4, y) + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+
+/* ---------- colours: stable per entity ---------- */
+var baseMaps = {};
+function baseMap(dim) {
+  if (baseMaps[dim]) return baseMaps[dim];
+  var m = new Map();
+  var g = groupBy(recs.filter(function (r) { return r.status !== 'Cancelled' && r.status !== 'Postponed'; }), function (r) { return r[dim]; });
+  g.sort(function (a, b) { return b.rows.length - a.rows.length; });
+  g.slice(0, 5).forEach(function (x, i) { m.set(x.key, i + 1); });
+  baseMaps[dim] = m; return m;
+}
+function slotsFor(dim, keys) {
+  var m = baseMap(dim), used = new Set(), out = {};
+  keys.forEach(function (k) { var sl = m.get(k); if (sl && !used.has(sl)) { out[k] = sl; used.add(sl); } });
+  keys.forEach(function (k) {
+    if (out[k]) return;
+    for (var sl = 1; sl <= 6; sl++) if (!used.has(sl)) { out[k] = sl; used.add(sl); break; }
+    if (!out[k]) out[k] = 6;
+  });
+  return out;
+}
+function pieData(rows, dim, valueFn, n) {
+  var g = groupBy(rows, function (r) { return r[dim]; }).map(function (x) { return { key: x.key, value: valueFn(x.rows) }; })
+    .filter(function (x) { return x.value > 0; }).sort(function (a, b) { return b.value - a.value; });
+  var top = g.slice(0, n), rest = g.slice(n);
+  var slots = slotsFor(dim, top.map(function (x) { return x.key; }));
+  var slices = top.map(function (x) { return { label: x.key, value: x.value, color: 'var(--s' + slots[x.key] + ')', dark: slots[x.key] === 4 }; });
+  if (rest.length) slices.push({ label: 'Others (' + rest.length + ')', value: rest.reduce(function (a, x) { return a + x.value; }, 0), color: 'var(--other)', dark: true });
+  return slices;
+}
+var RATING_COLOR = { 'Will book again with UHL': ['var(--s1)', false], 'Satisfied': ['var(--s2)', false], 'Not Rated': ['var(--other)', true] };
+function ratingPie(rows, field) {
+  var g = groupBy(rows, function (r) { return r[field]; }).map(function (x) { return { key: x.key, value: x.rows.length }; });
+  var order = ['Will book again with UHL', 'Satisfied', 'Not Rated'];
+  g.sort(function (a, b) { return order.indexOf(a.key) - order.indexOf(b.key); });
+  return g.map(function (x) { var c = RATING_COLOR[x.key] || ['var(--other)', true]; return { label: x.key, value: x.value, color: c[0], dark: c[1] }; });
+}
+
+/* ---------- charts ---------- */
+function barPath(x, y, w, hgt, r, roundTop) {
+  if (hgt <= 0) return '';
+  r = Math.min(r, w / 2, hgt);
+  if (!roundTop || r <= 0) return 'M' + x + ',' + y + 'h' + w + 'v' + hgt + 'h' + (-w) + 'Z';
+  var yb = y + hgt;
+  return 'M' + x + ',' + yb + 'V' + (y + r) + 'Q' + x + ',' + y + ' ' + (x + r) + ',' + y + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + y + ' ' + (x + w) + ',' + (y + r) + 'V' + yb + 'Z';
+}
+/* cfg: cats[], series[{name,color,values[]}], kind: single|grouped|stacked, percent, fmt, title */
+function barChart(cfg) {
+  var cats = cfg.cats, series = cfg.series, kind = cfg.kind, pct = !!cfg.percent, fmt = cfg.fmt || f0;
+  var W = 860, H = 300, l = 58, r = 10, t = 14, b = cats.length > 12 ? 64 : 34;
+  var pw = W - l - r, ph = H - t - b, n = Math.max(cats.length, 1);
+  var totals = cats.map(function (_, i) { return series.reduce(function (a, sr) { return a + sr.values[i]; }, 0); });
+  var max;
+  if (kind === 'stacked') max = pct ? 100 : Math.max.apply(null, totals.concat([0]));
+  else max = Math.max.apply(null, [0].concat.apply([], series.map(function (sr) { return sr.values; })));
+  var sc = niceTicks(max);
+  function y(v) { return t + ph - (v / sc.max) * ph; }
+  var svg = s('svg', { viewBox: '0 0 ' + W + ' ' + H, 'class': 'chart', role: 'img', 'aria-label': cfg.title });
+  sc.ticks.forEach(function (v) {
+    svg.append(s('line', { x1: l, x2: W - r, y1: y(v), y2: y(v), 'class': 'grid' }));
+    svg.append(s('text', { x: l - 8, y: y(v) + 4, 'class': 'tick', 'text-anchor': 'end' }, pct && kind === 'stacked' ? v + '%' : comp(v)));
+  });
+  svg.append(s('line', { x1: l, x2: W - r, y1: y(0), y2: y(0), 'class': 'axis' }));
+  var band = pw / n, k = series.length;
+  var maxIdx = -1;
+  if (kind === 'single' && series[0]) { var mv = -1; series[0].values.forEach(function (v, i) { if (v > mv) { mv = v; maxIdx = i; } }); }
+  cats.forEach(function (c, i) {
+    var cx = l + band * i + band / 2;
+    var g = s('g', { 'class': 'cat', tabindex: 0 });
+    g.append(s('rect', { 'class': 'hit', x: l + band * i, y: t, width: band, height: ph }));
+    if (kind === 'single') {
+      var w1 = Math.min(24, band * 0.62), v1 = series[0].values[i], h1 = (v1 / sc.max) * ph;
+      g.append(s('path', { d: barPath(cx - w1 / 2, y(v1), w1, h1, 4, true), style: 'fill:' + series[0].color }));
+      if (i === maxIdx && v1 > 0) g.append(s('text', { x: cx, y: y(v1) - 5, 'class': 'vlab', 'text-anchor': 'middle' }, fmt(v1)));
+    } else if (kind === 'grouped') {
+      var bw = Math.min(24, (band * 0.8 - (k - 1) * 2) / k), gw = k * bw + (k - 1) * 2, x0 = cx - gw / 2;
+      series.forEach(function (sr, j) {
+        var v = sr.values[i], hh = (v / sc.max) * ph;
+        g.append(s('path', { d: barPath(x0 + j * (bw + 2), y(v), bw, hh, 4, true), style: 'fill:' + sr.color }));
+      });
+    } else {
+      var w2 = Math.min(24, band * 0.62), acc = 0, last = -1;
+      series.forEach(function (sr, j) { if (sr.values[i] > 0) last = j; });
+      series.forEach(function (sr, j) {
+        var v = sr.values[i]; if (!(v > 0)) return;
+        var share = pct ? (totals[i] ? v / totals[i] * 100 : 0) : v;
+        var y1 = y(acc + share), y0 = y(acc), hh = y0 - y1;
+        var gap = j === 0 ? 0 : 2;
+        g.append(s('path', { d: barPath(cx - w2 / 2, y1, w2, Math.max(hh - gap, 0), 4, j === last), style: 'fill:' + sr.color }));
+        acc += share;
+      });
+    }
+    var tx = cats.length > 12 ? s('text', { x: cx, y: H - b + 14, 'class': 'xt', 'text-anchor': 'end', transform: 'rotate(-45 ' + cx + ' ' + (H - b + 14) + ')' }, c)
+      : s('text', { x: cx, y: H - b + 16, 'class': 'xt', 'text-anchor': 'middle' }, c);
+    svg.append(g); g.append(tx);
+    function items() {
+      return series.map(function (sr) {
+        var v = sr.values[i], txt = fmt(v);
+        if (kind === 'stacked' && pct) txt = (totals[i] ? (v / totals[i] * 100).toFixed(1) : '0.0') + '%  (' + fmt(v) + ')';
+        return { color: sr.color, name: sr.name, value: txt };
+      });
+    }
+    g.addEventListener('pointermove', function (ev) { showTip(ev, c, items()); });
+    g.addEventListener('pointerleave', hideTip);
+    g.addEventListener('focus', function () { var bb = g.getBoundingClientRect(); showTip({ clientX: bb.left + bb.width / 2, clientY: bb.top }, c, items()); });
+    g.addEventListener('blur', hideTip);
+  });
+  var wrap = h('div');
+  if (series.length >= 2) wrap.append(h('div', { 'class': 'legend' }, series.map(function (sr) { return h('span', { 'class': 'item' }, h('span', { 'class': 'sw', style: 'background:' + sr.color }), sr.name); })));
+  wrap.append(svg);
+  return wrap;
+}
+function pieChart(cfg) {
+  var slices = cfg.slices, fmt = cfg.fmt || f0, total = slices.reduce(function (a, x) { return a + x.value; }, 0);
+  if (!(total > 0)) return h('div', { 'class': 'empty' }, 'No data for this selection');
+  var cx = 85, cy = 85, R = 80, a0 = -Math.PI / 2;
+  var svg = s('svg', { viewBox: '0 0 170 170', role: 'img', 'aria-label': cfg.title });
+  slices.forEach(function (sl) {
+    var share = sl.value / total, ang = share * Math.PI * 2, a1 = a0 + ang, node;
+    if (slices.length === 1) node = s('circle', { cx: cx, cy: cy, r: R, style: 'fill:' + sl.color + ';stroke:var(--surface);stroke-width:2', 'class': 'slice' });
+    else {
+      var x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0), x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
+      node = s('path', { d: 'M' + cx + ',' + cy + 'L' + x0 + ',' + y0 + 'A' + R + ',' + R + ' 0 ' + (ang > Math.PI ? 1 : 0) + ' 1 ' + x1 + ',' + y1 + 'Z', style: 'fill:' + sl.color + ';stroke:var(--surface);stroke-width:2', 'class': 'slice' });
+    }
+    node.addEventListener('pointermove', function (ev) { showTip(ev, sl.label, [{ color: sl.color, name: (cfg.measure || 'Value'), value: fmt(sl.value) + ' (' + (share * 100).toFixed(1) + '%)' }]); });
+    node.addEventListener('pointerleave', hideTip);
+    svg.append(node);
+    if (share >= 0.07 && slices.length > 1) {
+      var am = a0 + ang / 2, lx = cx + R * 0.62 * Math.cos(am), ly = cy + R * 0.62 * Math.sin(am);
+      svg.append(s('text', { x: lx, y: ly + 4, 'text-anchor': 'middle', style: 'font-size:11px;font-weight:600;pointer-events:none;fill:' + (sl.dark ? '#0b0b0b' : '#ffffff') }, Math.round(share * 100) + '%'));
+    }
+    a0 = a1;
+  });
+  var list = h('ul', { 'class': 'pl' }, slices.map(function (sl) {
+    return h('li', null, h('span', { 'class': 'sw', style: 'background:' + sl.color }), h('span', { 'class': 'nm', title: sl.label }, sl.label), h('span', { 'class': 'vv' }, fmt(sl.value)), h('span', { 'class': 'pc' }, (sl.value / total * 100).toFixed(0) + '%'));
+  }));
+  return h('div', { 'class': 'pie-wrap' }, svg, list);
+}
+
+/* ---------- table helpers ---------- */
+function dataTable(head, body, numFrom) {
+  numFrom = numFrom == null ? 1 : numFrom;
+  return h('div', { 'class': 'scroll' }, h('table', null,
+    h('thead', null, h('tr', null, head.map(function (c, i) { return h('th', { 'class': i >= numFrom ? 'num' : '' }, c); }))),
+    h('tbody', null, body.map(function (row, ri) {
+      return h('tr', { 'class': row.total ? 'total' : '' }, row.cells.map(function (c, i) { return h('td', { 'class': i >= numFrom ? 'num' : '' }, c); }));
+    }))));
+}
+function card(opts) {
+  var showTable = false, body = h('div', null, opts.node);
+  var btn = h('button', { 'class': 'btn', type: 'button', onclick: function () {
+    showTable = !showTable; body.replaceChildren(showTable ? opts.table() : opts.node); btn.textContent = showTable ? 'Chart' : 'Table';
+  } }, 'Table');
+  var right = h('div', { 'class': 'rbtns' }, opts.extra || null, btn);
+  return h('section', { 'class': 'card' + (opts.wide ? ' wide' : '') }, h('header', null, h('h3', null, opts.title), right), h('p', { 'class': 'settings' }, opts.settings), body);
+}
+
+/* ---------- Reports tab ---------- */
+var COLS = [
+  ['Fixture Number', 0, function (r) { return r.num; }],
+  ['Fixture Status', 0, function (r) { return r.status; }],
+  ['Invoice Status', 0, function (r) { return r.inv; }],
+  ['Booking Date', 0, function (r) { return fmtDate(r.booking); }],
+  ['Laycan Start', 0, function (r) { return fmtDate(r.laycan); }],
+  ['Report Date', 0, function (r) { return fmtDate(r.reportDate); }],
+  ['Report Year', 0, function (r) { return r.year; }],
+  ['Report Month', 0, function (r) { return r.month; }],
+  ['Account', 0, function (r) { return r.acct; }],
+  ['Head Account', 0, function (r) { return r.head; }],
+  ['Shipper', 0, function (r) { return r.shipper; }],
+  ['Person In Charge', 0, function (r) { return r.pic; }],
+  ['Assigned Office', 0, function (r) { return r.office; }],
+  ['Final Performer', 0, function (r) { return r.fp; }],
+  ['Vessel Type', 0, function (r) { return r.vt; }],
+  ['Cargo Category', 0, function (r) { return r.cargo; }],
+  ['Chartering Rating', 0, function (r) { return r.rc; }],
+  ['Operations Rating', 0, function (r) { return r.ro; }],
+  ['Engineering Rating', 0, function (r) { return r.re; }],
+  ['Currency', 0, function (r) { return r.cur; }],
+  ['Gross Freight', 1, function (r) { return f0(r.gross); }],
+  ['Gross Freight EUR', 1, function (r) { return f0(r.eur); }],
+  ['Gross Freight USD', 1, function (r) { return f0(r.usd); }],
+  ['Exchange Rate', 1, function (r) { return r.rate.toFixed(2); }],
+  ['Total in USD', 1, function (r) { return f0(r.total); }],
+  ['Management Fee EUR', 1, function (r) { return f0(r.mfEur); }],
+  ['Management Fee USD', 1, function (r) { return f0(r.mfUsd); }]
+];
+function reportsTab(rows) {
+  var per = 25, pages = Math.max(1, Math.ceil(rows.length / per));
+  if (state.page >= pages) state.page = pages - 1;
+  var from = state.page * per, slice = rows.slice(from, from + per);
+  var root = h('div');
+  root.append(h('p', { 'class': 'settings' }, 'The generated table: one row per fixture, ' + COLS.length + ' columns. Charts and pivots below are built only from these columns.'));
+  if (!rows.length) { root.append(h('div', { 'class': 'empty' }, 'No fixtures match these fields.')); return root; }
+  root.append(h('div', { 'class': 'scroll' }, h('table', null,
+    h('thead', null, h('tr', null, COLS.map(function (c) { return h('th', { 'class': c[1] ? 'num' : '' }, c[0]); }))),
+    h('tbody', null, slice.map(function (r) { return h('tr', null, COLS.map(function (c) { return h('td', { 'class': c[1] ? 'num' : '' }, c[2](r)); })); })))));
+  root.append(h('div', { 'class': 'pager' },
+    h('span', null, (from + 1) + ' - ' + (from + slice.length) + ' of ' + rows.length),
+    h('button', { 'class': 'btn', type: 'button', disabled: state.page === 0, onclick: function () { state.page--; render(); } }, 'Previous'),
+    h('button', { 'class': 'btn', type: 'button', disabled: state.page >= pages - 1, onclick: function () { state.page++; render(); } }, 'Next')));
+  return root;
+}
+
+/* ---------- Charts tab ---------- */
+var GROUPS = [['acct', 'Account'], ['head', 'Head Account'], ['shipper', 'Shipper'], ['pic', 'Person In Charge'], ['office', 'Assigned Office'], ['fp', 'Final Performer'], ['vt', 'Vessel Type'], ['cargo', 'Cargo Category']];
+function groupLabel(k) { return GROUPS.filter(function (g) { return g[0] === k; })[0][1]; }
+function months(rows) { return Array.from(new Set(rows.map(function (r) { return r.month; }))).sort(); }
+function pieCard(rows, title, dim, valueFn, measure, settings, fmt) {
+  var slices = pieData(rows, dim, valueFn, 5), total = slices.reduce(function (a, x) { return a + x.value; }, 0);
+  return card({
+    title: title, settings: settings,
+    node: pieChart({ slices: slices, fmt: fmt || f0, measure: measure, title: title }),
+    table: function () { return dataTable([groupLabel(dim), measure, 'Share'], slices.map(function (x) { return { cells: [x.label, (fmt || f0)(x.value), (x.value / total * 100).toFixed(1) + '%'] }; }).concat([{ total: true, cells: ['Total', (fmt || f0)(total), '100%'] }])); }
+  });
+}
+function chartsTab(rows) {
+  var root = h('div');
+  if (!rows.length) { root.append(h('div', { 'class': 'empty' }, 'No fixtures match these fields.')); return root; }
+  var ms = months(rows), by = groupBy(rows, function (r) { return r.month; }), idx = {};
+  by.forEach(function (g) { idx[g.key] = g.rows; });
+  function perMonth(fn) { return ms.map(function (m) { return fn(idx[m] || []); }); }
+  var grid = h('div', { 'class': 'grid2' });
+
+  var counts = perMonth(function (x) { return x.length; });
+  grid.append(card({
+    wide: true, title: 'Bar Chart: fixtures per month',
+    settings: 'X Axis: Report Month  |  Y Axis: Fixture Number  |  Aggregation: Count',
+    node: barChart({ cats: ms, series: [{ name: 'Fixtures', color: 'var(--s1)', values: counts }], kind: 'single', title: 'Fixtures per month' }),
+    table: function () { return dataTable(['Report Month', 'Count of Fixture Number'], ms.map(function (m, i) { return { cells: [m, f0(counts[i])] }; }).concat([{ total: true, cells: ['Grand Total', f0(rows.length)] }])); }
+  }));
+
+  var sUsd = perMonth(function (x) { return sum(x, 'usd'); }), sEur = perMonth(function (x) { return sum(x, 'eur'); }), sTot = perMonth(function (x) { return sum(x, 'total'); });
+  grid.append(card({
+    wide: true, title: 'Grouped Bar Chart (new type): fixture amount per month',
+    settings: 'X Axis: Report Month  |  Y Axis: Gross Freight USD, Gross Freight EUR, Total in USD  |  Aggregation: Sum',
+    node: barChart({ cats: ms, kind: 'grouped', title: 'Fixture amount per month', series: [
+      { name: 'Gross Freight USD', color: 'var(--s1)', values: sUsd }, { name: 'Gross Freight EUR', color: 'var(--s2)', values: sEur }, { name: 'Total in USD', color: 'var(--s3)', values: sTot }] }),
+    table: function () { return dataTable(['Report Month', 'Sum of Gross Freight USD', 'Sum of Gross Freight EUR', 'Sum of Total in USD'], ms.map(function (m, i) { return { cells: [m, f0(sUsd[i]), f0(sEur[i]), f0(sTot[i])] }; }).concat([{ total: true, cells: ['Grand Total', f0(sum(rows, 'usd')), f0(sum(rows, 'eur')), f0(sum(rows, 'total'))] }])); }
+  }));
+
+  var usdT = perMonth(function (x) { return sum(x.filter(function (r) { return r.cur === 'US Dollar'; }), 'total'); });
+  var eurT = perMonth(function (x) { return sum(x.filter(function (r) { return r.cur === 'Euro'; }), 'total'); });
+  var seg = h('div', { 'class': 'seg' },
+    h('button', { type: 'button', 'aria-pressed': String(!state.stackPct), onclick: function () { state.stackPct = false; render(); } }, 'Values'),
+    h('button', { type: 'button', 'aria-pressed': String(state.stackPct), onclick: function () { state.stackPct = true; render(); } }, 'Percentage'));
+  grid.append(card({
+    wide: true, title: 'Stacked Bar Chart: Total in USD per month, stacked by currency', extra: seg,
+    settings: 'X Axis: Report Month  |  Y Axis: Total in USD  |  Aggregation: Sum  |  Stack By: Currency  |  Display In: ' + (state.stackPct ? 'Percentage' : 'Values'),
+    node: barChart({ cats: ms, kind: 'stacked', percent: state.stackPct, title: 'Total in USD by currency', series: [{ name: 'US Dollar', color: 'var(--s1)', values: usdT }, { name: 'Euro (converted)', color: 'var(--s2)', values: eurT }] }),
+    table: function () { return dataTable(['Report Month', 'US Dollar', 'Euro (converted)', 'Total'], ms.map(function (m, i) { return { cells: [m, f0(usdT[i]), f0(eurT[i]), f0(usdT[i] + eurT[i])] }; })); }
+  }));
+
+  grid.append(pieCard(rows, 'Pie Chart: Total in USD by Account', 'acct', function (x) { return sum(x, 'total'); }, 'Sum of Total in USD',
+    'Category (Slice By): Account  |  Value: Total in USD  |  Aggregation: Sum  |  Top N: 5 + Others (new)'));
+  grid.append(pieCard(rows, 'Pie Chart: fixtures by Cargo Category', 'cargo', function (x) { return x.length; }, 'Count of Fixture Number',
+    'Category (Slice By): Cargo Category  |  Value: Fixture Number  |  Aggregation: Count  |  Top N: 5 + Others (new)'));
+
+  // reports 3-8 pattern
+  var sel = h('select', { 'aria-label': 'Group by', onchange: function (e) { state.group = e.target.value; render(); } }, GROUPS.map(function (g) { return h('option', { value: g[0], selected: g[0] === state.group }, g[1]); }));
+  var four = h('div', { 'class': 'pies' }, [
+    ['Total in USD', function (x) { return sum(x, 'total'); }, 'Sum of Total in USD'],
+    ['Fixtures', function (x) { return x.length; }, 'Count of Fixture Number'],
+    ['Gross Freight EUR', function (x) { return sum(x, 'eur'); }, 'Sum of Gross Freight EUR'],
+    ['Gross Freight USD', function (x) { return sum(x, 'usd'); }, 'Sum of Gross Freight USD']
+  ].map(function (p) {
+    return h('div', null, h('p', { 'class': 'pie-title' }, p[0]), pieChart({ slices: pieData(rows, state.group, p[1], 5), measure: p[2], title: p[0] }));
+  }));
+  grid.append(card({
+    wide: true, title: 'Four pies for one group field (the pattern of Customer, Person In Charge, Offices, Vessel, Vessel Type and Cargo Type)',
+    extra: h('label', { 'class': 'f' }, h('span', null, 'Category (Slice By)'), sel),
+    settings: 'Four Pie Charts with the same Category and different Values: Total in USD (Sum), Fixture Number (Count), Gross Freight EUR (Sum), Gross Freight USD (Sum). Top N: 5 + Others (new).',
+    node: four,
+    table: function () {
+      var g = groupBy(rows, function (r) { return r[state.group]; }).map(function (x) { return { key: x.key, c: x.rows.length, e: sum(x.rows, 'eur'), u: sum(x.rows, 'usd'), t: sum(x.rows, 'total') }; }).sort(function (a, b) { return b.t - a.t; });
+      return dataTable([groupLabel(state.group), 'Count', 'EUR', 'USD', 'Total in USD'], g.slice(0, 40).map(function (x) { return { cells: [x.key, f0(x.c), f0(x.e), f0(x.u), f0(x.t)] }; }));
+    }
+  }));
+
+  // satisfaction
+  var three = h('div', { 'class': 'pies' }, [['Chartering', 'rc'], ['Operations', 'ro'], ['Engineering', 're']].map(function (p) {
+    return h('div', null, h('p', { 'class': 'pie-title' }, p[0] + ' rating'), pieChart({ slices: ratingPie(rows, p[1]), measure: 'Fixtures', title: p[0] + ' rating' }));
+  }));
+  grid.append(card({
+    wide: true, title: 'Customer satisfaction: three pies, one per rating column',
+    settings: 'Category (Slice By): Chartering Rating / Operations Rating / Engineering Rating  |  Value: Fixture Number  |  Aggregation: Count',
+    node: three,
+    table: function () {
+      return dataTable(['Rating', 'Chartering', 'Operations', 'Engineering'], ['Will book again with UHL', 'Satisfied', 'Not Rated'].map(function (k) {
+        return { cells: [k, f0(rows.filter(function (r) { return r.rc === k; }).length), f0(rows.filter(function (r) { return r.ro === k; }).length), f0(rows.filter(function (r) { return r.re === k; }).length)] };
+      }));
+    }
+  }));
+  root.append(grid);
+  return root;
+}
+
+/* ---------- Pivot tab ---------- */
+function pivotEl(o) {
+  // o: rowHead, colHead (optional spanning label), cols[], rows[{label, cells[]}], total{cells[]}
+  var head1 = o.colHead ? h('tr', null, h('th', null, ''), h('th', { colspan: o.cols.length, style: 'text-align:left' }, o.colHead)) : null;
+  var head2 = h('tr', null, h('th', null, o.rowHead || 'Row Labels'), o.cols.map(function (c) { return h('th', { 'class': 'num' }, c); }));
+  return h('div', { 'class': 'scroll' }, h('table', null,
+    h('thead', null, head1, head2),
+    h('tbody', null,
+      o.rows.map(function (r) { return h('tr', null, h('td', null, r.label), r.cells.map(function (c) { return h('td', { 'class': 'num' }, c); })); }),
+      h('tr', { 'class': 'total' }, h('td', null, 'Grand Total'), o.total.cells.map(function (c) { return h('td', { 'class': 'num' }, c); })))));
+}
+var VALS = {
+  count: ['Count of Fixture Number', function (x) { return f0(x.length); }],
+  eur: ['Sum of Gross Freight EUR', function (x) { return f0(sum(x, 'eur')); }],
+  usd: ['Sum of Gross Freight USD', function (x) { return f0(sum(x, 'usd')); }],
+  total: ['Sum of Total in USD', function (x) { return f0(sum(x, 'total')); }],
+  mfEur: ['Sum of Management Fee EUR', function (x) { return f0(sum(x, 'mfEur')); }],
+  mfUsd: ['Sum of Management Fee USD', function (x) { return f0(sum(x, 'mfUsd')); }]
+};
+function simplePivot(rows, keyFn, vals, sortFn, rowHead, limit) {
+  var g = groupBy(rows, keyFn);
+  if (sortFn) g.sort(sortFn); else g.sort(function (a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
+  var shown = g, others = null;
+  if (limit && g.length > limit) { shown = g.slice(0, limit); var rest = g.slice(limit), orows = []; rest.forEach(function (x) { orows = orois(orows, x.rows); }); others = { label: 'Others (' + rest.length + ')', rows: orows }; }
+  var out = shown.map(function (x) { return { label: x.key, cells: vals.map(function (v) { return VALS[v][1](x.rows); }) }; });
+  if (others) out.push({ label: others.label, cells: vals.map(function (v) { return VALS[v][1](others.rows); }) });
+  return pivotEl({ rowHead: rowHead, cols: vals.map(function (v) { return VALS[v][0]; }), rows: out, total: { cells: vals.map(function (v) { return VALS[v][1](rows); }) } });
+}
+function orois(a, b) { return a.concat(b); }
+function pivotTab(rows) {
+  var list = [
+    ['monthly', 'Monthly overview'], ['across', 'Total in USD, months across'], ['status', 'Fixture status'], ['invoice', 'Invoice status'],
+    ['group', 'Group report'], ['yearly', 'Yearly overview'], ['sat', 'Customer satisfaction']
+  ];
+  var root = h('div', { 'class': 'cols' });
+  root.append(h('div', { 'class': 'plist', role: 'tablist' }, list.map(function (p) {
+    return h('button', { type: 'button', role: 'tab', 'aria-selected': String(state.pivot === p[0]), onclick: function () { state.pivot = p[0]; render(); } }, p[1]);
+  })));
+  var body = h('div', { 'class': 'pbody card' });
+  if (!rows.length) { body.append(h('div', { 'class': 'empty' }, 'No fixtures match these fields.')); root.append(body); return root; }
+  var title = '', settings = '', node = null;
+  if (state.pivot === 'monthly') {
+    title = 'Monthly overview (old report: Fixture)';
+    settings = 'Rows: Report Month  |  Values: Count of Fixture Number, Sum of Gross Freight EUR, Sum of Gross Freight USD, Sum of Total in USD';
+    node = simplePivot(rows, function (r) { return r.month; }, ['count', 'eur', 'usd', 'total'], null, 'Row Labels');
+  } else if (state.pivot === 'across') {
+    title = 'Total in USD with months across (old report: Fixture, months as columns)';
+    settings = 'Rows: Currency  |  Columns: Report Month  |  Values: Sum of Total in USD';
+    var ms = months(rows), cur = ['US Dollar', 'Euro'];
+    var prow = cur.map(function (c) { var x = rows.filter(function (r) { return r.cur === c; }); return { label: c, cells: ms.map(function (m) { return f0(sum(x.filter(function (r) { return r.month === m; }), 'total')); }).concat([f0(sum(x, 'total'))]) }; });
+    node = pivotEl({ rowHead: 'Row Labels', colHead: 'Column Labels', cols: ms.concat(['Sum of Total in USD (Grand Total)']), rows: prow, total: { cells: ms.map(function (m) { return f0(sum(rows.filter(function (r) { return r.month === m; }), 'total')); }).concat([f0(sum(rows, 'total'))]) } });
+  } else if (state.pivot === 'status') {
+    title = 'Fixture status (old report: Fixture, Cancelled and Postponed tiles)';
+    settings = 'Rows: Fixture Status  |  Values: Count of Fixture Number, Sum of Gross Freight EUR, Sum of Gross Freight USD' + (state.inclCP ? '' : '  |  Tick "Include Cancelled and Postponed fixtures" above to see those two rows');
+    node = simplePivot(rows, function (r) { return r.status; }, ['count', 'eur', 'usd'], null, 'Row Labels');
+  } else if (state.pivot === 'invoice') {
+    title = 'Invoice status (old report: Fixture, To Be Issued / Invoiced / Paid tiles)';
+    settings = 'Rows: Invoice Status  |  Values: Sum of Management Fee EUR, Sum of Management Fee USD';
+    node = simplePivot(rows, function (r) { return r.inv; }, ['mfEur', 'mfUsd'], null, 'Row Labels');
+  } else if (state.pivot === 'group') {
+    title = 'Group report (old reports: Top Ten Customers, Customer, Person In Charge, Offices, Vessel, Vessel Type, Cargo Type)';
+    var limit = state.topN === 'all' ? 0 : +state.topN;
+    settings = 'Rows: ' + groupLabel(state.pgroup) + '  |  Values: Count of Fixture Number, Sum of Gross Freight EUR, Sum of Gross Freight USD, Sum of Total in USD  |  Sort: Total in USD, descending (new)  |  Top N: ' + (limit ? limit + ' + Others (new)' : 'all');
+    var selG = h('label', { 'class': 'f' }, h('span', null, 'Rows'), h('select', { onchange: function (e) { state.pgroup = e.target.value; render(); } }, GROUPS.map(function (g) { return h('option', { value: g[0], selected: g[0] === state.pgroup }, g[1]); })));
+    var selN = h('label', { 'class': 'f' }, h('span', null, 'Top N'), h('select', { onchange: function (e) { state.topN = e.target.value; render(); } }, [['5', '5'], ['10', '10'], ['20', '20'], ['all', 'All']].map(function (o) { return h('option', { value: o[0], selected: o[0] === state.topN }, o[1]); })));
+    node = h('div', null, h('div', { 'class': 'toolbar' }, selG, selN), simplePivot(rows, function (r) { return r[state.pgroup]; }, ['count', 'eur', 'usd', 'total'], function (a, b) { return sum(b.rows, 'total') - sum(a.rows, 'total'); }, groupLabel(state.pgroup), limit));
+  } else if (state.pivot === 'yearly') {
+    title = 'Yearly overview (old report: Yearly Overview)';
+    settings = 'Rows: Report Year  |  Values: Count of Fixture Number, Sum of Gross Freight USD, Sum of Gross Freight EUR, Sum of Total in USD  |  needs more than one year in the Period field';
+    node = simplePivot(rows, function (r) { return r.year; }, ['count', 'usd', 'eur', 'total'], null, 'Row Labels');
+  } else {
+    title = 'Customer satisfaction (old report: Customer Satisfaction)';
+    settings = 'Three pivots, one per rating column. Rows: Chartering Rating / Operations Rating / Engineering Rating  |  Values: Count of Fixture Number';
+    node = h('div', null, [['Chartering Rating', 'rc'], ['Operations Rating', 'ro'], ['Engineering Rating', 're']].map(function (p) {
+      return h('div', { style: 'margin-bottom:12px' }, simplePivot(rows, function (r) { return r[p[1]]; }, ['count'], function (a, b) { return b.rows.length - a.rows.length; }, p[0]));
+    }));
+  }
+  body.append(h('h3', null, title), h('p', { 'class': 'settings' }, settings), node);
+  root.append(body);
+  return root;
+}
+
+/* ---------- page assembly ---------- */
+function renderStats(rows) {
+  var eurN = rows.filter(function (r) { return r.cur === 'Euro'; }).length;
+  return h('div', { 'class': 'stats' },
+    h('div', { 'class': 'stat' }, h('span', { 'class': 'stat-label' }, 'Fixtures in this report'), h('span', { 'class': 'stat-value' }, f0(rows.length))),
+    h('div', { 'class': 'stat' }, h('span', { 'class': 'stat-label' }, 'Total in USD'), h('span', { 'class': 'stat-value' }, '$' + comp(sum(rows, 'total')))),
+    h('div', { 'class': 'stat' }, h('span', { 'class': 'stat-label' }, 'Fixtures in EUR'), h('span', { 'class': 'stat-value' }, f0(eurN))));
+}
+function render() {
+  hideTip();
+  var rows = build(), root = document.getElementById('report');
+  var tabs = [['reports', 'Reports'], ['charts', 'Charts'], ['pivot', 'Pivot Table']];
+  var content = state.tab === 'reports' ? reportsTab(rows) : state.tab === 'charts' ? chartsTab(rows) : pivotTab(rows);
+  root.replaceChildren(
+    renderStats(rows),
+    h('section', { 'class': 'panel' },
+      h('div', { 'class': 'rhead' }, h('h2', null, state.name),
+        h('div', { 'class': 'rbtns' }, h('button', { 'class': 'btn', type: 'button', onclick: render }, 'Refresh'), h('button', { 'class': 'btn primary', type: 'button', disabled: true, title: 'Not part of the sample' }, 'Share'))),
+      h('div', { 'class': 'tabs', role: 'tablist' }, tabs.map(function (t) {
+        return h('button', { 'class': 'tab', type: 'button', role: 'tab', 'aria-selected': String(state.tab === t[0]), onclick: function () { state.tab = t[0]; render(); } }, t[1]);
+      })),
+      content));
+}
+
+/* ---------- popup fields ---------- */
+function renderParams() {
+  var p = document.getElementById('params');
+  var name = h('input', { type: 'text', value: state.name, oninput: function (e) { state.name = e.target.value || 'Fixture report'; render(); } });
+  var basis = h('select', { onchange: function (e) {
+    state.basis = e.target.value; state.page = 0;
+    var av = yearsFor(state.basis); state.years = new Set(av.filter(function (y) { return state.years.has(y); })); if (!state.years.size) state.years = new Set(av);
+    drawChips(); render();
+  } }, h('option', { value: 'booking', selected: state.basis === 'booking' }, 'Booking Date'), h('option', { value: 'laycan', selected: state.basis === 'laycan' }, 'LAY-CAN / Voyage Date'));
+  var chips = h('div', { 'class': 'chips', id: 'chips' });
+  function drawChips() {
+    var av = yearsFor(state.basis);
+    chips.replaceChildren.apply(chips, [h('button', { 'class': 'chip', type: 'button', 'aria-pressed': String(av.every(function (y) { return state.years.has(y); })), onclick: function () { state.years = new Set(av); state.from = ''; state.to = ''; fromI.value = ''; toI.value = ''; drawChips(); render(); } }, 'All')].concat(
+      av.map(function (y) {
+        return h('button', { 'class': 'chip', type: 'button', 'aria-pressed': String(state.years.has(y)), onclick: function () { if (state.years.has(y)) state.years.delete(y); else state.years.add(y); state.from = ''; state.to = ''; fromI.value = ''; toI.value = ''; state.page = 0; drawChips(); render(); } }, String(y));
+      })));
+  }
+  var fromI = h('input', { type: 'date', 'aria-label': 'From', onchange: function (e) { state.from = e.target.value; state.page = 0; render(); } });
+  var toI = h('input', { type: 'date', 'aria-label': 'To', onchange: function (e) { state.to = e.target.value; state.page = 0; render(); } });
+  var summary = h('summary', null, '');
+  function updSummary() { summary.textContent = state.offices.size === OFFICES.length ? 'All ' + OFFICES.length + ' offices' : state.offices.size + ' of ' + OFFICES.length + ' offices'; }
+  var boxes = [];
+  var allBox = h('input', { type: 'checkbox', checked: true, onchange: function (e) { state.offices = e.target.checked ? new Set(OFFICES) : new Set(); boxes.forEach(function (b) { b.checked = e.target.checked; }); updSummary(); state.page = 0; render(); } });
+  var menu = h('div', { 'class': 'menu' }, h('label', null, allBox, 'Select all'), OFFICES.map(function (o) {
+    var b = h('input', { type: 'checkbox', checked: true, onchange: function (e) { if (e.target.checked) state.offices.add(o); else state.offices.delete(o); allBox.checked = state.offices.size === OFFICES.length; updSummary(); state.page = 0; render(); } });
+    boxes.push(b); return h('label', null, b, o);
+  }));
+  updSummary();
+  var offices = h('details', { 'class': 'ms' }, summary, menu);
+  var rate = h('input', { type: 'number', step: '0.01', min: '0', value: String(state.rate), oninput: function (e) { var v = parseFloat(e.target.value); if (v > 0) { state.rate = v; render(); } } });
+  var conv = h('input', { type: 'date', value: '2026-11-03' });
+  var incl = h('input', { type: 'checkbox', onchange: function (e) { state.inclCP = e.target.checked; state.page = 0; render(); } });
+  function F(label, node, hint, req) { return h('div', { 'class': 'f' }, h('span', { 'class': req ? 'req' : '' }, label), node, hint ? h('span', { 'class': 'hint' }, hint) : null); }
+  drawChips();
+  p.replaceChildren(
+    F('Report Name', name, null, true),
+    F('Based on', basis, 'Same as the old report filter', true),
+    F('Period: Year (several allowed)', chips, 'Or pick a date range below; the range wins', true),
+    F('Period: Select Date Range', h('div', { 'class': 'range' }, fromI, h('span', null, 'to'), toI)),
+    F('Offices', offices, 'All offices selected by default', true),
+    F('Currency', h('input', { type: 'text', value: 'US Dollar', disabled: true }), 'Report currency', true),
+    F('Conversion Date', conv, 'Date of the EUR to USD rate', true),
+    F('EUR to USD rate (sample value)', rate, 'Used for Total in USD; the real field would read the system rate'),
+    h('label', { 'class': 'check' }, incl, 'Include Cancelled and Postponed fixtures'));
+}
+
+/* ---------- static text ---------- */
+function staticText() {
+  var total = recs.length;
+  document.getElementById('datanote').textContent = 'Data: ' + total + ' fixtures booked in 2021 and 2022, read from the Fixture List on coems.bctesting.admaren.org on 3 Nov 2026. Years 2023 to 2026 on bctesting are mostly test entries (freight values in the billions and trillions, placeholder categories), so they were left out. The EUR to USD rate of 1.17 is a sample value.';
+  var map = [
+    ['1 Fixture', 'Pivot "Monthly overview" and "Total in USD, months across"; Bar "fixtures per month"; Grouped Bar "fixture amount"; Pivots "Fixture status" and "Invoice status" for the tiles. Not possible: Indications, Conversion Rate (%), Indications per Fixture (Inquiry data).'],
+    ['2 Top Ten Customers', 'Pivot "Group report" with Rows = Account, Top N = 10; Pie "Total in USD by Account" (Top N + Others, new).'],
+    ['3 Customer', 'Pivot "Group report" with Rows = Account (or Head Account, Shipper); the four pies.'],
+    ['4 Person In Charge', 'Pivot "Group report" with Rows = Person In Charge; the four pies.'],
+    ['5 Offices', 'Pivot "Group report" with Rows = Assigned Office; the four pies.'],
+    ['6 Vessel', 'Pivot "Group report" with Rows = Final Performer; the four pies.'],
+    ['7 Vessel Type', 'Pivot "Group report" with Rows = Vessel Type; the four pies.'],
+    ['8 Cargo Type', 'Pivot "Group report" with Rows = Cargo Category; the four pies.'],
+    ['9 Yearly Overview', 'Pivot "Yearly overview" (keep both years selected in the Period field).'],
+    ['10 Customer Satisfaction', 'Three pies and the pivot "Customer satisfaction".']
+  ];
+  var t = document.getElementById('maptable');
+  t.append(h('thead', null, h('tr', null, h('th', null, 'Old report'), h('th', null, 'Where it is in this sample'))), h('tbody', null, map.map(function (m) { return h('tr', null, h('td', null, m[0]), h('td', { style: 'white-space:normal' }, m[1])); })));
+  var notes = [
+    'Pies show at most 5 slices plus "Others", which keeps them readable; the full list is in the pivot, which has no limit on rows. The Top N and Others option is a proposed addition to the chart and pivot forms.',
+    'The Grouped Bar Chart and the Sort / Top N settings do not exist in the Port Call Evaluation Report today; they are the additions proposed for the Fixture Report. Stacked Bar, Pie and Pivot Table already exist there.',
+    'Blank values (for example a fixture with no Head Account) show as "(Unassigned)" so totals always match the Fixture List.',
+    'Not in this sample: Indications, Conversion Rate and Indications per Fixture (not Fixture List data). bctesting also holds a few fixtures in other currencies (for example Icelandic Krona, Singapore Dollar, in 2026); the EUR and USD columns do not cover them, so a rule is needed.',
+    'The Customer Satisfaction counts here include every fixture in the period; the old report counts only 36 of 110 fixtures in UAT and that rule is still unknown.'
+  ];
+  var ul = document.getElementById('notes');
+  notes.forEach(function (n) { ul.append(h('li', null, n)); });
+}
+
+staticText();
+renderParams();
+render();
+})();
+</script>
+</body>
+</html>
