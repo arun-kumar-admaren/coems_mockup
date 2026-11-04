@@ -32,7 +32,7 @@ Buttons: Cancel, Create Report. The gear on the report reopens the same fields a
 
 ## 3. The generated table
 
-One row per fixture. Same Show/Hide and Reorder column chooser as the Fixture List and the PCER (87 columns).
+One row per fixture. Same Show/Hide and Reorder column chooser as the Fixture List and the PCER (87 columns). **Column widths can be resized** as on the other COEMS listing pages: a grip at the right edge of each header is dragged to widen or narrow that column (minimum width applies; long text is cut off with "…" until widened; the new width applies to the header and every cell; other columns keep their width and the table scrolls sideways to fit). Widths are saved automatically per user and kept when a column is hidden and shown again; there is no "reset widths" control (same as the listing pages' story, `docs/user-stories/engineering/column-resize-engineering.md`).
 
 ### 3a. Columns from the export (81)
 

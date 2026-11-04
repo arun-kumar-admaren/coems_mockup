@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { ChevronDown, Plus, RefreshCw, Settings as SettingsIcon, Trash2 } from "lucide-react";
+import { PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, GripVertical, Plus, RefreshCw, Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -99,15 +99,67 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /* ---------------------------------------------------------------- Reports tab */
+// Column widths work like the COEMS listing pages: drag the grip at a header's right edge; the width belongs to
+// the column (kept when hidden/shown), applies to header and every cell, never changes other columns, is saved
+// automatically (here: in this browser, one set for the page) and unresized columns keep their default width.
+const MIN_COL_W = 70;
+const MAX_DEFAULT_W = 300;
+const WIDTHS_KEY = "coems-fixture-report-col-widths";
+function loadWidths(): Record<string, number> {
+  try {
+    const v = JSON.parse(localStorage.getItem(WIDTHS_KEY) || "{}");
+    return v && typeof v === "object" ? v : {};
+  } catch { return {}; }
+}
+
 function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[]; rows: Row[]; hidden: string[]; onHidden: (h: string[]) => void; basisMissing: number }) {
   const [page, setPage] = useState(0);
   const [q, setQ] = useState("");
+  const [widths, setWidths] = useState<Record<string, number>>(loadWidths);
+  const widthsRef = useRef(widths);
+  const drag = useRef<{ name: string; x: number; w: number } | null>(null);
   const per = 25;
   const pages = Math.max(1, Math.ceil(rows.length / per));
   const p = Math.min(page, pages - 1);
   const visible = cols.filter((c) => !hidden.includes(c.name));
   const slice = rows.slice(p * per, p * per + per);
   const toggle = (name: string) => onHidden(hidden.includes(name) ? hidden.filter((h) => h !== name) : [...hidden, name]);
+
+  // Default width = what the header and the longest of the first rows need (capped, so long text is cut off with "…" until widened)
+  const defaults = useMemo(() => {
+    const out: Record<string, number> = {};
+    const sample = rows.slice(0, 300);
+    for (const c of cols) {
+      let body = 0;
+      for (const r of sample) body = Math.max(body, fmtCell(c.type, r[c.name]).length);
+      out[c.name] = Math.min(MAX_DEFAULT_W, Math.max(MIN_COL_W, Math.round(Math.max(c.name.length * 8, body * 7.2) + 40)));
+    }
+    return out;
+  }, [cols, rows]);
+  const widthOf = (c: Col) => widths[c.name] ?? defaults[c.name] ?? 120;
+  const tableWidth = visible.reduce((s, c) => s + widthOf(c), 0);
+
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>, c: Col) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { name: c.name, x: e.clientX, w: widthOf(c) };
+    document.body.style.userSelect = "none";
+  };
+  const moveResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    const w = Math.max(MIN_COL_W, Math.round(d.w + e.clientX - d.x));
+    if (widthsRef.current[d.name] === w) return;
+    widthsRef.current = { ...widthsRef.current, [d.name]: w };
+    setWidths(widthsRef.current);
+  };
+  const endResize = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    document.body.style.userSelect = "";
+    try { localStorage.setItem(WIDTHS_KEY, JSON.stringify(widthsRef.current)); } catch { /* storage unavailable: width just isn't remembered */ }
+  };
 
   return (
     <div>
@@ -144,12 +196,28 @@ function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[
       ) : (
         <>
           <div className="max-h-[560px] overflow-auto rounded-lg border border-gray-200 bg-white">
-            <table className="w-full border-collapse text-left">
+            <table className="border-collapse text-left" style={{ width: tableWidth, tableLayout: "fixed" }}>
+              <colgroup>
+                {visible.map((c) => <col key={c.name} style={{ width: widthOf(c) }} />)}
+              </colgroup>
               <thead>
                 <tr className="text-[11px] font-medium uppercase tracking-wider text-gray-500">
                   {visible.map((c) => (
-                    <th key={c.name} className={`sticky top-0 z-[1] whitespace-nowrap border-b border-gray-200 px-3 py-3 ${c.added ? "bg-amber-50 text-gray-800" : "bg-[#f8f9fa]"} ${c.type === "num" ? "text-right" : ""}`} title={c.added ? "New column (not in the export)" : undefined}>
-                      {c.name}
+                    <th key={c.name} className={`sticky top-0 z-[1] border-b border-gray-200 py-3 pl-3 pr-5 ${c.added ? "bg-amber-50 text-gray-800" : "bg-[#f8f9fa]"} ${c.type === "num" ? "text-right" : ""}`} title={c.added ? `${c.name} (new column, not in the export)` : c.name}>
+                      <span className="block truncate">{c.name}</span>
+                      <div
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Resize column ${c.name}`}
+                        title="Drag to resize"
+                        className="group/grip absolute right-0 top-0 flex h-full w-4 cursor-col-resize touch-none select-none items-center justify-center"
+                        onPointerDown={(e) => startResize(e, c)}
+                        onPointerMove={moveResize}
+                        onPointerUp={endResize}
+                        onPointerCancel={endResize}
+                      >
+                        <GripVertical className="size-3.5 text-gray-300 group-hover/grip:text-blue-500" />
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -157,9 +225,10 @@ function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[
               <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700">
                 {slice.map((r, i) => (
                   <tr key={i} className="hover:bg-gray-50">
-                    {visible.map((c) => (
-                      <td key={c.name} className={`whitespace-nowrap px-3 py-2.5 ${c.type === "num" ? "text-right tabular-nums" : ""}`}>{fmtCell(c.type, r[c.name])}</td>
-                    ))}
+                    {visible.map((c) => {
+                      const s = fmtCell(c.type, r[c.name]);
+                      return <td key={c.name} title={s || undefined} className={`truncate px-3 py-2.5 ${c.type === "num" ? "text-right tabular-nums" : ""}`}>{s}</td>;
+                    })}
                   </tr>
                 ))}
               </tbody>
