@@ -195,7 +195,8 @@ function ReportsTab({ cols, rows, hidden, onHidden, basisMissing }: { cols: Col[
         <div className="rounded-lg border border-gray-200 bg-white p-10 text-center text-sm text-gray-400">No fixtures match these fields.</div>
       ) : (
         <>
-          <div className="max-h-[560px] overflow-auto rounded-lg border border-gray-200 bg-white">
+          {/* Fills the screen below the header (the 430px is the header, stats, tabs and paging above/below), never shorter than 320px */}
+          <div className="overflow-auto rounded-lg border border-gray-200 bg-white" style={{ maxHeight: "max(320px, calc(100vh - 430px))" }}>
             <table className="border-collapse text-left" style={{ width: tableWidth, tableLayout: "fixed" }}>
               <colgroup>
                 {visible.map((c) => <col key={c.name} style={{ width: widthOf(c) }} />)}
