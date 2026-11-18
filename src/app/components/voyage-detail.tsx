@@ -50,7 +50,6 @@ function withEtaRoutes(base: any, v: EtaVoyage, st: ReturnType<typeof useEtaStat
         cost: "$ 0",
         portColor: loading ? "bg-green-600" : discharging ? "bg-red-600" : "bg-blue-600",
         dateStr,
-        lc: pc.latestArrival ? `L/A : ${fmtDate(pc.latestArrival)}` : undefined,
         noExpand: true,
         portCallId: pc.id,
         fixtureCount: pc.fixtures.length,

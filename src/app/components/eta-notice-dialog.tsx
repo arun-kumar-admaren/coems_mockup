@@ -227,7 +227,6 @@ export function EtaNoticeDialog({
   // each row has its own port call (they only differ for manually created notices)
   const pcOf = (r: Row): PortCall => findPortCall(r.portCallId)?.portCall ?? pc;
   const etaOf = (r: Row) => effectiveEta(pcOf(r), st) ?? "";
-  const breach = (iso: string, p: PortCall = pc) => !!p.latestArrival && iso.slice(0, 10) > p.latestArrival;
   const multiPort = new Set(rows.map((r) => r.portCallId)).size > 1;
 
   // Manual mode: the ticks in the left panel create and remove the e-mails on the right
@@ -348,16 +347,6 @@ export function EtaNoticeDialog({
               <span className="text-gray-500">{pc.timeZone}</span>{" "}
               <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">{savedEntered ? "entered" : "computed"}</span>
             </span>
-            {pc.latestArrival && (
-              <span className={cn(breach(systemEta) ? "text-amber-700" : "text-gray-700")}>
-                Latest arrival: <b>{fmtDate(pc.latestArrival)}</b>
-                {breach(systemEta) && (
-                  <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold">
-                    <AlertTriangle className="size-3" /> ETA is after the latest arrival
-                  </span>
-                )}
-              </span>
-            )}
             {pc.kind === "canal" && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">Canal transit</span>}
           </div>
         </div>
@@ -495,7 +484,6 @@ export function EtaNoticeDialog({
                         Include time (port time)
                       </label>
                       {mismatch && <span className="text-[10px] text-amber-700">Differs from the system Expected ETA</span>}
-                      {breach(r.etaIso, rowPc) && <span className="text-[10px] text-amber-700">After the latest arrival ({fmtDate(rowPc.latestArrival)})</span>}
                     </div>
                   </div>
 
@@ -604,9 +592,12 @@ export function EtaNoticeDialog({
             Signatory: <b className="font-semibold text-gray-900">{CURRENT_USER}</b>
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <button type="button" onClick={onClose} className="h-8 rounded border border-gray-300 bg-white px-4 text-[12px] font-medium text-gray-700 hover:bg-gray-50">
-              {rows.some((r) => r.status === "sent") ? "Close" : "Cancel"}
-            </button>
+            {/* Cancel only before something was sent; afterwards the X in the corner closes the dialog */}
+            {!rows.some((r) => r.status === "sent") && (
+              <button type="button" onClick={onClose} className="h-8 rounded border border-gray-300 bg-white px-4 text-[12px] font-medium text-gray-700 hover:bg-gray-50">
+                Cancel
+              </button>
+            )}
             <button
               type="button"
               onClick={send}
@@ -657,11 +648,6 @@ export function SentNoticeDialog({ notice, onClose }: { notice: SentNotice; onCl
             <div className="text-[13px] font-semibold text-gray-900 underline">{notice.subject}</div>
             <MailText text={notice.body} className="mt-3 whitespace-pre-wrap font-sans text-[12px] leading-relaxed text-gray-800" />
           </div>
-        </div>
-        <div className="flex justify-end border-t border-gray-200 bg-white px-6 py-3">
-          <button type="button" onClick={onClose} className="h-8 rounded border border-gray-300 bg-white px-4 text-[12px] font-medium text-gray-700 hover:bg-gray-50">
-            Close
-          </button>
         </div>
       </DialogContent>
     </Dialog>

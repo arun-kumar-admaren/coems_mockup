@@ -39,8 +39,6 @@ export interface PortCall {
   /** Operator-entered expected dates (shown as normal text). */
   entered: { arrival?: string; departure?: string };
   actual: { arrival?: string; berth?: string; departure?: string };
-  /** Latest arrival requirement, "YYYY-MM-DD". */
-  latestArrival?: string;
   fixtures: PortCallFixture[];
   remarks?: string;
   pic?: string;
@@ -167,7 +165,7 @@ export const ETA_VOYAGES: EtaVoyage[] = [
       },
       {
         id: "FRS 2604:cuxhaven", voyage: "FRS 2604", vessel: "UHL FRESH", port: "Cuxhaven", locode: "DECUX", kind: "port",
-        timeZone: "(UTC+1:00) Europe/Berlin", latestArrival: "2026-11-20",
+        timeZone: "(UTC+1:00) Europe/Berlin",
         budgeted: { arrival: "2026-11-19T04:45", departure: "2026-11-23T16:45" },
         computed: { arrival: "2026-11-24T21:45", departure: "2026-11-28T09:45" }, entered: {}, actual: {},
         fixtures: [
@@ -179,7 +177,7 @@ export const ETA_VOYAGES: EtaVoyage[] = [
       },
       {
         id: "FRS 2604:emden", voyage: "FRS 2604", vessel: "UHL FRESH", port: "Emden", locode: "DEEME", kind: "port",
-        timeZone: "(UTC+1:00) Europe/Berlin", latestArrival: "2026-11-30",
+        timeZone: "(UTC+1:00) Europe/Berlin",
         budgeted: { arrival: "2026-11-24T19:02", departure: "2026-11-26T07:02" },
         computed: { arrival: "2026-11-29T02:00", departure: "2026-12-01T07:02" },
         entered: { arrival: "2026-11-29T04:00" }, actual: {},
@@ -215,7 +213,7 @@ export const ETA_VOYAGES: EtaVoyage[] = [
       },
       {
         id: "FOR 2603:gdynia", voyage: "FOR 2603", vessel: "UHL FORTUNE", port: "Gdynia", locode: "PLGDY", kind: "port",
-        timeZone: "(UTC+1:00) Europe/Warsaw", latestArrival: "2026-11-22",
+        timeZone: "(UTC+1:00) Europe/Warsaw",
         budgeted: { arrival: "2026-11-21T05:00", departure: "2026-11-23T18:00" },
         computed: { arrival: "2026-11-21T09:30", departure: "2026-11-23T18:00" }, entered: {}, actual: {},
         fixtures: [{ fixtureId: "UHL-F-2026-1401", operation: "Discharging" }], pic: "MH",
