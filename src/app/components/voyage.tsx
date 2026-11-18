@@ -4,6 +4,8 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { VoyageDetail } from "./voyage-detail";
+import { useVersion } from "../version-context";
+import { ETA_VOYAGES } from "./eta-notice-store";
 
 const VOYAGE_DATA = [
   { id: 2712, number: "HLSD 2605", vessel: "HLS DIAMOND", status: "Preplanning", operationInCharge: "Aiswarya Admaren", tce: "$ 3.328,00", startDate: "25/04/2026", suez: "N/A", nsr: "N/A", createdBy: "Aiswarya Admaren", modifiedBy: "Nikhil Mathew", createdOn: "18/03/2026", modifiedOn: "23/03/2026", vesselType: "Dong Bang Deckcarrier", customsFiling: "Pending", agm: "Pending", armedGuards: "Pending", transitRequirements: "Pending", bunkerPlanning: "Pending" },
@@ -23,10 +25,21 @@ const VOYAGE_DATA = [
   { id: 2694, number: "AQUA 2606", vessel: "AQUAGEMINI", status: "Completed", operationInCharge: "Safna Basheer", tce: "$ 71.279,00", startDate: "06/08/2027", suez: "N/A", nsr: "N/A", createdBy: "Safna Basheer", modifiedBy: "Safna Basheer", createdOn: "10/03/2026", modifiedOn: "18/03/2026", vesselType: "Bulk Carrier", customsFiling: "Pending", agm: "Pending", armedGuards: "Pending", transitRequirements: "Pending", bunkerPlanning: "Pending" },
 ];
 
+// v2.0: voyages carrying the ETA notice demo data (shared with the Position List)
+const ETA_VOYAGE_ROWS = ETA_VOYAGES.map((v) => ({
+  id: v.id, number: v.number, vessel: v.vessel, status: v.status, operationInCharge: v.operationInCharge,
+  tce: "$ 24.007,00", startDate: v.startDate, suez: "N/A", nsr: "N/A", createdBy: "Tester Adminren", modifiedBy: "Tester Adminren",
+  createdOn: "01/11/2026", modifiedOn: "16/11/2026", vesselType: "Heavy Lift", customsFiling: "Pending", agm: "Pending",
+  armedGuards: "Pending", transitRequirements: "Pending", bunkerPlanning: "Pending",
+}));
+
 export function Voyage({ version = 'v1' }: { version?: 'v1' | 'v2' }) {
+  const isV2 = useVersion() === "2.0";
+  const rows = isV2 ? [...ETA_VOYAGE_ROWS, ...VOYAGE_DATA] : VOYAGE_DATA;
   const [archived, setArchived] = useState(false);
   const [listType, setListType] = useState<"Lists" | "Trash">("Lists");
   const [selectedVoyage, setSelectedVoyage] = useState<any | null>(null);
+
 
   if (selectedVoyage) {
     return <VoyageDetail voyage={selectedVoyage} onClose={() => setSelectedVoyage(null)} version={version} />;
@@ -61,6 +74,7 @@ export function Voyage({ version = 'v1' }: { version?: 'v1' | 'v2' }) {
             <Plus className="size-4" />
             Add Filter
           </Button>
+
         </div>
 
         <div className="flex items-center gap-5">
@@ -133,7 +147,7 @@ export function Voyage({ version = 'v1' }: { version?: 'v1' | 'v2' }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-[13px] text-gray-700 bg-white">
-              {VOYAGE_DATA.map((row) => (
+              {rows.map((row) => (
                 <tr 
                   key={row.id} 
                   className="hover:bg-gray-50 transition-colors group cursor-pointer"

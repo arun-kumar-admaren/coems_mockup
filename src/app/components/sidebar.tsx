@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote, Check, ChevronDown, Mail } from "lucide-react";
+import { Building2, Anchor, Building, FileText, BarChart3, FileSpreadsheet, DollarSign, ShieldCheck, Shield, Ship, Settings, MoreVertical, LogOut, FileSearch, Scale, Banknote, Check, ChevronDown, Mail, ListOrdered } from "lucide-react";
 import { NavigationItem } from "../App";
 import { AppVersion } from "../version-context";
 import { cn } from "./ui/utils";
@@ -41,11 +41,19 @@ const operationsItems = [
 export function Sidebar({ activeSection, onNavigate, version, onVersionChange }: SidebarProps) {
   const [versionOpen, setVersionOpen] = useState(false);
   // v2.0: the "Fixture Reports" menu is replaced by "Reports", where users create their own Fixture Report
-  const opsItems = operationsItems.map((i) =>
+  const baseOpsItems = operationsItems.map((i) =>
     version === "2.0" && i.id === "fixture-reports"
       ? { id: "reports" as NavigationItem, label: "Reports", icon: BarChart3, badge: "NEW" }
       : i
   );
+  // v2.0: Position List, the second entry point (with the Voyage page) of the ETA notice
+  const opsItems = version === "2.0"
+    ? baseOpsItems.flatMap((i) =>
+        i.id === "voyage-v2"
+          ? [i, { id: "position-list" as NavigationItem, label: "Position List", icon: ListOrdered, badge: "BETA" }]
+          : [i]
+      )
+    : baseOpsItems;
   return (
     <aside className="w-64 bg-[#1a1d29] flex flex-col h-screen text-white">
       {/* Header */}

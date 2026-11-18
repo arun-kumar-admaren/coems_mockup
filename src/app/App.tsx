@@ -9,6 +9,7 @@ import { Inquiry } from "./components/inquiry";
 import { Legal } from "./components/legal";
 import { Fixtures } from "./components/fixtures";
 import { Reports } from "./components/reports";
+import { PositionList } from "./components/position-list";
 import { SmartInbox } from "./components/smart-inbox";
 import { Settings } from "./components/settings";
 import { EmailAccountEntry, DEFAULT_EMAIL_ACCOUNTS } from "./components/settings-integrations";
@@ -25,6 +26,7 @@ export type NavigationItem =
   | "claims-insurance"
   | "voyage"
   | "voyage-v2"
+  | "position-list"
   | "inquiry"
   | "smart-inbox"
   | "legal"
@@ -48,7 +50,13 @@ export default function App() {
     setVersion(v);
     localStorage.setItem("coems-version", v);
     // v1.0 "Fixture Reports" is replaced by "Reports" (with New Fixture Report) in v2.0
-    setActiveSection((s) => (v === "2.0" && s === "fixture-reports" ? "reports" : v === "1.0" && s === "reports" ? "fixture-reports" : s));
+    setActiveSection((s) =>
+      v === "2.0" && s === "fixture-reports" ? "reports"
+        : v === "1.0" && s === "reports" ? "fixture-reports"
+        // v2.0 only: the Position List (ETA notice entry point) does not exist in v1.0
+        : v === "1.0" && s === "position-list" ? "voyage"
+        : s
+    );
   };
 
   // Cross-module bridge: a linked claim clicked inside an Incident's Claims tab
@@ -72,6 +80,8 @@ export default function App() {
         return <Voyage />;
       case "voyage-v2":
         return <Voyage version="v2" />;
+      case "position-list":
+        return <PositionList />;
       case "inquiry":
         return <Inquiry />;
       case "smart-inbox":

@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Map as MapIcon, ChevronRight, ChevronDown, Download, MoreVertical, Maximize2, Flag, Circle, Plus, List, ArrowRight, Info, Check, ChevronsUpDown, Search, Activity, Banknote, Edit, PlusCircle } from "lucide-react";
+import { X, Map as MapIcon, ChevronRight, ChevronDown, Download, MoreVertical, Maximize2, Flag, Circle, Plus, List, ArrowRight, Info, Check, ChevronsUpDown, Search, Activity, Banknote, Edit, PlusCircle, Mail } from "lucide-react";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
@@ -14,6 +14,52 @@ import { cn } from "./ui/utils";
 import exampleImage from 'figma:asset/6931c210e64628b26cf918b8364d99257fc1fce7.png';
 import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE_OF_COVER_OPTIONS, TYPE_OF_COVER_TO_CLAIM_TYPES, BROKERS, PIC_LEGAL_OPTIONS, INSURERS, formatClaimNo } from "./claims-types";
 import { useVersion } from "../version-context";
+import { ArrivalDepartureReport } from "./arrival-departure-report";
+import { EtaNoticeDialog, SentNoticeDialog } from "./eta-notice-dialog";
+import { cardDates, dueFixtures, findVoyage, fmtCard, fmtDate, fmtDT, nowIso, portDays, portsFor, readyNotices, useEtaState, type EtaVoyage, type PortCall, type SentNotice } from "./eta-notice-store";
+
+// Replaces the route list of the Voyage detail with the shared ETA-notice port calls (v2.0 only).
+function withEtaRoutes(base: any, v: EtaVoyage, st: ReturnType<typeof useEtaState>) {
+  const first = v.fixtures[0];
+  const dep = (pc: PortCall) => pc.actual.departure ?? pc.computed.departure ?? pc.budgeted.departure;
+  const startIso = dep(v.portCalls[0]);
+  const endIso = dep(v.portCalls[v.portCalls.length - 1]);
+  const d8 = (iso?: string) => (iso ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(2, 4)}` : "");
+  return {
+    ...base,
+    startDate: d8(startIso) || base.startDate,
+    endDate: d8(endIso) || base.endDate,
+    duration: portDays(startIso, endIso) ?? base.duration,
+    fixtureName: first ? `${first.id} ${first.account}` : base.fixtureName,
+    fixtureTag: "BREAKBULK",
+    fixturePorts: first
+      ? [portsFor(v, [first.id], "Loading") || base.fixturePorts[0], portsFor(v, [first.id], "Discharging") || base.fixturePorts[1]]
+      : base.fixturePorts,
+    ports: v.portCalls.map((pc) => ({ name: pc.port, amount: "$ 0" })),
+    totalPortIncome: "$ 0",
+    routes: v.portCalls.map((pc) => {
+      const d = cardDates(pc, st);
+      const dateStr = pc.startOnly
+        ? fmtCard(pc.actual.departure)
+        : [d.arrival && fmtCard(d.arrival.value), d.departure && fmtCard(d.departure.value)].filter(Boolean).join("   ");
+      const loading = pc.fixtures.some((f) => f.operation === "Loading");
+      const discharging = pc.fixtures.some((f) => f.operation === "Discharging");
+      return {
+        port: pc.port,
+        dist: "0 nm",
+        cost: "$ 0",
+        portColor: loading ? "bg-green-600" : discharging ? "bg-red-600" : "bg-blue-600",
+        dateStr,
+        lc: pc.latestArrival ? `L/A : ${fmtDate(pc.latestArrival)}` : undefined,
+        noExpand: true,
+        portCallId: pc.id,
+        fixtureCount: pc.fixtures.length,
+        canal: pc.kind === "canal",
+        due: dueFixtures(v, pc, st).length > 0,
+      };
+    }),
+  };
+}
 
 const INCIDENT_CATEGORIES = ["Cargo", "Environmental", "Near-Miss", "Personnel Accident", "Property Damage", "Security", "Technical", "Other"];
 const FIXTURE_OPTIONS = ["FAI 2601", "FAI 2602", "FAI 2603", "FAI 2501"];
@@ -210,7 +256,23 @@ const getVoyageDetails = (voyage: any) => {
 
 export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailProps) {
   const isV2 = useVersion() === "2.0"; // COEMS mockup Version 2.0 toggle — distinct from the `version` (Voyage v1/v2) prop above
-  const data = getVoyageDetails(voyage);
+  const etaState = useEtaState();
+  const etaVoyage = isV2 ? findVoyage(voyage.number) : undefined;
+  const baseData = getVoyageDetails(voyage);
+  // v2.0 ETA notice voyages: route rows come from the shared port-call data, so the dates open the
+  // Arrival and Departure Report (where the ETA notice lives)
+  const data: any = etaVoyage ? withEtaRoutes(baseData, etaVoyage, etaState) : baseData;
+  const [reportPortCallId, setReportPortCallId] = React.useState<string | null>(null);
+  const [etaPopOpen, setEtaPopOpen] = React.useState(false);
+  // What the "ETA notices" list previews: a sent notice (read-only) or a Ready to Send one (the notice dialog for that fixture)
+  const [previewTarget, setPreviewTarget] = React.useState<
+    | { kind: "sent"; notice: SentNotice }
+    | { kind: "ready"; portCallId: string; fixtureId: string }
+    | null
+  >(null);
+  const [creatorOpen, setCreatorOpen] = React.useState(false);
+  const etaReady = etaVoyage ? readyNotices(etaVoyage, etaState) : [];
+  const etaSent = etaVoyage ? etaState.sent.filter((n) => n.voyage === etaVoyage.number) : [];
   const isHLG2605 = voyage.number === "HLG 2605";
   const [activeTab, setActiveTab] = React.useState("Port");
   const [addNewOpen, setAddNewOpen] = React.useState(false);
@@ -393,6 +455,21 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
         </div>
       </div>
 
+      {reportPortCallId && <ArrivalDepartureReport portCallId={reportPortCallId} onClose={() => setReportPortCallId(null)} />}
+      {previewTarget?.kind === "sent" && <SentNoticeDialog notice={previewTarget.notice} onClose={() => setPreviewTarget(null)} />}
+      {previewTarget?.kind === "ready" && (
+        <EtaNoticeDialog portCallId={previewTarget.portCallId} fixtureIds={[previewTarget.fixtureId]} unsaved={false} onClose={() => setPreviewTarget(null)} />
+      )}
+      {/* New ETA notice (manual): fixtures / ports tabs on the left, the e-mails on the right */}
+      {creatorOpen && etaVoyage && (
+        <EtaNoticeDialog
+          manual
+          portCallId={(etaVoyage.portCalls.find((p) => !p.startOnly && !p.actual.arrival && p.fixtures.length > 0) ?? etaVoyage.portCalls[0]).id}
+          unsaved={false}
+          onClose={() => setCreatorOpen(false)}
+        />
+      )}
+
       {/* Info Header */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2 bg-white border-b border-gray-200 shrink-0 text-xs">
         <div>
@@ -448,6 +525,112 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
         <div className="flex-1" />
         
         <div className="flex items-center gap-2">
+          {/* v2.0 — list of the ETA notices of this voyage: Ready to Send and Sent */}
+          {etaVoyage && (
+            <Popover open={etaPopOpen} onOpenChange={setEtaPopOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  <Mail className="size-3.5" />
+                  ETA notices
+                  <span className={`rounded-full px-1.5 text-[10px] font-semibold ${etaReady.length ? "bg-amber-500 text-white" : "bg-gray-200 text-gray-600"}`}>
+                    {etaReady.length}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[780px] max-w-[96vw] p-0">
+                <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
+                  <span className="text-[13px] font-semibold text-gray-900">
+                    ETA notices <span className="font-normal text-gray-500">· {voyage.number}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEtaPopOpen(false);
+                      setCreatorOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-blue-600 bg-white px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50"
+                  >
+                    <Plus className="size-3" /> New ETA notice
+                  </button>
+                </div>
+                {etaReady.length + etaSent.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-[12px] text-gray-400">No ETA notice for this voyage yet.</div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    <table className="w-full text-left text-[12px]">
+                      <thead className="sticky top-0 bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Date</th>
+                          <th className="px-3 py-2 font-medium">Port</th>
+                          <th className="px-3 py-2 font-medium">Fixture</th>
+                          <th className="px-3 py-2 font-medium">To</th>
+                          <th className="px-3 py-2 font-medium">Status</th>
+                          <th className="px-3 py-2 font-medium text-right">Preview</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-gray-800">
+                        {etaReady.map(({ portCall, fixture }) => (
+                          <tr key={`ready-${portCall.id}-${fixture.id}`}>
+                            <td className="px-3 py-2 whitespace-nowrap">{fmtDate(nowIso().slice(0, 10))}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{portCall.port}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{fixture.id}</td>
+                            <td className="px-3 py-2 max-w-[220px] truncate" title={fixture.etaEmails.join(", ")}>
+                              {fixture.etaEmails.length ? fixture.etaEmails.join(", ") : <span className="text-amber-700">No address</span>}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">Ready to Send</span>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEtaPopOpen(false);
+                                  setPreviewTarget({ kind: "ready", portCallId: portCall.id, fixtureId: fixture.id });
+                                }}
+                                className="font-medium text-blue-600 hover:underline"
+                              >
+                                Preview
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {etaSent.map((n) => (
+                          <tr key={n.id}>
+                            <td className="px-3 py-2 whitespace-nowrap">{fmtDT(n.sentAt.slice(0, 16))}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{n.port}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{n.fixtureIds.join(", ") || "-"}</td>
+                            <td className="px-3 py-2 max-w-[220px] truncate" title={n.to.join(", ")}>{n.to.join(", ")}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${n.status === "Sent" ? "border-green-300 bg-green-100 text-green-800" : "border-red-300 bg-red-100 text-red-800"}`}
+                              >
+                                {n.status}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEtaPopOpen(false);
+                                  setPreviewTarget({ kind: "sent", notice: n });
+                                }}
+                                className="font-medium text-blue-600 hover:underline"
+                              >
+                                Preview
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          )}
           <button className="p-1 hover:bg-gray-100 rounded text-gray-600"><Download className="size-4" /></button>
           <button className="p-1 hover:bg-gray-100 rounded text-gray-600"><Flag className="size-4" /></button>
           <button className="p-1 hover:bg-gray-100 rounded text-gray-600"><Maximize2 className="size-4" /></button>
@@ -612,12 +795,30 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                       <div className={`w-2.5 h-2.5 ${route.portColor}`}></div>
                       <span className="font-medium text-gray-800">{route.port}</span>
                       {i === 0 && <Circle className="size-3 text-black fill-black ml-1" />}
-                      <span className="text-blue-600 text-[10px] ml-2 font-medium">{route.dateStr}</span>
-                      
+                      {route.portCallId ? (
+                        // v2.0: clicking the dates opens the Arrival and Departure Report (ETA notice entry point)
+                        <button
+                          type="button"
+                          onClick={() => setReportPortCallId(route.portCallId)}
+                          title="Open the Arrival and Departure Report"
+                          className="text-blue-600 text-[10px] ml-2 font-medium hover:underline"
+                        >
+                          {route.dateStr}
+                        </button>
+                      ) : (
+                        <span className="text-blue-600 text-[10px] ml-2 font-medium">{route.dateStr}</span>
+                      )}
+                      {route.canal && <span className="ml-1 rounded bg-gray-100 px-1.5 py-px text-[9px] text-gray-500">Canal</span>}
+                      {route.due && (
+                        <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-px text-[9px] font-semibold text-amber-800" title="ETA notice due today">
+                          <span className="size-1.5 rounded-full bg-amber-500" /> ETA notice due
+                        </span>
+                      )}
+
                       <div className="ml-auto flex items-center gap-3">
                          {route.lc && <span className="text-red-400 text-[10px] mr-2">{route.lc}</span>}
                          <span className="text-red-500 font-medium">{route.cost}</span>
-                         <div className="w-5 h-5 border border-gray-300 rounded flex items-center justify-center text-[10px] text-gray-500 bg-white">1</div>
+                         <div className="w-5 h-5 border border-gray-300 rounded flex items-center justify-center text-[10px] text-gray-500 bg-white">{route.fixtureCount ?? 1}</div>
                          <MoreVertical className="size-3 text-gray-400" />
                       </div>
                     </div>
