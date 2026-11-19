@@ -29,14 +29,19 @@ export interface ChartSpec {
   cat?: string; val?: string;
 }
 
+/** A measure in the Values zone: a column and how it is aggregated (Sum / Count / Average). */
+export interface PivotValue { field: string; agg: AggOp }
+/**
+ * A pivot table as saved (COEMS-14199 / 14368): the fields of the four zones, in order.
+ * A date column in Filters / Rows / Columns is stored with its grouping, e.g. "BOOKING DATE (Year)" or "BOOKING DATE (Month)".
+ */
 export interface PivotSpec {
   id: number;
   name: string;
-  rows: string;
-  cols: string;
-  fcol: string;
-  fval: string;
-  values: [string, AggOp][];
+  filters: string[];
+  rows: string[];
+  cols: string[];
+  values: PivotValue[];
 }
 
 export interface ReportRecord {
@@ -300,31 +305,6 @@ export function pieData(types: Types, allRows: Row[], rows: Row[], c: ChartSpec)
   return { slices, folded: rest.length, groups: g.length };
 }
 
-/* ---------- pivot view model ---------- */
-export function pivotModel(types: Types, rows: Row[], p: PivotSpec) {
-  const cur = p.fcol && p.fval ? rows.filter((r) => String(gk(types, p.fcol, r[p.fcol])) === p.fval) : rows;
-  const rm = groupBy(types, cur, p.rows);
-  const rk = sortedKeys(types, rm, p.rows);
-  if (!p.cols) {
-    return {
-      colHead: null as string | null,
-      head: p.values.map((v) => aggLabel(v[0], v[1])),
-      body: rk.map((k) => ({ label: keyLabel(types, p.rows, k), cells: p.values.map((v) => fmtNum(aggregate(rm.get(k)!, v[0], v[1]))) })),
-      total: p.values.map((v) => fmtNum(aggregate(cur, v[0], v[1]))),
-    };
-  }
-  const cm = groupBy(types, cur, p.cols);
-  const ck = sortedKeys(types, cm, p.cols);
-  const v0 = p.values[0];
-  const cell = (rs: Row[], k: Key) => fmtNum(aggregate(rs.filter((r) => gk(types, p.cols, r[p.cols]) === k), v0[0], v0[1]));
-  return {
-    colHead: `Column Labels: ${p.cols}`,
-    head: ck.map((k) => keyLabel(types, p.cols, k)).concat([`${aggLabel(v0[0], v0[1])} (Grand Total)`]),
-    body: rk.map((k) => { const rs = rm.get(k)!; return { label: keyLabel(types, p.rows, k), cells: ck.map((c) => cell(rs, c)).concat([fmtNum(aggregate(rs, v0[0], v0[1]))]) }; }),
-    total: ck.map((c) => cell(cur, c)).concat([fmtNum(aggregate(cur, v0[0], v0[1]))]),
-  };
-}
-
 /* ---------- examples shown in the seeded report ---------- */
 export const EXAMPLE_PARAMS: ReportParams = {
   name: "Fixture report 2022",
@@ -341,7 +321,8 @@ export const EXAMPLE_CHARTS: ChartSpec[] = [
   { id: 4, type: "pie", name: "Fixtures by fixture status", cat: "FIXTURE STATUS", val: "NUMBER", agg: "Count" },
 ];
 export const EXAMPLE_PIVOTS: PivotSpec[] = [
-  { id: 1, name: "Gross Freight against Converted Gross Freight, by currency", rows: "CURRENCY", cols: "", fcol: "", fval: "", values: [["NUMBER", "Count"], ["GROSS FREIGHT", "Sum"], ["CONVERTED GROSS FREIGHT", "Sum"]] },
-  { id: 2, name: "Monthly overview", rows: "BOOKING DATE (Month)", cols: "", fcol: "", fval: "", values: [["NUMBER", "Count"], ["CONVERTED GROSS FREIGHT", "Sum"], ["CONVERTED MANAGEMENT FEE", "Sum"]] },
-  { id: 3, name: "Fixture status by invoice status", rows: "FIXTURE STATUS", cols: "INVOICE STATUS", fcol: "", fval: "", values: [["NUMBER", "Count"]] },
+  { id: 1, name: "Gross Freight against Converted Gross Freight, by currency", filters: [], rows: ["CURRENCY"], cols: [], values: [{ field: "NUMBER", agg: "Count" }, { field: "GROSS FREIGHT", agg: "Sum" }, { field: "CONVERTED GROSS FREIGHT", agg: "Sum" }] },
+  { id: 2, name: "Monthly overview", filters: [], rows: ["BOOKING DATE (Month)"], cols: [], values: [{ field: "NUMBER", agg: "Count" }, { field: "CONVERTED GROSS FREIGHT", agg: "Sum" }, { field: "CONVERTED MANAGEMENT FEE", agg: "Sum" }] },
+  { id: 3, name: "Fixture status by invoice status", filters: [], rows: ["FIXTURE STATUS"], cols: ["INVOICE STATUS"], values: [{ field: "NUMBER", agg: "Count" }] },
+  { id: 4, name: "Freight by year and currency", filters: ["FIXTURE STATUS"], rows: ["BOOKING DATE (Year)", "CURRENCY"], cols: [], values: [{ field: "NUMBER", agg: "Count" }, { field: "CONVERTED GROSS FREIGHT", agg: "Sum" }] },
 ];

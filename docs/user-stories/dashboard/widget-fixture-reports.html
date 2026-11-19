@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dashboard - Fixture Reports as a Widget</title>
+<style>
+  body { font-family: Inter, Calibri, Arial, sans-serif; font-size: 16px; line-height: 1.5; max-width: 860px; margin: 24px auto; color: #1a1a1a; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 16px; }
+  ol > li { margin: 14px 0 0; }
+  ol > li > b { display: block; margin-bottom: 4px; }
+  ul { margin: 0; }
+  li li { margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<h1>Dashboard - Fixture Reports as a Widget</h1>
+
+<p><b>As a user,</b><br>
+<b>I want to</b> add report charts and pivots to my dashboard by choosing a Fixture Report and the charts I want from it<br>
+<b>So that</b> I can keep the figures I care about on my dashboard without opening the report each time.</p>
+
+<p><b>Acceptance Criteria</b></p>
+
+<ol>
+  <li><b>Opening the pop-up</b>
+    <ul>
+      <li>The <b>Add Widget</b> list on the My Dashboard tab must include <b>Select Reports</b>.</li>
+      <li>When the user clicks <b>Select Reports</b>, a <b>pop-up menu</b> must open. Nothing is added to the dashboard until the user has made a selection in it.</li>
+    </ul>
+  </li>
+
+  <li><b>Availability of Widget</b>
+    <ul>
+      <li>The "Fixture Reports" widget should be available for users who have access to the following Desks:
+        <ul>
+          <li>Chartering</li>
+        </ul>
+      </li>
+      <li>If the Desk access for the user is revoked/changed, the currently configured Widget should show a blank state with the following message: "Desk Access Removed, No Data Available"</li>
+    </ul>
+  </li>
+
+  <li><b>Select Fixture Report</b>
+    <ul>
+      <li>The pop-up must have a <b>Select Fixture Report</b> dropdown field.</li>
+      <li>The dropdown must list <b>all the available Fixture Reports</b>.</li>
+    </ul>
+  </li>
+
+  <li><b>Select Chart / Pivot</b>
+    <ul>
+      <li>The pop-up must have a <b>Select Chart / Pivot</b> dropdown field.</li>
+      <li>It must list <b>all the available charts inside the selected Fixture Report</b>.</li>
+      <li>If the selected Fixture Report has <b>no charts available</b>, the field must be <b>empty</b>.</li>
+      <li>The user must be able to select <b>multiple</b> charts.</li>
+      <li><b>No duplicates</b> are allowed: the same chart cannot be selected more than once.</li>
+    </ul>
+  </li>
+
+  <li><b>Charts displayed on the dashboard</b>
+    <ul>
+      <li>Once the user selects the Fixture Report and charts, the <b>selected charts must display on the dashboard</b>.</li>
+      <li>For reference, the <b>Fixture Report name must appear as a subheading in each chart</b>.</li>
+      <li>Each chart must appear at its <b>default minimum size</b>, without overlapping any other widget.</li>
+    </ul>
+  </li>
+
+  <li><b>Can be added again</b>
+    <ul>
+      <li>Unlike My Tasks, Map, and Worklogs, the <b>Select Reports</b> option is <b>not</b> disabled in <b>the Add Widget</b> after charts have been added. The user can open the pop-up again to add charts from the same or another Fixture Report.</li>
+    </ul>
+  </li>
+
+  <li><b>Refresh</b>
+    <ul>
+      <li>Each chart must show a <b>Refresh</b> icon in its header. Clicking it must reload that chart's data.</li>
+      <li>Refresh must not change the chart's size or position and must not reload any other widget.</li>
+    </ul>
+  </li>
+
+  <li><b>Resize</b>
+    <ul>
+      <li>The user must be able to increase or decrease a chart's size within the defined limits and must not be able to reduce it below its minimum allowed size.</li>
+      <li>The chart, its title, and the Fixture Report subheading must stay readable at minimum size.</li>
+    </ul>
+  </li>
+
+  <li><b>Delete and persistence</b>
+    <ul>
+      <li>Each chart must have a delete control that removes it from the dashboard. The remaining widgets must adjust so no gaps or overlaps remain.</li>
+      <li>The charts on the dashboard (including which Fixture Report each belongs to), and their positions and sizes, must persist for the user across sessions.</li>
+    </ul>
+  </li>
+</ol>
+
+</body>
+</html>
