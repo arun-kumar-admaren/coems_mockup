@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, Calendar, ChevronDown, ChevronUp, Eye, EyeOff, Mail, X, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, Calendar, ChevronDown, ChevronUp, Eye, EyeOff, X, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MailEditor, MailText } from "./eta-mail-text";
 import { ManualPicker } from "./eta-manual-picker";
@@ -195,8 +195,8 @@ export function EtaNoticeDialog({
    */
   fixtureIds?: string[];
   /**
-   * Manual creation ("New ETA notice" in the voyage header): the fixtures and their ports are ticked in a panel on the
-   * left, the e-mails (one per fixture + port) appear on the right as they are ticked.
+   * Manual creation ("New ETA notice" in the voyage header): the ports of each fixture are ticked in a panel on the
+   * left (fixtures have a chevron, no checkbox), the e-mails (one per fixture + port) appear on the right as they are ticked.
    */
   manual?: boolean;
 }) {
@@ -216,7 +216,6 @@ export function EtaNoticeDialog({
   });
   const [showAllLog, setShowAllLog] = React.useState(false);
   const [openLog, setOpenLog] = React.useState<string | null>(null);
-  const [selFixtures, setSelFixtures] = React.useState<string[]>([]); // manual mode: fixtures ticked in the left list
 
   if (!found) return null;
   const { voyage, portCall: pc } = found;
@@ -234,25 +233,13 @@ export function EtaNoticeDialog({
   const selectedPairs = new Set(rows.map((r) => pairKey(r.portCallId, r.fixtureIds[0])));
   const isLocked = (r: Row) => r.status === "sent" || r.status === "sending";
   const rowFor = (pcId: string, fxId: string) => buildRow(voyage, pcId, [fxId], effectiveEta(findPortCall(pcId)!.portCall, st) ?? "");
-  // Ticking a fixture selects it; its port is ticked for it only when the fixture has a single port left,
-  // with several ports the operator ticks the ports. Unticking a fixture removes its e-mails (sent ones stay).
-  const toggleFixture = (fxId: string, callIds: string[]) => {
-    if (selFixtures.includes(fxId)) {
-      setSelFixtures((f) => f.filter((x) => x !== fxId));
-      setRows((rs) => rs.filter((r) => r.fixtureIds[0] !== fxId || isLocked(r)));
-    } else {
-      setSelFixtures((f) => [...f, fxId]);
-      if (callIds.length === 1 && !selectedPairs.has(pairKey(callIds[0], fxId))) setRows((rs) => [...rs, rowFor(callIds[0], fxId)]);
-    }
-  };
-  // Ticking a port also marks its fixture as selected
+  // Fixtures have no checkbox: ticking a port creates its e-mail, unticking removes it (a sent one stays).
   const togglePair = (pcId: string, fxId: string) => {
     const existing = rows.find((r) => r.portCallId === pcId && r.fixtureIds[0] === fxId);
     if (existing) {
       if (!isLocked(existing)) setRows((rs) => rs.filter((r) => r.key !== existing.key));
     } else {
       setRows((rs) => [...rs, rowFor(pcId, fxId)]);
-      setSelFixtures((f) => (f.includes(fxId) ? f : [...f, fxId]));
     }
   };
   // The client of a row = the Account of its fixture(s)
@@ -335,7 +322,7 @@ export function EtaNoticeDialog({
         {/* Header */}
         <div className="px-6 pt-5 pb-3 border-b border-gray-200">
           <DialogTitle className="flex items-center gap-2 text-[16px] font-semibold text-gray-900">
-            <Mail className="size-4 text-blue-600" /> {manual ? "New ETA notice" : multiPort ? "ETA notices" : <>ETA notice · {pc.port}</>}
+            {manual ? "New ETA notice" : multiPort ? "ETA notices" : <>ETA notice · {pc.port}</>}
             <span className="text-[12px] font-normal text-gray-500">
               {voyage.vessel} · {voyage.number}
             </span>
@@ -357,9 +344,7 @@ export function EtaNoticeDialog({
             <aside className="w-[310px] shrink-0 overflow-hidden border-r border-gray-200 bg-white">
               <ManualPicker
                 voyage={voyage}
-                selFixtures={selFixtures}
                 selectedPairs={selectedPairs}
-                onToggleFixture={toggleFixture}
                 onTogglePair={togglePair}
               />
             </aside>
@@ -625,7 +610,7 @@ export function SentNoticeDialog({ notice, onClose }: { notice: SentNotice; onCl
       >
         <div className="px-6 pt-5 pb-3 border-b border-gray-200">
           <DialogTitle className="flex items-center gap-2 text-[16px] font-semibold text-gray-900">
-            <Mail className="size-4 text-blue-600" /> ETA notice · {notice.port}
+            ETA notice · {notice.port}
             <span className="text-[12px] font-normal text-gray-500">
               {notice.vessel} · {notice.voyage}
             </span>

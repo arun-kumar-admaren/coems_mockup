@@ -1,31 +1,30 @@
 import React from "react";
-import { Check } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "./ui/utils";
 import { effectiveEta, fmtDT, useEtaState, type EtaVoyage, type PortCall } from "./eta-notice-store";
 
 /**
- * Left panel of the manual "New ETA notice" dialog, one list: every fixture of the voyage with its loading / discharge
- * ports the vessel has not reached yet always shown under it. Several fixtures and several ports can be ticked.
- * Ticking a fixture ticks its port only when it has a single port left; with several ports the operator ticks the
- * ports. The e-mails appear on the right as things are ticked.
+ * Left panel of the manual "New ETA notice" dialog, one list: every fixture of the voyage, each with a chevron that
+ * collapses / expands its loading / discharge ports the vessel has not reached yet (expanded by default). Fixtures have
+ * no checkbox: the operator ticks the ports, any number of them across several fixtures. The e-mails appear on the
+ * right as ports are ticked.
  * Any fixture can be picked, also one whose Frequency is None, because the operator asks for it explicitly.
  */
 export function ManualPicker({
   voyage,
-  selFixtures,
   selectedPairs,
-  onToggleFixture,
   onTogglePair,
 }: {
   voyage: EtaVoyage;
-  selFixtures: string[];
   /** Set of "portCallId|fixtureId" that already have an e-mail on the right. */
   selectedPairs: Set<string>;
-  onToggleFixture: (fixtureId: string, portCallIds: string[]) => void;
   onTogglePair: (portCallId: string, fixtureId: string) => void;
 }) {
   const st = useEtaState();
   const key = (pcId: string, fxId: string) => `${pcId}|${fxId}`;
+  // fixtures whose ports are collapsed; every fixture starts expanded
+  const [collapsed, setCollapsed] = React.useState<string[]>([]);
+  const toggleOpen = (fxId: string) => setCollapsed((c) => (c.includes(fxId) ? c.filter((x) => x !== fxId) : [...c, fxId]));
 
   /** A fixture's ports of loading / discharge the vessel has not reached yet. */
   const portsOf = (fixtureId: string): { pc: PortCall; operation: "Loading" | "Discharging" }[] =>
@@ -44,8 +43,7 @@ export function ManualPicker({
       <div className="border-b border-gray-200 px-3 py-2.5">
         <div className="text-[12px] font-semibold text-gray-900">Fixtures and ports</div>
         <div className="text-[11px] text-gray-500">
-          Tick a fixture, then the ports to notify. A fixture with one port ticks it for you. {selFixtures.length} fixture{selFixtures.length === 1 ? "" : "s"},{" "}
-          {selectedPairs.size} port{selectedPairs.size === 1 ? "" : "s"} ticked.
+          Tick the ports to notify. {selectedPairs.size} port{selectedPairs.size === 1 ? "" : "s"} ticked.
         </div>
       </div>
 
@@ -53,20 +51,20 @@ export function ManualPicker({
         {voyage.fixtures.map((fx) => {
           const ports = portsOf(fx.id);
           const disabled = ports.length === 0;
+          const open = !collapsed.includes(fx.id);
           return (
             <div key={fx.id}>
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() =>
-                  onToggleFixture(
-                    fx.id,
-                    ports.map((p) => p.pc.id)
-                  )
-                }
+                onClick={() => toggleOpen(fx.id)}
+                aria-expanded={!disabled && open}
+                title={disabled ? undefined : open ? "Collapse the ports" : "Show the ports"}
                 className={cn("flex w-full items-start gap-3 px-3 py-2.5 text-left", disabled ? "cursor-not-allowed opacity-50" : "hover:bg-gray-50")}
               >
-                <span className="mt-0.5">{box(selFixtures.includes(fx.id))}</span>
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center text-gray-500">
+                  {disabled ? null : open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13px] font-medium text-gray-900">{fx.id}</span>
                   <span className="block text-[11px] text-gray-500">
@@ -82,7 +80,7 @@ export function ManualPicker({
                 </span>
               </button>
 
-              {!disabled && (
+              {!disabled && open && (
                 <div className="mx-3 mb-3 ml-10 rounded border border-gray-200 bg-white">
                   <div className="border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-[11px] font-medium text-gray-600">Ports of {fx.id}</div>
                   <div className="divide-y divide-gray-100">
