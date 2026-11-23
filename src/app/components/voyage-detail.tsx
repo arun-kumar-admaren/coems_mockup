@@ -16,7 +16,7 @@ import { PRIORITY_OPTIONS, VESSELS, ALL_FIXTURES, PORT_AGENTS, CLAIM_TYPES, TYPE
 import { useVersion } from "../version-context";
 import { ArrivalDepartureReport } from "./arrival-departure-report";
 import { EtaNoticeDialog, SentNoticeDialog } from "./eta-notice-dialog";
-import { cardDates, dueFixtures, findVoyage, fmtCard, fmtDate, fmtDT, nowIso, portDays, portsFor, readyNotices, useEtaState, type EtaVoyage, type PortCall, type SentNotice } from "./eta-notice-store";
+import { cardDates, dueFixtures, expiredNotices, findPortCall, findVoyage, fmtCard, fmtDate, fmtDT, nowIso, portDays, portsFor, readyNotices, useEtaState, type EtaVoyage, type PortCall, type SentNotice } from "./eta-notice-store";
 
 // Replaces the route list of the Voyage detail with the shared ETA-notice port calls (v2.0 only).
 function withEtaRoutes(base: any, v: EtaVoyage, st: ReturnType<typeof useEtaState>) {
@@ -267,11 +267,24 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
   const [previewTarget, setPreviewTarget] = React.useState<
     | { kind: "sent"; notice: SentNotice }
     | { kind: "ready"; portCallId: string; fixtureId: string }
+    | { kind: "expired"; portCallId: string; fixtureId: string; generatedOn: string }
     | null
   >(null);
   const [creatorOpen, setCreatorOpen] = React.useState(false);
   const etaReady = etaVoyage ? readyNotices(etaVoyage, etaState) : [];
-  const etaSent = etaVoyage ? etaState.sent.filter((n) => n.voyage === etaVoyage.number) : [];
+  const etaExpired = etaVoyage ? expiredNotices(etaVoyage, etaState) : [];
+  // listed only for ports the vessel has not reached yet; a notice sent today stays in the list that day
+  const etaToday = nowIso().slice(0, 10);
+  const etaSent = etaVoyage
+    ? etaState.sent.filter(
+        (n) => n.voyage === etaVoyage.number && (!findPortCall(n.portCallId)?.portCall.actual.arrival || n.sentAt.slice(0, 10) === etaToday)
+      )
+    : [];
+  // Sent and Expired notices together, the latest on top (the Ready to Send ones come first)
+  const etaHistory = [
+    ...etaSent.map((n) => ({ kind: "sent" as const, at: n.sentAt, n })),
+    ...etaExpired.map((e) => ({ kind: "expired" as const, at: `${e.generatedOn}T08:00:00`, e })),
+  ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   const isHLG2605 = voyage.number === "HLG 2605";
   const [activeTab, setActiveTab] = React.useState("Port");
   const [addNewOpen, setAddNewOpen] = React.useState(false);
@@ -457,14 +470,22 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
       {reportPortCallId && <ArrivalDepartureReport portCallId={reportPortCallId} onClose={() => setReportPortCallId(null)} />}
       {previewTarget?.kind === "sent" && <SentNoticeDialog notice={previewTarget.notice} onClose={() => setPreviewTarget(null)} />}
       {previewTarget?.kind === "ready" && (
-        <EtaNoticeDialog portCallId={previewTarget.portCallId} fixtureIds={[previewTarget.fixtureId]} unsaved={false} onClose={() => setPreviewTarget(null)} />
+        <EtaNoticeDialog portCallId={previewTarget.portCallId} fixtureIds={[previewTarget.fixtureId]} onClose={() => setPreviewTarget(null)} />
+      )}
+      {previewTarget?.kind === "expired" && (
+        <EtaNoticeDialog
+          expired
+          generatedOn={previewTarget.generatedOn}
+          portCallId={previewTarget.portCallId}
+          fixtureIds={[previewTarget.fixtureId]}
+          onClose={() => setPreviewTarget(null)}
+        />
       )}
       {/* New ETA notice (manual): fixtures / ports tabs on the left, the e-mails on the right */}
       {creatorOpen && etaVoyage && (
         <EtaNoticeDialog
           manual
           portCallId={(etaVoyage.portCalls.find((p) => !p.startOnly && !p.actual.arrival && p.fixtures.length > 0) ?? etaVoyage.portCalls[0]).id}
-          unsaved={false}
           onClose={() => setCreatorOpen(false)}
         />
       )}
@@ -524,7 +545,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
         <div className="flex-1" />
         
         <div className="flex items-center gap-2">
-          {/* v2.0 — list of the ETA notices of this voyage: Ready to Send and Sent */}
+          {/* v2.0 — list of the ETA notices of this voyage: Ready to Send, Sent and Expired */}
           {etaVoyage && (
             <Popover open={etaPopOpen} onOpenChange={setEtaPopOpen}>
               <PopoverTrigger asChild>
@@ -555,7 +576,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                     <Plus className="size-3" /> New ETA notice
                   </button>
                 </div>
-                {etaReady.length + etaSent.length === 0 ? (
+                {etaReady.length + etaHistory.length === 0 ? (
                   <div className="px-3 py-6 text-center text-[12px] text-gray-400">No ETA notice for this voyage yet.</div>
                 ) : (
                   <div className="max-h-80 overflow-y-auto">
@@ -571,9 +592,9 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-gray-800">
-                        {etaReady.map(({ portCall, fixture }) => (
+                        {etaReady.map(({ portCall, fixture, generatedOn }) => (
                           <tr key={`ready-${portCall.id}-${fixture.id}`}>
-                            <td className="px-3 py-2 whitespace-nowrap">{fmtDate(nowIso().slice(0, 10))}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{fmtDate(generatedOn)}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{portCall.port}</td>
                             <td className="px-3 py-2 whitespace-nowrap">{fixture.id}</td>
                             <td className="px-3 py-2 max-w-[220px] truncate" title={fixture.etaEmails.join(", ")}>
@@ -596,33 +617,59 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                             </td>
                           </tr>
                         ))}
-                        {etaSent.map((n) => (
-                          <tr key={n.id}>
-                            <td className="px-3 py-2 whitespace-nowrap">{fmtDT(n.sentAt.slice(0, 16))}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{n.port}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{n.fixtureIds.join(", ") || "-"}</td>
-                            <td className="px-3 py-2 max-w-[220px] truncate" title={n.to.join(", ")}>{n.to.join(", ")}</td>
-                            <td className="px-3 py-2">
-                              <span
-                                className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${n.status === "Sent" ? "border-green-300 bg-green-100 text-green-800" : "border-red-300 bg-red-100 text-red-800"}`}
-                              >
-                                {n.status}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEtaPopOpen(false);
-                                  setPreviewTarget({ kind: "sent", notice: n });
-                                }}
-                                className="font-medium text-blue-600 hover:underline"
-                              >
-                                Preview
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {etaHistory.map((row) =>
+                          row.kind === "sent" ? (
+                            <tr key={row.n.id}>
+                              <td className="px-3 py-2 whitespace-nowrap">{fmtDT(row.n.sentAt.slice(0, 16))}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{row.n.port}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{row.n.fixtureIds.join(", ") || "-"}</td>
+                              <td className="px-3 py-2 max-w-[220px] truncate" title={row.n.to.join(", ")}>{row.n.to.join(", ")}</td>
+                              <td className="px-3 py-2">
+                                <span
+                                  className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${row.n.status === "Sent" ? "border-green-300 bg-green-100 text-green-800" : "border-red-300 bg-red-100 text-red-800"}`}
+                                >
+                                  {row.n.status}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEtaPopOpen(false);
+                                    setPreviewTarget({ kind: "sent", notice: row.n });
+                                  }}
+                                  className="font-medium text-blue-600 hover:underline"
+                                >
+                                  Preview
+                                </button>
+                              </td>
+                            </tr>
+                          ) : (
+                            <tr key={`expired-${row.e.portCall.id}-${row.e.fixture.id}-${row.e.generatedOn}`}>
+                              <td className="px-3 py-2 whitespace-nowrap">{fmtDate(row.e.generatedOn)}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{row.e.portCall.port}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{row.e.fixture.id}</td>
+                              <td className="px-3 py-2 max-w-[220px] truncate" title={row.e.fixture.etaEmails.join(", ")}>
+                                {row.e.fixture.etaEmails.length ? row.e.fixture.etaEmails.join(", ") : <span className="text-amber-700">No address</span>}
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">Expired</span>
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEtaPopOpen(false);
+                                    setPreviewTarget({ kind: "expired", portCallId: row.e.portCall.id, fixtureId: row.e.fixture.id, generatedOn: row.e.generatedOn });
+                                  }}
+                                  className="font-medium text-blue-600 hover:underline"
+                                >
+                                  Preview
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -809,7 +856,7 @@ export function VoyageDetail({ voyage, onClose, version = 'v1' }: VoyageDetailPr
                       )}
                       {route.canal && <span className="ml-1 rounded bg-gray-100 px-1.5 py-px text-[9px] text-gray-500">Canal</span>}
                       {route.due && (
-                        <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-px text-[9px] font-semibold text-amber-800" title="ETA notice due today">
+                        <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-px text-[9px] font-semibold text-amber-800" title="ETA notice due">
                           <span className="size-1.5 rounded-full bg-amber-500" /> ETA notice due
                         </span>
                       )}

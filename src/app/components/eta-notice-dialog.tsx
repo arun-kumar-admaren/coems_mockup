@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, Calendar, ChevronDown, ChevronUp, Eye, EyeOff, X, Check, Loader2 } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, Eye, EyeOff, X, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MailEditor, MailText } from "./eta-mail-text";
 import { ManualPicker } from "./eta-manual-picker";
@@ -7,9 +7,11 @@ import { cn } from "./ui/utils";
 import {
   OPERATIONS_MAILBOX,
   CURRENT_USER,
+  draftKey,
   dueFixtures,
-  effectiveEta,
   etaActions,
+  etaAt8,
+  etaAt8Entered,
   etaText,
   findPortCall,
   fixtureOf,
@@ -17,11 +19,14 @@ import {
   fmtDate,
   noticeFixtures,
   nowIso,
+  operationLabel,
   parseDT,
   portsFor,
   renderBody,
   renderSubject,
+  toTemplateText,
   useEtaState,
+  type EtaState,
   type EtaVoyage,
   type NoticeValues,
   type PortCall,
@@ -179,15 +184,51 @@ const buildRow = (voyage: EtaVoyage, portCallId: string, fixtureIds: string[], e
   showPreview,
 });
 
+/** The values that fill the template placeholders of one row. */
+const makeValues = (voyage: EtaVoyage, pc: PortCall, r: Pick<Row, "fixtureIds" | "etaIso" | "includeTime" | "remark">): NoticeValues => ({
+  vessel: voyage.vessel,
+  voyage: voyage.number,
+  port: pc.port,
+  eta: etaText(r.etaIso, r.includeTime, pc.timeZone),
+  fixture: r.fixtureIds.join(", "),
+  loadPort: portsFor(voyage, r.fixtureIds, "Loading"),
+  dischargePort: portsFor(voyage, r.fixtureIds, "Discharging"),
+  client: Array.from(new Set(r.fixtureIds.map((id) => fixtureOf(voyage, id)?.account).filter(Boolean) as string[])).join(", "),
+  remark: r.remark.trim(),
+  signatory: CURRENT_USER,
+});
+
+/**
+ * A Ready to Send notice starts with the changes this user stored earlier (also those made the day before):
+ * the texts come back with the values of the new notice, for example the ETA date.
+ */
+const applyDraft = (r: Row, voyage: EtaVoyage, st: EtaState): Row => {
+  const pc = findPortCall(r.portCallId)?.portCall;
+  const d = st.drafts[draftKey(r.portCallId, r.fixtureIds[0])];
+  if (!pc || !d || !dueFixtures(voyage, pc, st).some((f) => f.id === r.fixtureIds[0])) return r;
+  const sameDay = d.day === nowIso().slice(0, 10);
+  const next: Row = { ...r, to: d.to, remark: d.remark, etaIso: sameDay ? d.etaIso : r.etaIso, includeTime: sameDay ? d.includeTime : false };
+  const values = makeValues(voyage, pc, next);
+  if (d.subjectT != null) {
+    next.subject = renderSubject(d.subjectT, values);
+    next.subjectEdited = true;
+  }
+  if (d.bodyT != null) {
+    next.body = renderBody(d.bodyT, values);
+    next.bodyEdited = true;
+  }
+  return next;
+};
+
 export function EtaNoticeDialog({
   portCallId,
-  unsaved,
   onClose,
   fixtureIds,
   manual = false,
+  expired = false,
+  generatedOn,
 }: {
   portCallId: string;
-  unsaved: boolean;
   onClose: () => void;
   /**
    * Show only these fixtures' e-mails, whatever their Frequency (used from the "ETA notices" list and the manual
@@ -199,40 +240,81 @@ export function EtaNoticeDialog({
    * left (fixtures have a chevron, no checkbox), the e-mails (one per fixture + port) appear on the right as they are ticked.
    */
   manual?: boolean;
+  /** Preview of an Expired notice: nothing can be edited and Send is disabled ("ETA Notice Expired"). */
+  expired?: boolean;
+  /** The day an Expired notice was generated, "YYYY-MM-DD". */
+  generatedOn?: string;
 }) {
   const st = useEtaState();
   const found = findPortCall(portCallId);
   // The system builds one e-mail (row) per fixture of this port call; nothing has to be chosen.
   const [rows, setRows] = React.useState<Row[]>(() => {
     if (!found) return [];
-    const eta = effectiveEta(found.portCall, st) ?? "";
+    const eta = etaAt8(found.portCall) ?? "";
     if (manual) return [];
+    // a Ready to Send notice comes back with the changes this user stored earlier
+    const withDraft = (r: Row) => (expired ? r : applyDraft(r, found.voyage, st));
     if (fixtureIds) {
       return found.voyage.fixtures
         .filter((fx) => fixtureIds.includes(fx.id))
-        .map((fx) => buildRow(found.voyage, found.portCall.id, [fx.id], eta));
+        .map((fx) => withDraft(buildRow(found.voyage, found.portCall.id, [fx.id], eta)));
     }
-    return noticeFixtures(found.voyage, found.portCall).map((fx) => buildRow(found.voyage, found.portCall.id, [fx.id], eta));
+    return noticeFixtures(found.voyage, found.portCall).map((fx) => withDraft(buildRow(found.voyage, found.portCall.id, [fx.id], eta)));
   });
   const [showAllLog, setShowAllLog] = React.useState(false);
   const [openLog, setOpenLog] = React.useState<string | null>(null);
 
+  // Stored changes: the changes of a Ready to Send notice are kept for this user (not for manual e-mails), so they are
+  // shown when the notice is opened again and the next notice of the fixture and port starts with them.
+  React.useEffect(() => {
+    if (!found || manual || expired) return;
+    rows.forEach((r) => {
+      if (r.status) return;
+      const rowPc = findPortCall(r.portCallId)?.portCall;
+      if (!rowPc || !dueFixtures(found.voyage, rowPc, st).some((f) => f.id === r.fixtureIds[0])) return;
+      const handover = Array.from(new Set(r.fixtureIds.flatMap((id) => fixtureOf(found.voyage, id)?.etaEmails ?? [])));
+      const dirty =
+        r.remark.trim() !== "" ||
+        r.subjectEdited ||
+        r.bodyEdited ||
+        r.includeTime ||
+        r.etaIso !== (etaAt8(rowPc) ?? "") ||
+        r.to.join("|") !== handover.join("|");
+      const values = makeValues(found.voyage, rowPc, r);
+      etaActions.saveDraft(
+        draftKey(r.portCallId, r.fixtureIds[0]),
+        dirty
+          ? {
+              to: r.to,
+              etaIso: r.etaIso,
+              includeTime: r.includeTime,
+              remark: r.remark,
+              subjectT: r.subjectEdited ? toTemplateText(r.subject, values) : undefined,
+              bodyT: r.bodyEdited ? toTemplateText(r.body, values) : undefined,
+              day: nowIso().slice(0, 10),
+            }
+          : null
+      );
+    });
+  }, [rows]);
+
   if (!found) return null;
   const { voyage, portCall: pc } = found;
-  const systemEta = effectiveEta(pc, st) ?? "";
-  const savedEntered = !!st.saved[pc.id]?.arrival;
+  // every screen uses the Expected ETA as it was at 8 am today; a date changed later is used from the next day's notice
+  const systemEta = etaAt8(pc) ?? "";
+  const savedEntered = etaAt8Entered(pc);
   // the signatory is the signed-in user, no designation
   const signatory = { name: CURRENT_USER };
   // each row has its own port call (they only differ for manually created notices)
   const pcOf = (r: Row): PortCall => findPortCall(r.portCallId)?.portCall ?? pc;
-  const etaOf = (r: Row) => effectiveEta(pcOf(r), st) ?? "";
+  const etaOf = (r: Row) => etaAt8(pcOf(r)) ?? "";
   const multiPort = new Set(rows.map((r) => r.portCallId)).size > 1;
 
   // Manual mode: the ticks in the left panel create and remove the e-mails on the right
   const pairKey = (pcId: string, fxId: string) => `${pcId}|${fxId}`;
   const selectedPairs = new Set(rows.map((r) => pairKey(r.portCallId, r.fixtureIds[0])));
   const isLocked = (r: Row) => r.status === "sent" || r.status === "sending";
-  const rowFor = (pcId: string, fxId: string) => buildRow(voyage, pcId, [fxId], effectiveEta(findPortCall(pcId)!.portCall, st) ?? "");
+  const rowFor = (pcId: string, fxId: string) => buildRow(voyage, pcId, [fxId], etaAt8(findPortCall(pcId)!.portCall) ?? "");
   // Fixtures have no checkbox: ticking a port creates its e-mail, unticking removes it (a sent one stays).
   const togglePair = (pcId: string, fxId: string) => {
     const existing = rows.find((r) => r.portCallId === pcId && r.fixtureIds[0] === fxId);
@@ -246,18 +328,7 @@ export function EtaNoticeDialog({
   const clientOf = (r: Row) =>
     Array.from(new Set(r.fixtureIds.map((id) => fixtureOf(voyage, id)?.account).filter(Boolean) as string[])).join(", ");
 
-  const valuesFor = (r: Row): NoticeValues => ({
-    vessel: voyage.vessel,
-    voyage: voyage.number,
-    port: pcOf(r).port,
-    eta: etaText(r.etaIso, r.includeTime, pcOf(r).timeZone),
-    fixture: r.fixtureIds.join(", "),
-    loadPort: portsFor(voyage, r.fixtureIds, "Loading"),
-    dischargePort: portsFor(voyage, r.fixtureIds, "Discharging"),
-    client: clientOf(r),
-    remark: r.remark.trim(),
-    signatory: signatory.name,
-  });
+  const valuesFor = (r: Row): NoticeValues => makeValues(voyage, pcOf(r), r);
   const autoSubject = (r: Row) => renderSubject(st.template.subject, valuesFor(r));
   const subjectOf = (r: Row) => (r.subjectEdited ? r.subject : autoSubject(r));
   const bodyOf = (r: Row) => (r.bodyEdited ? r.body : renderBody(st.template.body, valuesFor(r)));
@@ -268,21 +339,21 @@ export function EtaNoticeDialog({
   const handoverOf = (ids: string[]) =>
     Array.from(new Set(ids.flatMap((id) => fixtureOf(voyage, id)?.etaEmails ?? [])));
 
-  // Fixtures whose notice is due today get a "Due today" badge on their row
+  // Fixtures with a Ready to Send notice get a "Due" badge on their row
   const isDueRow = (r: Row) => dueFixtures(voyage, pcOf(r), st).some((f) => r.fixtureIds.includes(f.id));
 
   // every e-mail is sent; a row without a recipient is left out (and flagged) until an address is added
-  const selectable = rows.filter((r) => r.status !== "sent" && r.status !== "sending" && r.to.length > 0);
+  const selectable = expired ? [] : rows.filter((r) => r.status !== "sent" && r.status !== "sending" && r.to.length > 0);
   const sending = rows.some((r) => r.status === "sending");
 
   const send = () => {
-    if (unsaved || selectable.length === 0) return;
+    if (selectable.length === 0) return;
     const targets = selectable.map((r) => ({ ...r }));
     setRows((rs) => rs.map((r) => (targets.some((t) => t.key === r.key) ? { ...r, status: "sending", failReason: undefined } : r)));
     targets.forEach((t, i) => {
       window.setTimeout(() => {
         const failed = t.to.some((a) => a.toLowerCase().includes("fail"));
-        const reason = failed ? "Mailbox unavailable (550 5.1.1 recipient rejected)" : undefined;
+        const reason = failed ? "The mail server refused the e-mail (550 5.1.1 recipient rejected)" : undefined;
         etaActions.addNotice({
           id: `n-${Date.now()}-${t.key}`,
           portCallId: t.portCallId,
@@ -350,18 +421,14 @@ export function EtaNoticeDialog({
             </aside>
           )}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-[#fafafa]">
-          {unsaved && (
-            <div className="flex items-start gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
-              <AlertTriangle className="size-4 mt-0.5 shrink-0" />
-              <span>
-                You have unsaved date changes in the report. Close this dialog and click <b>Confirm &amp; Update</b> first. The notice carries the saved
-                Expected ETA, so Send stays off until then.
-              </span>
+          {expired && (
+            <div className="rounded border border-gray-300 bg-gray-50 px-3 py-2 text-[12px] text-gray-700">
+              This ETA notice expired{generatedOn ? ` (generated on ${fmtDate(generatedOn)})` : ""}. You can preview it, but it can no longer be sent.
             </div>
           )}
 
           {/* The system builds one e-mail per fixture; nothing has to be chosen */}
-          <p className="text-[12px] text-gray-600">
+          <p className={cn("text-[12px] text-gray-600", expired && "hidden")}>
             {rows.length > 0
               ? "One e-mail per fixture, each to the addresses in that fixture's Handover tab (ETA's to be given). A row without an address is not sent."
               : manual
@@ -370,7 +437,7 @@ export function EtaNoticeDialog({
           </p>
 
           {rows.map((r) => {
-            const locked = r.status === "sent" || r.status === "sending";
+            const locked = r.status === "sent" || r.status === "sending" || expired;
             const rowPc = pcOf(r);
             const mismatch = r.etaIso !== etaOf(r);
             return (
@@ -390,14 +457,20 @@ export function EtaNoticeDialog({
                       </span>
                     ) : null;
                   })}
-                  {isDueRow(r) && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800" title="Frequency Daily and no notice sent today">
-                      <span className="size-1.5 rounded-full bg-amber-500" /> Due today
+                  {expired ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-700">
+                      <span className="size-1.5 rounded-full bg-gray-500" /> Expired
                     </span>
+                  ) : (
+                    isDueRow(r) && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800" title="Ready to Send notice">
+                        <span className="size-1.5 rounded-full bg-amber-500" /> Due
+                      </span>
+                    )
                   )}
                   {/* what the fixture does at this port, e.g. "Discharging at Emden" */}
                   <span className="text-[13px] text-gray-900">
-                    {rowPc.fixtures.find((f) => f.fixtureId === r.fixtureIds[0])?.operation ?? "Notice"} at {rowPc.port}
+                    {operationLabel(rowPc, r.fixtureIds[0])} at {rowPc.port}
                   </span>
                   {!locked && r.to.length === 0 && (
                     <span className="rounded bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-medium text-red-700">No recipient</span>
@@ -583,14 +656,16 @@ export function EtaNoticeDialog({
                 Cancel
               </button>
             )}
-            <button
-              type="button"
-              onClick={send}
-              disabled={unsaved || selectable.length === 0 || sending}
-              className="h-8 rounded bg-green-600 px-4 text-[12px] font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-            >
-              Send ({selectable.length})
-            </button>
+            <span className="inline-block" title={expired ? "ETA Notice Expired" : undefined}>
+              <button
+                type="button"
+                onClick={send}
+                disabled={expired || selectable.length === 0 || sending}
+                className="h-8 rounded bg-green-600 px-4 text-[12px] font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                Send ({selectable.length})
+              </button>
+            </span>
           </div>
         </div>
       </DialogContent>

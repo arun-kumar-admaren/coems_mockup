@@ -2,12 +2,11 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { SettingsVessels } from "./settings-vessels";
 import { SettingsIntegrations, EmailAccountEntry } from "./settings-integrations";
-import { SettingsEtaNotice } from "./settings-eta-notice";
 import { useVersion } from "../version-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SettingsView = "home" | "vessels" | "integrations" | "eta-notice";
+type SettingsView = "home" | "vessels" | "integrations";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -70,7 +69,6 @@ export function Settings({ onBack, emailAccounts, onEmailAccountsChange }: Setti
           items: [
             ...section.items,
             { id: "integrations", label: "Integrations", desc: "Manage third-party service connections" },
-            { id: "eta-notice", label: "ETA Notice Template", desc: "Subject and body of the ETA notice e-mail" },
           ],
         }
       : section
@@ -79,16 +77,11 @@ export function Settings({ onBack, emailAccounts, onEmailAccountsChange }: Setti
   const handleCardClick = (id: string) => {
     if (id === "own-vessels") setView("vessels");
     if (id === "integrations") setView("integrations");
-    if (id === "eta-notice") setView("eta-notice");
     // other cards: placeholder — no-op for now
   };
 
   if (view === "vessels") {
     return <SettingsVessels onBack={() => setView("home")} />;
-  }
-
-  if (view === "eta-notice") {
-    return <SettingsEtaNotice onBack={() => setView("home")} />;
   }
 
   if (view === "integrations") {

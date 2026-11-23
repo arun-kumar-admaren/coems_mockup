@@ -257,7 +257,7 @@ export function ArrivalDepartureReport({ portCallId, onClose }: { portCallId: st
 
         {/* Second dialog — rendered inside this dialog's tree so Radix stacks the layers */}
         {noticeOpen && <div className="absolute inset-0 z-10 bg-black/40" />}
-        {noticeOpen && <EtaNoticeDialog portCallId={pc.id} unsaved={dirty} onClose={() => setNoticeOpen(false)} />}
+        {noticeOpen && <EtaNoticeDialog portCallId={pc.id} onClose={() => setNoticeOpen(false)} />}
       </DialogContent>
     </Dialog>
   );

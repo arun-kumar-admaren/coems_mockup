@@ -1,7 +1,7 @@
 import React from "react";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "./ui/utils";
-import { effectiveEta, fmtDT, useEtaState, type EtaVoyage, type PortCall } from "./eta-notice-store";
+import { etaAt8, fmtDT, operationLabel, type EtaVoyage, type PortCall } from "./eta-notice-store";
 
 /**
  * Left panel of the manual "New ETA notice" dialog, one list: every fixture of the voyage, each with a chevron that
@@ -20,17 +20,16 @@ export function ManualPicker({
   selectedPairs: Set<string>;
   onTogglePair: (portCallId: string, fixtureId: string) => void;
 }) {
-  const st = useEtaState();
   const key = (pcId: string, fxId: string) => `${pcId}|${fxId}`;
   // fixtures whose ports are collapsed; every fixture starts expanded
   const [collapsed, setCollapsed] = React.useState<string[]>([]);
   const toggleOpen = (fxId: string) => setCollapsed((c) => (c.includes(fxId) ? c.filter((x) => x !== fxId) : [...c, fxId]));
 
   /** A fixture's ports of loading / discharge the vessel has not reached yet. */
-  const portsOf = (fixtureId: string): { pc: PortCall; operation: "Loading" | "Discharging" }[] =>
+  const portsOf = (fixtureId: string): { pc: PortCall; operation: string }[] =>
     voyage.portCalls
-      .filter((p) => !p.startOnly && !p.actual.arrival)
-      .flatMap((p) => p.fixtures.filter((f) => f.fixtureId === fixtureId).map((f) => ({ pc: p, operation: f.operation })));
+      .filter((p) => !p.startOnly && !p.actual.arrival && p.fixtures.some((f) => f.fixtureId === fixtureId))
+      .map((p) => ({ pc: p, operation: operationLabel(p, fixtureId) }));
 
   const box = (on: boolean) => (
     <span className={cn("flex size-4 shrink-0 items-center justify-center rounded border", on ? "bg-blue-600 border-blue-600" : "border-gray-300")}>
@@ -91,7 +90,7 @@ export function ManualPicker({
                           <span className="block text-[13px] text-gray-900">
                             {pc.port} <span className="text-[11px] text-gray-500">· {operation}</span>
                           </span>
-                          <span className="block text-[11px] text-gray-500">ETA {fmtDT(effectiveEta(pc, st))}</span>
+                          <span className="block text-[11px] text-gray-500">ETA {fmtDT(etaAt8(pc))}</span>
                         </span>
                       </button>
                     ))}

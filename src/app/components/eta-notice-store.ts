@@ -280,19 +280,6 @@ export const DEFAULT_TEMPLATE: NoticeTemplate = {
   ].join("\n"),
 };
 
-export const TEMPLATE_TOKENS: { token: string; desc: string }[] = [
-  { token: "{vessel}", desc: "Vessel name" },
-  { token: "{voyage}", desc: "Voyage number" },
-  { token: "{port}", desc: "Port or canal of the notice" },
-  { token: "{eta}", desc: "ETA date, with time and port time when 'Include time' is on" },
-  { token: "{fixture}", desc: "Chosen fixture number(s); dropped when none is chosen" },
-  { token: "{loadPort}", desc: "Loading port(s) of the chosen fixture(s)" },
-  { token: "{dischargePort}", desc: "Discharge port(s) of the chosen fixture(s)" },
-  { token: "{client}", desc: "Client (customer) of the row" },
-  { token: "{remark}", desc: "Remark typed by the operator; the line is dropped when empty" },
-  { token: "{signatory}", desc: "Signatory: the signed-in user" },
-];
-
 // ─── Date helpers (ISO "YYYY-MM-DDTHH:mm", port-local) ────────────────────────
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -342,12 +329,28 @@ const isSameDay = (a: string, b: string) => a.slice(0, 10) === b.slice(0, 10);
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
-interface EtaState {
+export interface EtaState {
   sent: SentNotice[];
   /** Saved (Confirm & Update) expected dates per port call. */
   saved: Record<string, { arrival?: string; departure?: string }>;
   template: NoticeTemplate;
+  /** Stored changes of Ready to Send notices, per user, fixture and port. */
+  drafts: Record<string, NoticeDraft>;
 }
+
+/** The changes a user made in a Ready to Send notice. Texts are kept with placeholders so the values refresh on the next notice. */
+export interface NoticeDraft {
+  to: string[];
+  etaIso: string;
+  includeTime: boolean;
+  remark: string;
+  subjectT?: string;
+  bodyT?: string;
+  /** The day the changes were made: the ETA told is only carried within the same day. */
+  day: string;
+}
+
+export const draftKey = (portCallId: string, fixtureId: string) => `${CURRENT_USER}|${portCallId}|${fixtureId}`;
 
 const seedSaved = () => {
   const out: EtaState["saved"] = {};
@@ -386,7 +389,22 @@ let state: EtaState = {
   ],
   saved: seedSaved(),
   template: DEFAULT_TEMPLATE,
+  drafts: {},
 };
+
+// The Expected ETA as it was at 8 am today. Every notice screen uses it; a date changed later (Confirm & Update)
+// is used from the next day's notice. The mockup takes the snapshot when the page loads.
+const ETA_AT_8: Record<string, string | undefined> = {};
+const ETA_AT_8_ENTERED: Record<string, boolean> = {};
+ETA_VOYAGES.forEach((v) =>
+  v.portCalls.forEach((pc) => {
+    ETA_AT_8[pc.id] = state.saved[pc.id]?.arrival ?? pc.computed.arrival;
+    ETA_AT_8_ENTERED[pc.id] = !!state.saved[pc.id]?.arrival;
+  })
+);
+export const etaAt8 = (pc: PortCall) => ETA_AT_8[pc.id];
+/** True when the 8 am ETA was typed in the report and saved ("entered"), false when the system calculated it ("computed"). */
+export const etaAt8Entered = (pc: PortCall) => !!ETA_AT_8_ENTERED[pc.id];
 
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -402,12 +420,16 @@ export const etaActions = {
     state = { ...state, sent: [n, ...state.sent] };
     emit();
   },
-  saveExpected(portCallId: string, v: { arrival?: string; departure?: string }) {
-    state = { ...state, saved: { ...state.saved, [portCallId]: v } };
+  saveDraft(key: string, draft: NoticeDraft | null) {
+    const next = { ...state.drafts };
+    if (draft) next[key] = draft;
+    else delete next[key];
+    if (JSON.stringify(next) === JSON.stringify(state.drafts)) return;
+    state = { ...state, drafts: next };
     emit();
   },
-  setTemplate(t: NoticeTemplate) {
-    state = { ...state, template: t };
+  saveExpected(portCallId: string, v: { arrival?: string; departure?: string }) {
+    state = { ...state, saved: { ...state.saved, [portCallId]: v } };
     emit();
   },
 };
@@ -452,22 +474,18 @@ export const noticeFixtures = (v: EtaVoyage, pc: PortCall): EtaFixture[] =>
     .map((f) => fixtureOf(v, f.fixtureId))
     .filter((f): f is EtaFixture => !!f && f.frequency !== "None");
 
-export const coveredToday = (st: EtaState, portCallId: string, fixtureId: string) => {
-  const today = nowIso();
-  return st.sent.some(
-    (n) => n.portCallId === portCallId && n.status === "Sent" && n.fixtureIds.includes(fixtureId) && isSameDay(n.sentAt, today)
-  );
-};
-
-// ─── Frequency rules, agreed with the client on 2026-11-17 (read from the fixture's Handover tab) ───
-// Daily = every day. Standard = Monday, Wednesday and Friday. None = no notice.
-// The series starts 2 weeks before the voyage starts (loading port) or 2 weeks before the ETA (discharge port).
-// Sending is always manual: the schedule only decides what is "due" / "Ready to Send".
+// ─── Port order, generation and expiry (stories COEMS-23971 / 23972 / 24929 / 25008) ───
+// Frequency (Handover tab): Daily = every day, Standard = Monday, Wednesday and Friday, None = no notice.
+// The system generates the notices at 8 am on each scheduled day (the mockup treats "now" as the 8 am run).
+// Every port starts 2 weeks before the Expected date of that port. A fixture's notice for a port is only
+// generated after the vessel has reached the fixture's previous port (ATA entered in COEMS).
+// A generated notice stays "Ready to Send" until the next notice of the same fixture and port is generated,
+// then it is "Expired" (cannot be sent, can still be previewed). Sending is always manual.
 
 export const SERIES_WINDOW_DAYS = 14;
 
-/** "dd/mm/yyyy" → "YYYY-MM-DD" */
-const dmyToIso = (d: string) => `${d.slice(6, 10)}-${d.slice(3, 5)}-${d.slice(0, 2)}`;
+/** How many Expired notices per fixture and port the mockup lists (a user on leave would have many). */
+export const EXPIRED_KEPT = 2;
 
 const addDays = (isoDate: string, days: number) => {
   const d = new Date(`${isoDate}T00:00:00`);
@@ -481,28 +499,107 @@ export const isScheduleDay = (f: Frequency, isoDate: string) => {
   return false;
 };
 
-/** First day of the series for this fixture at this call ("" when it cannot be worked out). */
-export const seriesStart = (v: EtaVoyage, pc: PortCall, operation: "Loading" | "Discharging", st: EtaState) => {
-  const base = operation === "Loading" ? dmyToIso(v.startDate) : (effectiveEta(pc, st) ?? "").slice(0, 10);
-  return base ? addDays(base, -SERIES_WINDOW_DAYS) : "";
+/** The latest scheduled day on or before this date. */
+const lastScheduleDay = (f: Frequency, isoDate: string): string => {
+  let d = isoDate;
+  for (let i = 0; i < 8; i++) {
+    if (isScheduleDay(f, d)) return d;
+    d = addDays(d, -1);
+  }
+  return "";
 };
 
-/** Fixtures at this call whose notice is due today: inside the series window, on a scheduled day, and not sent yet today. */
-export const dueFixtures = (v: EtaVoyage, pc: PortCall, st: EtaState): EtaFixture[] => {
+const todayIso = () => nowIso().slice(0, 10);
+
+/** The ports where a fixture loads or discharges, in voyage order. */
+export const fixturePorts = (v: EtaVoyage, fixtureId: string): PortCall[] =>
+  v.portCalls.filter((p) => !p.startOnly && p.fixtures.some((f) => f.fixtureId === fixtureId));
+
+/** The previous port of the fixture before this call (undefined for its first port). */
+export const previousFixturePort = (v: EtaVoyage, pc: PortCall, fixtureId: string): PortCall | undefined => {
+  const ports = fixturePorts(v, fixtureId);
+  const i = ports.findIndex((p) => p.id === pc.id);
+  return i > 0 ? ports[i - 1] : undefined;
+};
+
+/** What the fixture does at this call: "Loading", "Discharging", or "Loading and Discharging" when it does both. */
+export const operationLabel = (pc: PortCall, fixtureId: string): string => {
+  const ops = Array.from(new Set(pc.fixtures.filter((f) => f.fixtureId === fixtureId).map((f) => f.operation)));
+  if (ops.length > 1) return "Loading and Discharging";
+  return ops[0] ?? "Notice";
+};
+
+/** First day of the series: 2 weeks before the Expected date of the port, and not before the fixture's previous port was reached. */
+export const seriesStart = (v: EtaVoyage, pc: PortCall, fixtureId: string, st: EtaState) => {
+  const eta = (effectiveEta(pc, st) ?? "").slice(0, 10);
+  if (!eta) return "";
+  let start = addDays(eta, -SERIES_WINDOW_DAYS);
+  const prevArrival = previousFixturePort(v, pc, fixtureId)?.actual.arrival?.slice(0, 10);
+  if (prevArrival && addDays(prevArrival, 1) > start) start = addDays(prevArrival, 1);
+  return start;
+};
+
+export interface GeneratedNotice {
+  portCall: PortCall;
+  fixture: EtaFixture;
+  /** The day (8 am run) on which the notice was generated, "YYYY-MM-DD". */
+  generatedOn: string;
+}
+
+/** Fixtures that get generated notices at this call: port order respected (the fixture's previous port was reached). */
+const noticeSlots = (v: EtaVoyage, pc: PortCall, st: EtaState) => {
   if (!canNotify(v, pc)) return [];
-  const today = nowIso().slice(0, 10);
   return pc.fixtures.flatMap((pf) => {
     const fx = fixtureOf(v, pf.fixtureId);
     if (!fx || fx.frequency === "None") return [];
-    const start = seriesStart(v, pc, pf.operation, st);
-    const due = !!start && today >= start && isScheduleDay(fx.frequency, today) && !coveredToday(st, pc.id, fx.id);
-    return due ? [fx] : [];
+    const prev = previousFixturePort(v, pc, fx.id);
+    if (prev && !prev.actual.arrival) return []; // port order rule
+    const start = seriesStart(v, pc, fx.id, st);
+    return start ? [{ fixture: fx, start }] : [];
   });
 };
 
-/** "Ready to Send" notices of a voyage = the notices that are due today (they come back on the next scheduled day). */
-export const readyNotices = (v: EtaVoyage, st: EtaState) =>
-  v.portCalls.flatMap((pc) => dueFixtures(v, pc, st).map((fixture) => ({ portCall: pc, fixture })));
+const sentBetween = (st: EtaState, portCallId: string, fixtureId: string, fromDay: string, untilDay?: string) =>
+  st.sent.some((n) => {
+    const day = n.sentAt.slice(0, 10);
+    return n.portCallId === portCallId && n.status === "Sent" && n.fixtureIds.includes(fixtureId) && day >= fromDay && (!untilDay || day < untilDay);
+  });
+
+/** "Ready to Send" notices of one port call: the latest generated notice of each fixture that is not sent yet. */
+export const readyForPort = (v: EtaVoyage, pc: PortCall, st: EtaState): GeneratedNotice[] =>
+  noticeSlots(v, pc, st).flatMap(({ fixture, start }) => {
+    const g = lastScheduleDay(fixture.frequency, todayIso());
+    if (!g || g < start || sentBetween(st, pc.id, fixture.id, g)) return [];
+    return [{ portCall: pc, fixture, generatedOn: g }];
+  });
+
+/** Fixtures at this call that have a Ready to Send notice (the "Due" marker and stamp). */
+export const dueFixtures = (v: EtaVoyage, pc: PortCall, st: EtaState): EtaFixture[] => readyForPort(v, pc, st).map((r) => r.fixture);
+
+export const readyNotices = (v: EtaVoyage, st: EtaState): GeneratedNotice[] => v.portCalls.flatMap((pc) => readyForPort(v, pc, st));
+
+/**
+ * Expired notices: an earlier generated notice that was not sent before the next one was generated.
+ * Derived from the schedule; the mockup keeps the latest EXPIRED_KEPT per fixture and port.
+ */
+export const expiredNotices = (v: EtaVoyage, st: EtaState): GeneratedNotice[] =>
+  v.portCalls.flatMap((pc) =>
+    noticeSlots(v, pc, st).flatMap(({ fixture, start }) => {
+      const g = lastScheduleDay(fixture.frequency, todayIso());
+      if (!g) return [];
+      const days: string[] = []; // scheduled days before the current one, newest first
+      let d = g;
+      for (let i = 0; i < 40; i++) {
+        d = lastScheduleDay(fixture.frequency, addDays(d, -1));
+        if (!d || d < start) break;
+        days.push(d);
+      }
+      return days
+        .filter((day, idx) => !sentBetween(st, pc.id, fixture.id, day, idx === 0 ? g : days[idx - 1]))
+        .slice(0, EXPIRED_KEPT)
+        .map((generatedOn) => ({ portCall: pc, fixture, generatedOn }));
+    })
+  );
 
 /** Last notice sent to this customer (and fixtures, when given) — used to pre-fill To. */
 export const lastNoticeFor = (st: EtaState, voyageNumber: string, customer: string, fixtureIds: string[] = []) => {
@@ -562,6 +659,30 @@ export const renderBody = (template: string, values: NoticeValues) => {
     out.push(r.out);
   });
   return out.join("\n");
+};
+
+/** Puts the placeholders back into an edited text, so the values refresh when it is used for the next notice. */
+export const toTemplateText = (text: string, values: NoticeValues) => {
+  const pairs: [string, string][] = [
+    [values.eta, "{eta}"],
+    [values.vessel, "{vessel}"],
+    [values.voyage, "{voyage}"],
+    [values.fixture, "{fixture}"],
+    [values.client, "{client}"],
+    [values.remark, "{remark}"],
+    [values.signatory, "{signatory}"],
+    [values.loadPort, "{loadPort}"],
+    [values.dischargePort, "{dischargePort}"],
+    [values.port, "{port}"],
+  ];
+  let out = text;
+  pairs
+    .filter(([val]) => val && val.trim().length >= 3)
+    .sort((a, b) => b[0].length - a[0].length)
+    .forEach(([val, tok]) => {
+      out = out.split(val).join(tok);
+    });
+  return out;
 };
 
 /** ETA text of the e-mail: "24.11.2026" or "24.11.2026 21:45 LT (UTC+1:00) Europe/Berlin". */

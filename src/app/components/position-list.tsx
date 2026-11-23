@@ -62,7 +62,7 @@ export function PositionList() {
           {due.length > 0 && (
             <span
               className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800"
-              title={`ETA notice due today: ${due.map((f) => f.id).join(", ")}`}
+              title={`ETA notice due: ${due.map((f) => f.id).join(", ")}`}
             >
               <Mail className="size-3" /> Due
             </span>
