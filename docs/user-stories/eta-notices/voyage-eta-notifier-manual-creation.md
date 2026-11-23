@@ -32,10 +32,10 @@ acceptance criteria:
      * The number of ports left, and the number of addresses in the Handover tab, for example "2 ports left · 1 address in Handover". If the fixture has no address, it should show "no address in Handover".
      * The Frequency of the fixture, for example, "Frequency: Daily"
    * Under every fixture, its ports should be shown in a box titled "Ports of" followed by the fixture number. Every fixture should be expanded by default, so the ports are shown when the screen opens. The user should be able to collapse a fixture with the chevron icon and expand it again. Collapsing a fixture should not untick its ports or remove their emails.
-   * Only the ports of loading and discharge of that fixture that the vessel has not reached yet should be shown. Each port should have a checkbox, the port name, the operation (Loading or Discharging), and "ETA" with the date and time of the expected ETA.
+   * Only the ports of loading and discharge of that fixture that the vessel has not reached yet should be shown. Each port should have a checkbox, the port name, the operation (Loading or Discharging), and "ETA" with the date and time of the Expected ETA at 8 am today.
    * A fixture that has no port of loading or discharge left to reach should be greyed out, without a chevron icon, and cannot be expanded. It should show "No loading or discharge port left to reach".
-   * The ports of any fixture can be ticked, whatever its Frequency, including None, and whether its notice is due today.
-   * The ports can be ticked also when the system has not generated the notice of the port yet because the vessel has not reached the previous port. The port order rule in the Voyage - ETA Notifier story (COEMS-23971) is for the notices that the system generates. It should not stop the user from creating a notice manually.
+   * The ports of any fixture can be ticked, whatever its Frequency, including None, and whether its notice is due.
+   * The ports can be ticked also when the system has not generated the notice of the port yet because the vessel has not reached the previous port of the fixture. The port order rule in the Voyage - ETA Notifier story (COEMS-23971) is for the notices that the system generates. It should not stop the user from creating a notice manually.
    * The list should scroll when it is long.
 
 4. Ticking ports
@@ -49,10 +49,10 @@ acceptance criteria:
 5. E-mails (right side)
 
    * Above the e-mails, the screen should show "One e-mail per fixture, each to the addresses in that fixture's Handover tab (ETA's to be given). A row without an address is not sent."
-   * Each e-mail should have a header with the fixture number, the Frequency, "Due today" when the notice of that fixture and port is due today, and the operation with the port, for example "Discharging at Emden". If there is no address, the header should show "No recipient".
+   * Each e-mail should have a header with the fixture number, the Frequency, "Due" when the notice of that fixture and port is due, and the operation with the port, for example "Discharging at Emden". When the fixture loads and discharges at that port, the operation should be "Loading and Discharging". If there is no address, the header should show "No recipient".
    * Each e-mail should have a chevron icon to collapse and expand the e-mail text. The e-mail text should be open by default.
    * To: it should be filled automatically with the addresses in the "ETA's to be given" field of the fixture's Handover tab, shown in green. The user should be able to add or remove addresses for this notice only. The fixture should not be changed. If the fixture has no address, the screen should show "<fixture number> has no e-mail in ETA's to be given. Add one here or in its Handover tab."
-   * ETA told to this client: the date and time in the time zone of the port, filled with the expected ETA of the port and editable. An "Include time (port time)" checkbox should decide whether the time is mentioned in the e-mail. When the ETA is changed, the screen should show "Differs from the system Expected ETA" and a "Reset to Expected ETA" option.
+   * ETA told to this client: the date and time in the time zone of the port, filled with the Expected ETA of the port at 8 am today and editable. When no Expected date is entered for the port call, the date calculated by the system should be used. An "Include time (port time)" checkbox should decide whether the time is mentioned in the e-mail. When the ETA is changed, the screen should show "Differs from the system Expected ETA" and a "Reset to Expected ETA" option, which brings back the Expected ETA at 8 am today.
    * Remark: a free text field with the hint "e.g. position, wind, weather, delay". When a remark is given, it should be shown in bold in the e-mail text.
    * Subject: filled from the ETA notice template and editable. After it is edited, a "Reset to template" option should be available.
    * The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template and should be editable. After it is edited, a "Reset to template" option should be available.
@@ -66,7 +66,7 @@ acceptance criteria:
    * The Cancel button should be shown only until an e-mail is sent. After that, the screen should be closed with the X icon.
    * When the user clicks Send, all e-mails that have an address should be sent. An e-mail without an address should not be sent and should stay with "No recipient".
    * While sending, the e-mail should show "Sending...". After that, it should show "Sent" in green and become read-only.
-   * If an e-mail cannot be delivered, it should show "Failed" with the reason in red. The user should be able to correct it and send it again with the Send button.
+   * If the mail server refuses an e-mail when it is sent, it should show "Failed" with the reason in red. The user should be able to correct it and send it again with the Send button.
    * The system should send an e-mail only when the user clicks Send.
 
 7. Sent notices

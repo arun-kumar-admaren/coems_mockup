@@ -21,7 +21,7 @@ acceptance criteria:
    * One entry should be added every time an ETA notice is sent, as soon as the system has sent it.
    * One entry should be added for each fixture and port, because one e-mail is created for each fixture and port. When the user sends three e-mails with one Send, three entries should be added.
    * An entry should be added for a notice sent from any place: the "ETA notices" list in the Voyage header, "+ New ETA notice", and the Arrival and Departure Report opened from the Position List or from the Voyage page.
-   * No entry should be added when an e-mail is only opened, previewed, edited, or cancelled, when a notice is Ready to Send but not sent, when a notice changes to Expired, or when an e-mail could not be delivered.
+   * No entry should be added when an e-mail is only opened, previewed, edited, or cancelled, when a notice is Ready to Send but not sent, when a notice changes to Expired, or when the mail server refused the e-mail.
 
 3. Entry of a sent notice
 
