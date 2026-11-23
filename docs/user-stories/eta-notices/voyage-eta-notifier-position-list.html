@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Voyage - ETA Notifier - Position List</title>
+<title>Position list - ETA Notifier</title>
 <style>
   body { font-family: Calibri, Arial, sans-serif; font-size: 16px; line-height: 1.5; max-width: 860px; margin: 24px auto; color: #1a1a1a; }
   h1 { font-size: 24px; font-weight: 400; margin: 0 0 16px; }
@@ -14,9 +14,9 @@
 </head>
 <body>
 
-<h1>Voyage - ETA Notifier - Position List</h1>
+<h1>Position list - ETA Notifier</h1>
 
-<p>COEMS id:</p>
+<p>COEMS id: COEMS-23972</p>
 
 <p>USER Story:</p>
 
@@ -38,11 +38,13 @@ So that I can notify the clients while I check the dates of the vessel&#x27;s ne
 
   <li>"Due" marker on the port call card
   <ul>
-    <li>A "Due" marker should be shown on a port call card in the Position List when at least one fixture at that port has an ETA notice that is due today, which means a Ready to Send notice as described in the Voyage - ETA Notices (header) story.
+    <li>A "Due" marker should be shown on a port call card in the Position List when at least one fixture at that port has an ETA notice that is due today, which means a Ready to Send notice as described in the Voyage - ETA Notifier story (COEMS-23971).
     </li>
     <li>When the user hovers on the marker, it should show "ETA notice due today:" followed by the numbers of the fixtures that are due.
     </li>
     <li>The marker should not be shown for a port call that has no fixture loading or discharging, for a canal, for a port the vessel has already reached, or when the notices of all its fixtures are already sent today.
+    </li>
+    <li>The marker should be shown only for a Ready to Send notice. It should not be shown for an Expired notice, or for a port whose notice is not generated yet because the vessel has not reached the previous port, as described in the Voyage - ETA Notifier story (COEMS-23971).
     </li>
     <li>The marker should disappear from the card when the ETA notices of all due fixtures of that port call have been sent.
     </li>
@@ -73,6 +75,8 @@ So that I can notify the clients while I check the dates of the vessel&#x27;s ne
     </ul>
     </li>
     <li>For a canal, a port without a fixture, a port the vessel has already reached, the first port of the voyage and a port where the Frequency of all fixtures is None, the button should not be shown.
+    </li>
+    <li>The button should be shown also for a port whose notice is not generated yet because the vessel has not reached the previous port. The user can create the notice from here.
     </li>
     <li>When at least one fixture at the port has an ETA notice due today, a "Due" marker should be shown inside the button.
     </li>
@@ -114,6 +118,10 @@ So that I can notify the clients while I check the dates of the vessel&#x27;s ne
     </li>
     <li>The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template (point 11) and should be editable. After it is edited, a "Reset to template" option should be available.
     </li>
+    <li>When the e-mail is a Ready to Send notice, which means it has the "Due today" stamp, the changes made in the e-mail should be stored automatically, as described in the Voyage - ETA Notifier story (COEMS-23971). When the user closes the screen without sending and opens it again, the stored changes should be shown, so that the user does not need to edit the e-mail again. The stored changes should be visible only to the user who made them, and the next notice of that fixture and port should start with them, with the values of the new notice, such as the ETA date, shown instead of the old values.
+    </li>
+    <li>The changes made in an e-mail that is not a Ready to Send notice, which means it does not have the "Due today" stamp, should not be stored.
+    </li>
     <li>Every e-mail should be independent. A change in one e-mail should not change the others.
     </li>
   </ul>
@@ -140,7 +148,7 @@ So that I can notify the clients while I check the dates of the vessel&#x27;s ne
     </li>
     <li>When the user clicks Send, all e-mails that have an address should be sent. An e-mail without an address should not be sent and should stay with "No recipient".
     </li>
-    <li>While sending, the e-mail should show "Sending…". After that it should show "Sent" in green and become read only.
+    <li>While sending, the e-mail should show "Sending...". After that it should show "Sent" in green and become read-only.
     </li>
     <li>If an e-mail cannot be delivered, it should show "Failed" with the reason in red. The user should be able to correct it and send it again with the Send button.
     </li>
@@ -166,9 +174,9 @@ So that I can notify the clients while I check the dates of the vessel&#x27;s ne
   <ul>
     <li>The "Due" marker should disappear from the button in the report and from the port call card in the Position List when the notices of all due fixtures of that port are sent. A Failed notice should not remove it.
     </li>
-    <li>Every notice sent from here should be added to the "ETA notices" list in the header of the Voyage page as Sent, or Failed, with the date and time, and the number on the "ETA notices" option should reduce by one for each Ready to Send notice that was sent.
+    <li>Every notice sent from here should be added to the "ETA notices" list in the header of the Voyage page as Sent or Failed, with the date and time, and the number on the "ETA notices" option should reduce by one for each Ready to Send notice that was sent.
     </li>
-    <li>Sending an ETA notice should not change the dates of the port call, the Frequency of the fixture or the days on which the system generates the ETA notices.
+    <li>Sending an ETA notice should not change the dates of the port call, the Frequency of the fixture, or the days on which the system generates the ETA notices.
     </li>
   </ul>
   </li>

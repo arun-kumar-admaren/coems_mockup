@@ -1,21 +1,21 @@
-# Voyage - ETA Notices (header)
+# Voyage - ETA Notifier
 
-COEMS id:
+COEMS id: COEMS-23971
 
 USER Story:
 
 As a user,
 I want to see all the ETA notices of a voyage in a list in the Voyage header
-So that I can see which ETA notices are ready to send and which are already sent, and preview them without opening each port call.
+So that I can see which ETA notices are ready to send and which have already been sent, and preview them without opening each port call.
 
 acceptance criteria:
 
 1. Option visibility
 
-   * An "ETA notices" option should be available in the header of the Voyage page, on the right side with the other header icons.
-   * The option should be visible only to the users who have the "ETA Notices" checkbox enabled in their user profile. For all other users the option, the list and the preview screens should not be available.
+   * An "ETA Notices" option should be available in the header of the Voyage page, on the right side with the other header icons.
+   * The option should be visible only to users who have the "ETA Notices" checkbox enabled in their user profile. For all other users, the option, the list, and the preview screens should not be available.
    * The option should not depend on the user's Role or Designation.
-   * The option should show the number of ETA notices that are Ready to Send for that voyage. When there are none, it should show 0.
+   * The option should show the number of ETA notices that are Ready to Send for that voyage. When there are none, it should show 0. The Sent and Expired notices should not be counted.
 
 2. Opening the list
 
@@ -26,20 +26,21 @@ acceptance criteria:
 
 3. List columns
 
-   * The list should have the columns Date, Port, Fixture, To, Status and Preview.
-   * Date: for a Ready to Send notice, the date on which it is to be sent (today). For a Sent notice, the date and time at which it was sent. It should not show the ETA date.
+   * The list should have the columns Date, Port, Fixture, To, Status, and Preview.
+   * Date: For a Ready to Send notice, the date on which it is to be sent (today). For a Sent notice, the date and time at which it was sent. For an Expired notice, the date on which it was generated. It should not show the ETA date.
    * Port: the port of loading or discharge the notice is for.
    * Fixture: the fixture number.
-   * To: the e-mail addresses the notice goes to. For a Ready to Send notice these are the addresses in the "ETA's to be given" field of the fixture's Handover tab. If the fixture has no address, "No address" should be shown. For a Sent notice these are the addresses it was sent to. A long list of addresses should be shortened, with the full list shown on hover.
-   * Status: "Ready to Send" or "Sent". If an e-mail could not be delivered, the status should show "Failed".
-   * Preview: every row should have a Preview option.
+   * To: the e-mail addresses the notice goes to. For a Ready to Send notice, these are the addresses in the "ETA's to be given" field of the fixture's Handover tab. If the fixture has no address, "No address" should be shown. For a Sent notice, these are the addresses it was sent to. For an Expired notice, these are the addresses of the notice. A long list of addresses should be shortened, with the full list shown on hover.
+   * Status: "Ready to Send", "Sent", or "Expired". If an e-mail could not be delivered, the status should show "Failed".
+   * Preview: every row should have a Preview option, including the Expired rows.
 
 4. Rows in the list
 
    * There should be one row for each fixture and port, because one e-mail is created for each fixture and port. Two fixtures for the same port should show two rows.
+   * A fixture and port can have more than one row, because the Sent and Expired notices of the earlier days stay in the list. Only one notice of a fixture and port can be Ready to Send at a time.
    * Notices should be listed only for the ports of loading and discharge of the fixtures, not for canals or other port calls.
    * Notices should be listed only for ports the vessel has not reached yet.
-   * The Ready to Send rows should be shown first, followed by the Sent rows with the latest on top.
+   * The Ready-to-Send rows should be shown first, followed by the Sent and Expired rows with the latest on top.
    * The list should scroll when it has many rows.
    * If the voyage has no ETA notice, the list should show "No ETA notice for this voyage yet."
 
@@ -47,20 +48,27 @@ acceptance criteria:
 
    * Whether a notice is Ready to Send depends on the "Frequency" field in the Handover tab of the fixture:
      * Daily: every day.
-     * Standard: Monday, Wednesday and Friday.
+     * Standard: Monday, Wednesday, and Friday.
      * None: the fixture should not have any ETA notice.
    * For Daily and Standard, the system should generate the ETA notice at 8 am on each day it is due.
-   * For a port of loading, the notices should start 2 weeks before the voyage starts. For a port of discharge, the notices should start 2 weeks before the ETA of that port, and the start should move when the ETA changes.
+   * The ETA notices of a voyage should be generated port by port, in the order of the ports of loading and discharge of the fixtures. The notice of the first port, which is the port of loading, should be generated first.
+   * The notice of the next port should be generated only after the vessel has reached the previous port, which means the Actual arrival (ATA) of the previous port is entered in COEMS. This should apply even when the ETA of the next port is inside the 14-day window, which is 2 weeks before the ETA.
+   * After the vessel has reached the previous port, if the ETA of the next port is inside the 14-day window, the notices of the next port should be generated as per the Frequency. If the ETA of the next port is not inside the 14-day window, the normal rule should apply, which means the notices should be generated when the ETA of that port comes inside the 14-day window.
+   * For the first port of loading, the notices should start 2 weeks before the voyage starts. For every other port, the notices should start 2 weeks before the ETA of that port, and the start should move when the ETA changes.
    * The notices for a port should stop when the vessel reaches that port.
    * When the notice of a fixture and port is sent, its row should change from Ready to Send to Sent. The next Ready to Send row should appear at 8 am on the next day it is due.
+   * The system generates the ETA notices by itself, so a Ready to Send notice can stay unsent, for example when the user is on leave. A Ready to Send notice that is not sent should change to Expired automatically when the next notice of the same fixture and port is generated, at 8 am on the next day it is due. For Daily, this is the next day at 8 am.
+   * When a notice changes to Expired, the new Ready to Send notice of that fixture and port should appear at the same time, so only one notice of a fixture and port is Ready to Send.
+   * An Expired notice cannot be sent. The user can still preview it, as described in point 8.
+   * A Sent notice should not change to Expired.
    * The system should never send an ETA notice automatically. Every ETA notice should be sent by the user.
 
 6. Preview of a Sent notice
 
    * Clicking Preview on a Sent row should open the "ETA notice" screen of that port on its own. The Arrival and Departure Report should not open.
-   * The screen should be read only.
+   * The screen should be read-only.
    * The title of the screen should show "ETA notice" with the port name, followed by the vessel name and the voyage number, and a "Sent" tag.
-   * Below the title the screen should show:
+   * Below the title, the screen should show:
      * Date: the date and time at which the notice was sent, followed by "by" and the name of the user who sent it
      * Fixture: the fixture number
      * To: the e-mail addresses the notice was sent to
@@ -74,16 +82,30 @@ acceptance criteria:
    * Clicking Preview on a Ready to Send row should open the "ETA notice" screen of that fixture and port only, on its own. The Arrival and Departure Report should not open.
    * The e-mail should be open by default. The user should be able to collapse and expand it with a chevron icon.
    * The header of the e-mail should show the fixture number, the Frequency, "Due today" when it is due, and the operation with the port, for example "Discharging at Cuxhaven".
-   * The To field should be filled automatically with the e-mail addresses in the "ETA's to be given" field of the fixture. The user should be able to add or remove addresses for this notice only. The fixture should not be changed. If there is no address, "No recipient" should be shown and the notice cannot be sent until an address is added.
+   * The To field should be filled automatically with the e-mail addresses in the "ETA's to be given" field of the fixture. The user should be able to add or remove addresses for this notice only. The fixture should not be changed. If there is no address, "No recipient" should be shown, and the notice cannot be sent until an address is added.
    * The user should be able to change the ETA told to the client, with the date and the time (using "Include time"). It should start with the expected ETA of the port, in the time zone of the port.
    * The user should be able to give a Remark. When a remark is given, it should be shown in bold in the e-mail.
-   * The Subject and the e-mail text should be filled from the ETA notice template (point 8) and should be editable. After the text is edited, a "Reset to template" option should be available.
+   * The Subject and the e-mail text should be filled from the ETA notice template and should be editable. After the text is edited, a "Reset to template" option should be available.
+   * The changes made in the notice, which means the To addresses, the ETA told with "Include time", the Remark, the Subject, and the e-mail text, should be stored automatically. When the user closes the screen without sending the notice and opens it again, the stored changes should be shown, so that the user does not need to edit the notice again.
+   * The stored changes should be visible only to the user who made them. Other users who open the notice should not see them.
+   * The next ETA notice that the system generates for the same fixture and port should not start from the plain template. For the user who made the changes, it should start with the changes stored in the earlier notice, which means the To addresses, the Remark, the Subject, and the e-mail text. The ETA told should start with the expected ETA of the port, as described above.
+   * The values that come from the new notice, such as the ETA date and the port, should be refreshed in the carried e-mail text. For example, when the expected ETA has changed, the e-mail text should show the new date and not the old date.
+   * When the user clicks "Reset to template", the stored changes of the subject or the e-mail text should be removed.
    * The signatory should be the logged-in user.
-   * The screen should have a Send button that shows the number of e-mails to be sent, and a Cancel option. It should also be closed with the X icon.
+   * The screen should have a Send button that shows the number of emails to be sent, and a Cancel option. It should also be closable with the X icon.
    * After the user clicks Send, the row should show Sent, the notice should show as Sent in the list with the date and time, and the number on the "ETA notices" option should reduce by one.
-   * The screen should list the notices already sent for that port, with an eye icon to view each e-mail.
+   * The screen should list the notices already sent for that port, with an eye icon to view each email.
 
-8. ETA notice template
+8. Preview of an Expired notice
+
+   * Clicking Preview on an Expired row should open the "ETA notice" screen of that fixture and port only, on its own. The Arrival and Departure Report should not open.
+   * The header of the e-mail should show the fixture number, the Frequency, the "Expired" status instead of the "Due today" stamp, and the operation with the port, for example "Discharging at Cuxhaven".
+   * The e-mail should be shown with the changes that were stored for the notice, if the user edited it before it expired. The user should be able to collapse and expand it with the chevron icon.
+   * The screen should be read-only. All the fields should be disabled, which means the To addresses, the ETA told, "Include time", the Remark, the Subject, and the e-mail text, and the "Reset to template" options. The user should not be able to edit anything.
+   * The Send button should be disabled. When the user hovers over the disabled Send button, it should show "ETA Notice Expired".
+   * The screen should be closed with the X icon, or with Cancel.
+
+9. ETA notice template
 
    * The Subject and the e-mail text of every ETA notice should be created from the template below. The template is fixed. It is not edited in Settings. The user can change the subject and the e-mail text only for one notice, as described in point 7.
    * Subject:

@@ -1,12 +1,12 @@
-# Voyage - ETA Notifier - Voyage History
+# Voyage - ETA Notices in History
 
-COEMS id:
+COEMS id: COEMS-25119
 
 USER Story:
 
 As a user,
 I want every ETA notice that is sent to be recorded in the History of the voyage
-So that I can check later what was told to the client about the arrival, who sent it and when.
+So that I can check later what was told to the client about the arrival, who sent it, and when.
 
 acceptance criteria:
 
@@ -21,7 +21,7 @@ acceptance criteria:
    * One entry should be added every time an ETA notice is sent, as soon as the system has sent it.
    * One entry should be added for each fixture and port, because one e-mail is created for each fixture and port. When the user sends three e-mails with one Send, three entries should be added.
    * An entry should be added for a notice sent from any place: the "ETA notices" list in the Voyage header, "+ New ETA notice", and the Arrival and Departure Report opened from the Position List or from the Voyage page.
-   * No entry should be added when an e-mail is only opened, previewed, edited or cancelled, when a notice is Ready to Send but not sent, or when an e-mail could not be delivered.
+   * No entry should be added when an e-mail is only opened, previewed, edited, or cancelled, when a notice is Ready to Send but not sent, when a notice changes to Expired, or when an e-mail could not be delivered.
 
 3. Entry of a sent notice
 
@@ -42,7 +42,3 @@ acceptance criteria:
    * The ETA notice entries should be shown only to the users who have the "ETA Notices" checkbox enabled in their user profile.
    * For all other users, the ETA notice entries should not be shown in the History. The other entries should be shown as today, and when the voyage has no other entry, "No History Available" should be shown.
    * The visibility should not depend on the user's Role or Designation.
-
-6. Notices sent before
-
-   * No entry should be created for the ETA notices that were sent before this feature.

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Voyage - ETA Notifier - Voyage History</title>
+<title>Voyage - ETA Notices in History</title>
 <style>
   body { font-family: Calibri, Arial, sans-serif; font-size: 16px; line-height: 1.5; max-width: 860px; margin: 24px auto; color: #1a1a1a; }
   h1 { font-size: 24px; font-weight: 400; margin: 0 0 16px; }
@@ -14,15 +14,15 @@
 </head>
 <body>
 
-<h1>Voyage - ETA Notifier - Voyage History</h1>
+<h1>Voyage - ETA Notices in History</h1>
 
-<p>COEMS id:</p>
+<p>COEMS id: COEMS-25119</p>
 
 <p>USER Story:</p>
 
 <p>As a user,<br>
 I want every ETA notice that is sent to be recorded in the History of the voyage<br>
-So that I can check later what was told to the client about the arrival, who sent it and when.</p>
+So that I can check later what was told to the client about the arrival, who sent it, and when.</p>
 
 <p>acceptance criteria:</p>
 
@@ -46,7 +46,7 @@ So that I can check later what was told to the client about the arrival, who sen
     </li>
     <li>An entry should be added for a notice sent from any place: the "ETA notices" list in the Voyage header, "+ New ETA notice", and the Arrival and Departure Report opened from the Position List or from the Voyage page.
     </li>
-    <li>No entry should be added when an e-mail is only opened, previewed, edited or cancelled, when a notice is Ready to Send but not sent, or when an e-mail could not be delivered.
+    <li>No entry should be added when an e-mail is only opened, previewed, edited, or cancelled, when a notice is Ready to Send but not sent, when a notice changes to Expired, or when an e-mail could not be delivered.
     </li>
   </ul>
   </li>
@@ -86,13 +86,6 @@ So that I can check later what was told to the client about the arrival, who sen
     <li>For all other users, the ETA notice entries should not be shown in the History. The other entries should be shown as today, and when the voyage has no other entry, "No History Available" should be shown.
     </li>
     <li>The visibility should not depend on the user's Role or Designation.
-    </li>
-  </ul>
-  </li>
-
-  <li>Notices sent before
-  <ul>
-    <li>No entry should be created for the ETA notices that were sent before this feature.
     </li>
   </ul>
   </li>

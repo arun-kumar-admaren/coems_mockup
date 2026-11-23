@@ -16,7 +16,7 @@
 
 <h1>Voyage - ETA Notifier - Manual Creation</h1>
 
-<p>COEMS id:</p>
+<p>COEMS id: COEMS-25008</p>
 
 <p>USER Story:</p>
 
@@ -63,17 +63,19 @@ So that I can send an ETA notice whenever it is needed, also when the system has
       </li>
       <li>The number of ports left, and the number of addresses in the Handover tab, for example "2 ports left · 1 address in Handover". If the fixture has no address, it should show "no address in Handover".
       </li>
-      <li>The Frequency of the fixture, for example "Frequency: Daily"
+      <li>The Frequency of the fixture, for example, "Frequency: Daily"
       </li>
     </ul>
     </li>
-    <li>Under every fixture, its ports should be shown in a box titled "Ports of" followed by the fixture number. Every fixture should be expanded by default, so the ports are shown when the screen opens. The user should be able to collapse a fixture with the chevron icon and expand it again. Collapsing a fixture should not untick its ports or remove their e-mails.
+    <li>Under every fixture, its ports should be shown in a box titled "Ports of" followed by the fixture number. Every fixture should be expanded by default, so the ports are shown when the screen opens. The user should be able to collapse a fixture with the chevron icon and expand it again. Collapsing a fixture should not untick its ports or remove their emails.
     </li>
-    <li>Only the ports of loading and discharge of that fixture that the vessel has not reached yet should be shown. Each port should have a checkbox, the port name, the operation (Loading or Discharging) and "ETA" with the date and time of the expected ETA.
+    <li>Only the ports of loading and discharge of that fixture that the vessel has not reached yet should be shown. Each port should have a checkbox, the port name, the operation (Loading or Discharging), and "ETA" with the date and time of the expected ETA.
     </li>
     <li>A fixture that has no port of loading or discharge left to reach should be greyed out, without a chevron icon, and cannot be expanded. It should show "No loading or discharge port left to reach".
     </li>
-    <li>The ports of any fixture can be ticked, whatever its Frequency, including None, and whether or not its notice is due today.
+    <li>The ports of any fixture can be ticked, whatever its Frequency, including None, and whether its notice is due today.
+    </li>
+    <li>The ports can be ticked also when the system has not generated the notice of the port yet because the vessel has not reached the previous port. The port order rule in the Voyage - ETA Notifier story (COEMS-23971) is for the notices that the system generates. It should not stop the user from creating a notice manually.
     </li>
     <li>The list should scroll when it is long.
     </li>
@@ -84,7 +86,7 @@ So that I can send an ETA notice whenever it is needed, also when the system has
   <ul>
     <li>The fixtures should not have a checkbox. The user should tick the ports.
     </li>
-    <li>More than one port can be ticked, also the ports of different fixtures.
+    <li>More than one port can be ticked, including ports of different fixtures.
     </li>
     <li>Each ticked port of a fixture should create one e-mail on the right straight away, in the order the ports were ticked. Two fixtures for the same port should create two e-mails.
     </li>
@@ -97,7 +99,7 @@ So that I can send an ETA notice whenever it is needed, also when the system has
 
   <li>E-mails (right side)
   <ul>
-    <li>Above the e-mails the screen should show "One e-mail per fixture, each to the addresses in that fixture's Handover tab (ETA's to be given). A row without an address is not sent."
+    <li>Above the e-mails, the screen should show "One e-mail per fixture, each to the addresses in that fixture's Handover tab (ETA's to be given). A row without an address is not sent."
     </li>
     <li>Each e-mail should have a header with the fixture number, the Frequency, "Due today" when the notice of that fixture and port is due today, and the operation with the port, for example "Discharging at Emden". If there is no address, the header should show "No recipient".
     </li>
@@ -109,9 +111,11 @@ So that I can send an ETA notice whenever it is needed, also when the system has
     </li>
     <li>Remark: a free text field with the hint "e.g. position, wind, weather, delay". When a remark is given, it should be shown in bold in the e-mail text.
     </li>
-    <li>Subject: filled from the ETA notice template (point 9) and editable. After it is edited, a "Reset to template" option should be available.
+    <li>Subject: filled from the ETA notice template and editable. After it is edited, a "Reset to template" option should be available.
     </li>
-    <li>The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template (point 9) and should be editable. After it is edited, a "Reset to template" option should be available.
+    <li>The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template and should be editable. After it is edited, a "Reset to template" option should be available.
+    </li>
+    <li>The changes made in the e-mails of this screen should not be stored. When the user closes the screen without sending, the changes should not be kept.
     </li>
     <li>Every e-mail should be independent. A change in one e-mail should not change the others.
     </li>
@@ -120,15 +124,15 @@ So that I can send an ETA notice whenever it is needed, also when the system has
 
   <li>Sending
   <ul>
-    <li>The footer of the screen should show "Signatory:" with the name of the logged-in user, a Cancel button and a "Send (n)" button. "n" is the number of e-mails that can be sent now, which means the e-mails that are not sent yet and have at least one address.
+    <li>The footer of the screen should show "Signatory:" with the name of the logged-in user, a Cancel button, and a "Send (n)" button. "n" is the number of e-mails that can be sent now, which means the e-mails that are not sent yet and have at least one address.
     </li>
     <li>The Send button should be disabled when "n" is 0.
     </li>
-    <li>The Cancel button should be shown only until an e-mail is sent. After that the screen should be closed with the X icon.
+    <li>The Cancel button should be shown only until an e-mail is sent. After that, the screen should be closed with the X icon.
     </li>
     <li>When the user clicks Send, all e-mails that have an address should be sent. An e-mail without an address should not be sent and should stay with "No recipient".
     </li>
-    <li>While sending, the e-mail should show "Sending…". After that it should show "Sent" in green and become read only.
+    <li>While sending, the e-mail should show "Sending...". After that, it should show "Sent" in green and become read-only.
     </li>
     <li>If an e-mail cannot be delivered, it should show "Failed" with the reason in red. The user should be able to correct it and send it again with the Send button.
     </li>
@@ -139,11 +143,11 @@ So that I can send an ETA notice whenever it is needed, also when the system has
 
   <li>Sent notices
   <ul>
-    <li>Below the e-mails the screen should show "Sent notices for these ports", with the notices already sent for the ports of the e-mails on the screen.
+    <li>Below the e-mails, the screen should show "Sent notices for these ports", with the notices already sent for the ports of the e-mails on the screen.
     </li>
     <li>Each sent notice should show the date and time it was sent, who sent it, the fixture, the To addresses, the ETA told (with the time if it was included), the status (Sent or Failed), and an eye icon. The eye icon should show and hide the e-mail exactly as it was sent, with the subject underlined and the remark in bold. For a Failed notice, the reason should be shown.
     </li>
-    <li>The latest 3 notices should be shown. When there are more, "Show all (n)" and "Show fewer" should be available.
+    <li>The latest three notices should be shown. When there are more, "Show all (n)" and "Show fewer" should be available.
     </li>
     <li>If no notice has been sent for these ports, it should show "No notice has been sent for this port call yet."
     </li>
@@ -152,9 +156,11 @@ So that I can send an ETA notice whenever it is needed, also when the system has
 
   <li>After sending
   <ul>
-    <li>Every notice sent from this screen should be added to the "ETA notices" list of the voyage as Sent, or Failed, with the date and time, as described in the Voyage - ETA Notices (header) story.
+    <li>Every notice sent from this screen should be added to the "ETA notices" list of the voyage as Sent or Failed, with the date and time, as described in the Voyage - ETA Notifier story (COEMS-23971).
     </li>
     <li>If the same fixture and port has a Ready to Send notice, it should change to Sent after the manual notice is sent, and the number on the "ETA notices" option should reduce by one. A Failed notice should not change it.
+    </li>
+    <li>An Expired notice of the same fixture and port should not change when a manual notice is sent.
     </li>
     <li>A manual notice for a fixture and port that is not due should not change the number on the "ETA notices" option.
     </li>

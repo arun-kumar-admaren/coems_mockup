@@ -1,6 +1,6 @@
-# Voyage - ETA Notifier - Position List
+# Position list - ETA Notifier
 
-COEMS id:
+COEMS id: COEMS-23972
 
 USER Story:
 
@@ -17,9 +17,10 @@ acceptance criteria:
 
 2. "Due" marker on the port call card
 
-   * A "Due" marker should be shown on a port call card in the Position List when at least one fixture at that port has an ETA notice that is due today, which means a Ready to Send notice as described in the Voyage - ETA Notices (header) story.
+   * A "Due" marker should be shown on a port call card in the Position List when at least one fixture at that port has an ETA notice that is due today, which means a Ready to Send notice as described in the Voyage - ETA Notifier story (COEMS-23971).
    * When the user hovers on the marker, it should show "ETA notice due today:" followed by the numbers of the fixtures that are due.
    * The marker should not be shown for a port call that has no fixture loading or discharging, for a canal, for a port the vessel has already reached, or when the notices of all its fixtures are already sent today.
+   * The marker should be shown only for a Ready to Send notice. It should not be shown for an Expired notice, or for a port whose notice is not generated yet because the vessel has not reached the previous port, as described in the Voyage - ETA Notifier story (COEMS-23971).
    * The marker should disappear from the card when the ETA notices of all due fixtures of that port call have been sent.
 
 3. Opening the Arrival and Departure Report
@@ -35,6 +36,7 @@ acceptance criteria:
      * The Frequency of at least one of these fixtures is not None
      * The vessel has not reached the port yet
    * For a canal, a port without a fixture, a port the vessel has already reached, the first port of the voyage and a port where the Frequency of all fixtures is None, the button should not be shown.
+   * The button should be shown also for a port whose notice is not generated yet because the vessel has not reached the previous port. The user can create the notice from here.
    * When at least one fixture at the port has an ETA notice due today, a "Due" marker should be shown inside the button.
 
 5. Opening the ETA notice screen
@@ -56,6 +58,8 @@ acceptance criteria:
    * Remark: a free text field with the hint "e.g. position, wind, weather, delay". When a remark is given, it should be shown in bold in the e-mail text.
    * Subject: filled from the ETA notice template (point 11) and editable. After it is edited, a "Reset to template" option should be available.
    * The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template (point 11) and should be editable. After it is edited, a "Reset to template" option should be available.
+   * When the e-mail is a Ready to Send notice, which means it has the "Due today" stamp, the changes made in the e-mail should be stored automatically, as described in the Voyage - ETA Notifier story (COEMS-23971). When the user closes the screen without sending and opens it again, the stored changes should be shown, so that the user does not need to edit the e-mail again. The stored changes should be visible only to the user who made them, and the next notice of that fixture and port should start with them, with the values of the new notice, such as the ETA date, shown instead of the old values.
+   * The changes made in an e-mail that is not a Ready to Send notice, which means it does not have the "Due today" stamp, should not be stored.
    * Every e-mail should be independent. A change in one e-mail should not change the others.
 
 7. Unsaved dates in the report
@@ -70,7 +74,7 @@ acceptance criteria:
    * The Send button should be disabled when "n" is 0.
    * The Cancel button should be shown only until an e-mail is sent. After that the screen should be closed with the X icon.
    * When the user clicks Send, all e-mails that have an address should be sent. An e-mail without an address should not be sent and should stay with "No recipient".
-   * While sending, the e-mail should show "Sending…". After that it should show "Sent" in green and become read only.
+   * While sending, the e-mail should show "Sending...". After that it should show "Sent" in green and become read-only.
    * If an e-mail cannot be delivered, it should show "Failed" with the reason in red. The user should be able to correct it and send it again with the Send button.
    * The system should send an e-mail only when the user clicks Send.
 
@@ -84,8 +88,8 @@ acceptance criteria:
 10. After sending
 
    * The "Due" marker should disappear from the button in the report and from the port call card in the Position List when the notices of all due fixtures of that port are sent. A Failed notice should not remove it.
-   * Every notice sent from here should be added to the "ETA notices" list in the header of the Voyage page as Sent, or Failed, with the date and time, and the number on the "ETA notices" option should reduce by one for each Ready to Send notice that was sent.
-   * Sending an ETA notice should not change the dates of the port call, the Frequency of the fixture or the days on which the system generates the ETA notices.
+   * Every notice sent from here should be added to the "ETA notices" list in the header of the Voyage page as Sent or Failed, with the date and time, and the number on the "ETA notices" option should reduce by one for each Ready to Send notice that was sent.
+   * Sending an ETA notice should not change the dates of the port call, the Frequency of the fixture, or the days on which the system generates the ETA notices.
 
 11. ETA notice template
 
