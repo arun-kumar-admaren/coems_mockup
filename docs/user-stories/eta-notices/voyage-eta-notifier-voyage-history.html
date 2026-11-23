@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voyage - ETA Notifier - Voyage History</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 16px; line-height: 1.5; max-width: 860px; margin: 24px auto; color: #1a1a1a; }
+  h1 { font-size: 24px; font-weight: 400; margin: 0 0 16px; }
+  ol > li { margin: 14px 0 0; }
+  ul { margin: 6px 0 0; }
+  li li { margin: 2px 0; }
+  pre.tpl { background: #f6f6f6; border: 1px solid #dddddd; padding: 8px 12px; font-family: Calibri, Arial, sans-serif; font-size: 15px; white-space: pre-wrap; margin: 6px 0; }
+</style>
+</head>
+<body>
+
+<h1>Voyage - ETA Notifier - Voyage History</h1>
+
+<p>COEMS id:</p>
+
+<p>USER Story:</p>
+
+<p>As a user,<br>
+I want every ETA notice that is sent to be recorded in the History of the voyage<br>
+So that I can check later what was told to the client about the arrival, who sent it and when.</p>
+
+<p>acceptance criteria:</p>
+
+<ol>
+  <li>Where the notices are shown
+  <ul>
+    <li>The ETA notices should be shown in the existing History of the voyage, which is opened with "View History" in the three-dot menu of the voyage details panel.
+    </li>
+    <li>The ETA notices should appear in the same list as the other changes of the voyage, in the same order, with the latest on top.
+    </li>
+    <li>No new option or screen is needed. The History window should work as it does today, including "No History Available" when the voyage has no entry, and closing with the X icon.
+    </li>
+  </ul>
+  </li>
+
+  <li>When an entry is added
+  <ul>
+    <li>One entry should be added every time an ETA notice is sent, as soon as the system has sent it.
+    </li>
+    <li>One entry should be added for each fixture and port, because one e-mail is created for each fixture and port. When the user sends three e-mails with one Send, three entries should be added.
+    </li>
+    <li>An entry should be added for a notice sent from any place: the "ETA notices" list in the Voyage header, "+ New ETA notice", and the Arrival and Departure Report opened from the Position List or from the Voyage page.
+    </li>
+    <li>No entry should be added when an e-mail is only opened, previewed, edited or cancelled, when a notice is Ready to Send but not sent, or when an e-mail could not be delivered.
+    </li>
+  </ul>
+  </li>
+
+  <li>Entry of a sent notice
+  <ul>
+    <li>The entry should show the name of the user who sent the notice and the date and time it was sent, in the same format as the other entries, for example "18/11/2026, 06:10 AM".
+    </li>
+    <li>Below the user and the date, the entry should show the line "Sent - ETA Notice" followed by the fixture number and the port in brackets, for example "Sent - ETA Notice (UHL-F-2026-1356, Cuxhaven)".
+    </li>
+    <li>Below this line, the entry should show:
+    <ul>
+      <li>To: the e-mail addresses the notice was sent to
+      </li>
+      <li>ETA told: the date, with the time if it was included, and the time zone
+      </li>
+      <li>Remark: the remark that was given, shown only if a remark was given
+      </li>
+    </ul>
+    </li>
+  </ul>
+  </li>
+
+  <li>Content of the entry
+  <ul>
+    <li>The entry should not show the subject or the e-mail text. They can be seen in the preview of the notice, from the "ETA notices" list in the Voyage header.
+    </li>
+    <li>The entry cannot be edited or deleted.
+    </li>
+  </ul>
+  </li>
+
+  <li>Who sees the entries
+  <ul>
+    <li>The ETA notice entries should be shown only to the users who have the "ETA Notices" checkbox enabled in their user profile.
+    </li>
+    <li>For all other users, the ETA notice entries should not be shown in the History. The other entries should be shown as today, and when the voyage has no other entry, "No History Available" should be shown.
+    </li>
+    <li>The visibility should not depend on the user's Role or Designation.
+    </li>
+  </ul>
+  </li>
+
+  <li>Notices sent before
+  <ul>
+    <li>No entry should be created for the ETA notices that were sent before this feature.
+    </li>
+  </ul>
+  </li>
+</ol>
+
+</body>
+</html>

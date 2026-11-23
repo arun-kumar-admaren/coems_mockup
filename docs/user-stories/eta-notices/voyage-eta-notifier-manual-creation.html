@@ -9,6 +9,7 @@
   ol > li { margin: 14px 0 0; }
   ul { margin: 6px 0 0; }
   li li { margin: 2px 0; }
+  pre.tpl { background: #f6f6f6; border: 1px solid #dddddd; padding: 8px 12px; font-family: Calibri, Arial, sans-serif; font-size: 15px; white-space: pre-wrap; margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -108,9 +109,9 @@ So that I can send an ETA notice whenever it is needed, also when the system has
     </li>
     <li>Remark: a free text field with the hint "e.g. position, wind, weather, delay". When a remark is given, it should be shown in bold in the e-mail text.
     </li>
-    <li>Subject: filled from the ETA notice template and editable. After it is edited, a "Reset to template" option should be available.
+    <li>Subject: filled from the ETA notice template (point 9) and editable. After it is edited, a "Reset to template" option should be available.
     </li>
-    <li>The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template and should be editable. After it is edited, a "Reset to template" option should be available.
+    <li>The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template (point 9) and should be editable. After it is edited, a "Reset to template" option should be available.
     </li>
     <li>Every e-mail should be independent. A change in one e-mail should not change the others.
     </li>
@@ -158,6 +159,65 @@ So that I can send an ETA notice whenever it is needed, also when the system has
     <li>A manual notice for a fixture and port that is not due should not change the number on the "ETA notices" option.
     </li>
     <li>A manual notice should not change the Frequency of the fixture or the days on which the system generates the ETA notices.
+    </li>
+  </ul>
+  </li>
+
+  <li>ETA notice template
+  <ul>
+    <li>The Subject and the e-mail text of every ETA notice should be created from the template below. The template is fixed. It is not edited in Settings. The user can change the subject and the e-mail text only for one notice, as described in point 5.
+    </li>
+    <li>Subject:
+<pre class="tpl">MV {vessel} – Voyage {voyage} – {fixture} – {loadPort} / {dischargePort} – {client}</pre>
+    </li>
+    <li>E-mail text:
+<pre class="tpl">Dear all,
+
+from today's perspective the MV {vessel} is expected to arrive in {port} on/about {eta} wp agw wog fme uce
+
+Remark: {remark}
+
+Please consider this message as notice in accordance with the governing cargo contract and let us know if any additional information is needed
+
+Thank you for your attention.
+
+Best regards,
+
+{signatory}
+
+UNITED HEAVY LIFT
+Am Kaiserkai 69, 20457 Hamburg, Germany
+operations@uhl-operations.example</pre>
+    </li>
+    <li>The line "Remark: {remark}" should be shown in bold in the e-mail.
+    </li>
+    <li>A word in curly brackets is a placeholder. It should be replaced with the value of the notice when the e-mail is created:
+    <ul>
+      <li>{vessel}: the vessel name
+      </li>
+      <li>{voyage}: the voyage number
+      </li>
+      <li>{port}: the port of the notice, which is the port of loading or discharge
+      </li>
+      <li>{eta}: the ETA told to the client, for example 24.11.2026. When "Include time" is ticked, the time and the time zone of the port should be added, for example 24.11.2026 21:45 LT (UTC+1:00) Europe/Berlin
+      </li>
+      <li>{fixture}: the fixture number
+      </li>
+      <li>{loadPort}: the port of loading of the fixture. When there are several, they should be separated by a comma
+      </li>
+      <li>{dischargePort}: the port of discharge of the fixture. When there are several, they should be separated by a comma
+      </li>
+      <li>{client}: the client of the fixture, which is the Account of the fixture
+      </li>
+      <li>{remark}: the remark given by the user in the ETA notice
+      </li>
+      <li>{signatory}: the name of the logged-in user who sends the notice
+      </li>
+    </ul>
+    </li>
+    <li>The parts of the subject are separated by " – ". A part whose placeholders are all empty should be left out of the subject. If the loading port or the discharge port is empty, the "/" next to it should also be left out.
+    </li>
+    <li>A line of the e-mail text whose placeholders are all empty should be left out, together with the blank line that follows it. For example, when no remark is given, the Remark line should not be in the e-mail.
     </li>
   </ul>
   </li>

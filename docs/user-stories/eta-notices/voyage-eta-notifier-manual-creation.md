@@ -53,8 +53,8 @@ acceptance criteria:
    * To: it should be filled automatically with the addresses in the "ETA's to be given" field of the fixture's Handover tab, shown in green. The user should be able to add or remove addresses for this notice only. The fixture should not be changed. If the fixture has no address, the screen should show "<fixture number> has no e-mail in ETA's to be given. Add one here or in its Handover tab."
    * ETA told to this client: the date and time in the time zone of the port, filled with the expected ETA of the port and editable. An "Include time (port time)" checkbox should decide whether the time is mentioned in the e-mail. When the ETA is changed, the screen should show "Differs from the system Expected ETA" and a "Reset to Expected ETA" option.
    * Remark: a free text field with the hint "e.g. position, wind, weather, delay". When a remark is given, it should be shown in bold in the e-mail text.
-   * Subject: filled from the ETA notice template and editable. After it is edited, a "Reset to template" option should be available.
-   * The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template and should be editable. After it is edited, a "Reset to template" option should be available.
+   * Subject: filled from the ETA notice template (point 9) and editable. After it is edited, a "Reset to template" option should be available.
+   * The e-mail box should show the To addresses, the subject underlined, and the e-mail text. The e-mail text should be filled from the ETA notice template (point 9) and should be editable. After it is edited, a "Reset to template" option should be available.
    * Every e-mail should be independent. A change in one e-mail should not change the others.
 
 6. Sending
@@ -80,3 +80,41 @@ acceptance criteria:
    * If the same fixture and port has a Ready to Send notice, it should change to Sent after the manual notice is sent, and the number on the "ETA notices" option should reduce by one. A Failed notice should not change it.
    * A manual notice for a fixture and port that is not due should not change the number on the "ETA notices" option.
    * A manual notice should not change the Frequency of the fixture or the days on which the system generates the ETA notices.
+
+9. ETA notice template
+
+   * The Subject and the e-mail text of every ETA notice should be created from the template below. The template is fixed. It is not edited in Settings. The user can change the subject and the e-mail text only for one notice, as described in point 5.
+   * Subject:
+     > MV {vessel} – Voyage {voyage} – {fixture} – {loadPort} / {dischargePort} – {client}
+   * E-mail text:
+     > Dear all,
+     >
+     > from today's perspective the MV {vessel} is expected to arrive in {port} on/about {eta} wp agw wog fme uce
+     >
+     > Remark: {remark}
+     >
+     > Please consider this message as notice in accordance with the governing cargo contract and let us know if any additional information is needed
+     >
+     > Thank you for your attention.
+     >
+     > Best regards,
+     >
+     > {signatory}
+     >
+     > UNITED HEAVY LIFT
+     > Am Kaiserkai 69, 20457 Hamburg, Germany
+     > operations@uhl-operations.example
+   * The line "Remark: {remark}" should be shown in bold in the e-mail.
+   * A word in curly brackets is a placeholder. It should be replaced with the value of the notice when the e-mail is created:
+     * {vessel}: the vessel name
+     * {voyage}: the voyage number
+     * {port}: the port of the notice, which is the port of loading or discharge
+     * {eta}: the ETA told to the client, for example 24.11.2026. When "Include time" is ticked, the time and the time zone of the port should be added, for example 24.11.2026 21:45 LT (UTC+1:00) Europe/Berlin
+     * {fixture}: the fixture number
+     * {loadPort}: the port of loading of the fixture. When there are several, they should be separated by a comma
+     * {dischargePort}: the port of discharge of the fixture. When there are several, they should be separated by a comma
+     * {client}: the client of the fixture, which is the Account of the fixture
+     * {remark}: the remark given by the user in the ETA notice
+     * {signatory}: the name of the logged-in user who sends the notice
+   * The parts of the subject are separated by " – ". A part whose placeholders are all empty should be left out of the subject. If the loading port or the discharge port is empty, the "/" next to it should also be left out.
+   * A line of the e-mail text whose placeholders are all empty should be left out, together with the blank line that follows it. For example, when no remark is given, the Remark line should not be in the e-mail.

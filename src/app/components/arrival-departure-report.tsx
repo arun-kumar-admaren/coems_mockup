@@ -145,7 +145,7 @@ export function ArrivalDepartureReport({ portCallId, onClose }: { portCallId: st
               <button
                 type="button"
                 onClick={() => setNoticeOpen(true)}
-                title="Send an ETA notice (operators only)"
+                title="Send an ETA notice"
                 className="inline-flex items-center gap-1.5 rounded border border-blue-600 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
               >
                 <Mail className="size-3.5" />

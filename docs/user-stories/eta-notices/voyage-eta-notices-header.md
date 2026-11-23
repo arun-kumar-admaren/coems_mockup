@@ -77,8 +77,46 @@ acceptance criteria:
    * The To field should be filled automatically with the e-mail addresses in the "ETA's to be given" field of the fixture. The user should be able to add or remove addresses for this notice only. The fixture should not be changed. If there is no address, "No recipient" should be shown and the notice cannot be sent until an address is added.
    * The user should be able to change the ETA told to the client, with the date and the time (using "Include time"). It should start with the expected ETA of the port, in the time zone of the port.
    * The user should be able to give a Remark. When a remark is given, it should be shown in bold in the e-mail.
-   * The Subject and the e-mail text should be filled from the ETA notice template and should be editable. After the text is edited, a "Reset to template" option should be available.
+   * The Subject and the e-mail text should be filled from the ETA notice template (point 8) and should be editable. After the text is edited, a "Reset to template" option should be available.
    * The signatory should be the logged-in user.
    * The screen should have a Send button that shows the number of e-mails to be sent, and a Cancel option. It should also be closed with the X icon.
    * After the user clicks Send, the row should show Sent, the notice should show as Sent in the list with the date and time, and the number on the "ETA notices" option should reduce by one.
    * The screen should list the notices already sent for that port, with an eye icon to view each e-mail.
+
+8. ETA notice template
+
+   * The Subject and the e-mail text of every ETA notice should be created from the template below. The template is fixed. It is not edited in Settings. The user can change the subject and the e-mail text only for one notice, as described in point 7.
+   * Subject:
+     > MV {vessel} – Voyage {voyage} – {fixture} – {loadPort} / {dischargePort} – {client}
+   * E-mail text:
+     > Dear all,
+     >
+     > from today's perspective the MV {vessel} is expected to arrive in {port} on/about {eta} wp agw wog fme uce
+     >
+     > Remark: {remark}
+     >
+     > Please consider this message as notice in accordance with the governing cargo contract and let us know if any additional information is needed
+     >
+     > Thank you for your attention.
+     >
+     > Best regards,
+     >
+     > {signatory}
+     >
+     > UNITED HEAVY LIFT
+     > Am Kaiserkai 69, 20457 Hamburg, Germany
+     > operations@uhl-operations.example
+   * The line "Remark: {remark}" should be shown in bold in the e-mail.
+   * A word in curly brackets is a placeholder. It should be replaced with the value of the notice when the e-mail is created:
+     * {vessel}: the vessel name
+     * {voyage}: the voyage number
+     * {port}: the port of the notice, which is the port of loading or discharge
+     * {eta}: the ETA told to the client, for example 24.11.2026. When "Include time" is ticked, the time and the time zone of the port should be added, for example 24.11.2026 21:45 LT (UTC+1:00) Europe/Berlin
+     * {fixture}: the fixture number
+     * {loadPort}: the port of loading of the fixture. When there are several, they should be separated by a comma
+     * {dischargePort}: the port of discharge of the fixture. When there are several, they should be separated by a comma
+     * {client}: the client of the fixture, which is the Account of the fixture
+     * {remark}: the remark given by the user in the ETA notice
+     * {signatory}: the name of the logged-in user who sends the notice
+   * The parts of the subject are separated by " – ". A part whose placeholders are all empty should be left out of the subject. If the loading port or the discharge port is empty, the "/" next to it should also be left out.
+   * A line of the e-mail text whose placeholders are all empty should be left out, together with the blank line that follows it. For example, when no remark is given, the Remark line should not be in the e-mail.
